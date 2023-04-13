@@ -45,7 +45,7 @@ def ghzLike_nodes(_qnumber, chi: int = None):
 		tools.add_gate_truncate(_qubits, Gates.cnot(), [i, i + 1])
 	# Optimization
 	tools.qr_left2right(_qubits)
-	# tools.svd_right2left(_qubits, chi=chi)
+	tools.svd_right2left(_qubits, chi=chi)
 	return _qubits
 
 

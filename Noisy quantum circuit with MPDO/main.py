@@ -17,11 +17,11 @@ import warnings
 
 tn.set_default_backend("pytorch")
 
-qnumber = 20
+qnumber = 5
 qubits = QNodes.ghzLike_nodes(qnumber)
 
-result = tools.contract_mps(qubits)
-print(tc.reshape(result.tensor, (2 ** qnumber, 1)))
-print(2 ** qnumber)
+# result = tools.contract_mps(qubits)
+# print(tc.reshape(result.tensor, (2 ** qnumber, 1)))
+# print(2 ** qnumber)
 
 # Contract in different chi, like chi = [1, 2, None], which spends different time as [13.757s, 21.24s, 27.86s]
