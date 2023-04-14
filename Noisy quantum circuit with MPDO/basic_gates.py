@@ -86,8 +86,11 @@ class TensorGate(object):
 
     def rx(self, theta):
         self.name = 'RX'
-        self.tensor = tc.tensor([[np.cos(theta / 2), -1j * np.sin(theta / 2)],
-                                 [-1j * np.sin(theta / 2), np.cos(theta / 2)]], dtype=self.dtype)
+        self.tensor = tc.tensor(
+            [[np.cos(theta / 2), -1j * np.sin(theta / 2)],
+                                 [-1j * np.sin(theta / 2), np.cos(theta / 2)]]
+            , dtype=self.dtype
+        )
         self.rank = 2
         self.dimension = 2
         self.single = True
@@ -160,7 +163,7 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 1, 0, 0],
                                  [0, 0, 1, 0],
-                                 [0, 0, 0, -1]], dtype=self.dtype)
+                                 [0, 0, 0, -1]], dtype=self.dtype).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = 2
         self.single = False
@@ -172,8 +175,23 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 0, 1, 0],
                                  [0, 1, 0, 0],
-                                 [0, 0, 0, 1]], dtype=self.dtype)
-        self.tensor = tc.reshape(self.tensor, (2, 2, 2, 2))
+                                 [0, 0, 0, 1]], dtype=self.dtype).reshape((2, 2, 2, 2))
+        self.rank = 4
+        self.dimension = 2
+        self.single = False
+        self.axis_name = ['inner_0', 'inner_1', 'physics_0', 'physics_1']
+        return self
+
+    def rzz(self, _theta):
+        self.name = 'RZZ'
+        self.tensor = tc.tensor(
+            [
+                [np.exp(-1j * _theta), 0, 0, 0],
+                [0, np.exp(1j * _theta), 0, 0],
+                [0, 0, np.exp(1j * _theta), 0],
+                [0, 0, 0, np.exp(-1j * _theta)],
+            ], dtype=self.dtype
+        ).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = 2
         self.single = False

@@ -5,7 +5,8 @@ Contact: weiguo.m@iphy.ac.cn
 """
 
 import time
-from basic_gates import *
+import torch as tc
+import numpy as np
 import tensornetwork as tn
 import QNodes
 import tools
@@ -17,11 +18,14 @@ import warnings
 
 tn.set_default_backend("pytorch")
 
-qnumber = 5
-qubits = QNodes.ghzLike_nodes(qnumber)
+qnumber = 7
+# qubits = QNodes.ghzLike_nodes(qnumber)
 
-# result = tools.contract_mps(qubits)
-# print(tc.reshape(result.tensor, (2 ** qnumber, 1)))
-# print(2 ** qnumber)
+
+qubits = QNodes.scalable_simulation_scheme2(np.pi/2)
+
+result = tools.contract_mps(qubits)
+print(tc.reshape(result.tensor, (2 ** qnumber, 1)))
+print(2 ** qnumber)
 
 # Contract in different chi, like chi = [1, 2, None], which spends different time as [13.757s, 21.24s, 27.86s]
