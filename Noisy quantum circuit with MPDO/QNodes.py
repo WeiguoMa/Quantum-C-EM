@@ -138,8 +138,8 @@ def used4test(_chi=None):
 	tools.add_gate_truncate(_qubits, Gates.cnot(), [2, 3])
 	# layer3
 	tools.add_gate_truncate(_qubits, Gates.cnot(), [1, 2])
-	# algorithm.qr_left2right(_qubits)
-	# algorithm.svd_right2left(_qubits, _chi=_chi)
+	algorithm.qr_left2right(_qubits)
+	algorithm.svd_right2left(_qubits, _chi=_chi)
 	# layer4
 	tools.add_gate_truncate(_qubits, Gates.x(), [0, 2, 3])
 	tools.add_gate_truncate(_qubits, Gates.h(), [1])

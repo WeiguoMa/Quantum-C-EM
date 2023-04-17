@@ -7,11 +7,15 @@ import tensornetwork as tn
 from tools import sort_edges4dep, EdgeName2AxisName, rename_edgeAxis
 import copy
 
-def qr_left2right(_qubits: list):
+def qr_left2right_old(_qubits: list):
     """
-    QR decomposition from left to right.
-    :param _qubits: List of qubits (as nodes);
-    :return: Nodes after QR decomposition.
+    QR decomposition from left to right, old version, may cause DecompositionError.
+
+    Args:
+        _qubits: List of qubits, which is a list of nodes.
+
+    Returns:
+        Nodes after QR decomposition, on progress.
     """
     # left-most
     _left_edges, _right_edges = sort_edges4dep(_qubits[0], _op_idx=[0], _purpose='qr')
@@ -41,6 +45,7 @@ def qr_left2right(_qubits: list):
         _qubits[ii], _qubits[ii + 1] = _q, _r
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([_qubits[ii], _qubits[ii + 1]])
+
 def svd_right2left_old(_qubits, chi: int = None):
     """
     SVD decomposition from right to left.
@@ -82,7 +87,40 @@ def svd_right2left_old(_qubits, chi: int = None):
                                         max_singular_values=chi)
     _qubits[0], _qubits[1] = _left, _right
 
-def svd_right2left(_qubits, _chi: int = None):
+def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
+    """
+    QR decomposition from left to right.
+
+    Args:
+        _qubits: List of qubits (as nodes).
+
+    Returns:
+        Nodes after QR decomposition, on progress.
+    """
+    if not isinstance(_qubits, list):
+        raise TypeError('input should be a list of qubits nodes')
+
+    for _i in range(len(_qubits) - 1):
+        _left_edges_name, _right_edges_name = copy.deepcopy(_qubits[_i].axis_names), []
+        for _name in _qubits[_i].axis_names:
+            if 'bond_{}_'.format(_i) in _name:
+                _left_edges_name.remove(_name)
+                _right_edges_name.append(_name)
+        _left_edges = [_qubits[_i][_name] for _name in _left_edges_name]
+        _right_edges = [_qubits[_i][_name] for _name in _right_edges_name]
+        _q, _r = tn.split_node_qr(_qubits[_i],
+                                  left_edges=_left_edges,
+                                  right_edges=_right_edges,
+                                  left_name='q{}'.format(_i),
+                                  right_name='right_waiting4contract2form_right',
+                                  edge_name='qrbond_{}_{}'.format(_i, _i+1))
+        _r = tn.contract_between(_r, _qubits[_i+1])
+        _r.name = 'qubit_{}'.format(_i+1)
+        _qubits[_i], _qubits[_i+1] = _q, _r
+        # ProcessFunction, for details, see the function definition.
+        EdgeName2AxisName([_qubits[_i], _qubits[_i + 1]])
+
+def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], _chi: int = None):
     """
     SVD from right to left
     Args:
@@ -91,6 +129,9 @@ def svd_right2left(_qubits, _chi: int = None):
     Returns:
         _qubits: list of nodes.
     """
+    if not isinstance(_qubits, list):
+        raise TypeError('input should be a list of qubits nodes')
+
     if _chi is None:
         # A number who is big enough to keep all the information
         chi = 2 ** len(_qubits)
