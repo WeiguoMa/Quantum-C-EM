@@ -18,14 +18,16 @@ import warnings
 
 tn.set_default_backend("pytorch")
 
-qnumber = 7
+qnumber = 4
 # qubits = QNodes.ghzLike_nodes(qnumber)
+et = time.time()
 
-
-qubits = QNodes.scalable_simulation_scheme2(np.pi/2)
+qubits = QNodes.used4test()
 
 result = tools.contract_mps(qubits)
+
+st = time.time()
 print(tc.reshape(result.tensor, (2 ** qnumber, 1)))
 print(2 ** qnumber)
-
+print(st - et)
 # Contract in different chi, like chi = [1, 2, None], which spends different time as [13.757s, 21.24s, 27.86s]

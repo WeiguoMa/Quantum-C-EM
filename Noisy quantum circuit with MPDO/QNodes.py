@@ -13,8 +13,12 @@ tn.set_default_backend("pytorch")
 def ghzLike_edges(_qnumber):
 	"""
 	ghzLike state preparation with edges.
-	:param _qnumber: Edge number of the state;
-	:return: Edge list of the state after preparation;
+
+	Args:
+		_qnumber: Node number of the state.
+
+	Returns:
+		Edge list of the state after preparation.
 	"""
 	all_nodes = []
 	Gates = TensorGate()
@@ -33,9 +37,13 @@ def ghzLike_edges(_qnumber):
 def ghzLike_nodes(_qnumber, _chi: int = None):
 	"""
 	ghzLike state preparation with nodes.
-	:param _qnumber: Node number of the state;
-	:param _chi: Maximum bond dimension of the state;
-	:return: Node list of the state after preparation;
+
+	Args:
+		_qnumber: Node number of the state;
+		_chi: Maximum bond dimension to be saved in SVD.
+
+	Returns:
+		Node list of the state after preparation.
 	"""
 	Gates = TensorGate()
 	_qubits = tools.create_ket0Series(_qnumber)
@@ -49,7 +57,19 @@ def ghzLike_nodes(_qnumber, _chi: int = None):
 	algorithm.svd_right2left(_qubits, _chi=_chi)
 	return _qubits
 
-def scalable_simulation_scheme2(_theta: float):
+def scalable_simulation_scheme2(_theta: float, _chi: float = None):
+	"""
+
+	Args:
+		_theta: The angle of rotation;
+		_chi: Maximum bond dimension to be saved in SVD.
+
+	Returns:
+		Node list of the state after preparation.
+
+	Additional information:
+		Currently did not use the Adam to optimize the parameters.
+	"""
 	Gates = TensorGate()
 	_qubits = tools.create_ket0Series(7)
 	# Initialize the state
@@ -71,7 +91,58 @@ def scalable_simulation_scheme2(_theta: float):
 	# Apply rx gate
 	print('Applying rx gate...')
 	tools.add_gate_truncate(_qubits, Gates.rx(np.pi/2), [0, 1, 2, 4, 5, 6])
+	# Optimization
+	algorithm.qr_left2right(_qubits)
+	algorithm.svd_right2left(_qubits, _chi=_chi)
 
+	return _qubits
+
+def used4test(_chi=None):
+	"""
+	Generate a random circuit to test whether the program is correct and the function of add_gate, compare with qutip
+		simulation, the result is the same, which implies that the program is correct.
+
+		'''
+		from qutip import basis, tensor
+		from qutip_qip.operations import cnot, rx, ry, rz, x_gate, y_gate, z_gate, hadamard_transform
+
+		I = qeye(2)
+		init = tensor(basis(2, 0), basis(2, 0), basis(2, 0), basis(2, 0))
+		layer1= tensor(hadamard_transform(), x_gate(), hadamard_transform(), I)
+		layer2 = cnot(4, 0, 1) * cnot(4, 2, 3)
+		layer3 = cnot(4, 1, 2)
+		layer4 = tensor(x_gate(), hadamard_transform(), x_gate(), x_gate())
+
+		output = layer4 * layer3 * layer2 * layer1 * init
+		print(output)
+		'''
+
+	I noticed that the optimization layer can be ONLY apply while the whole system are CONNECTED together, allow
+		outer product in qr and svd may solve the problem, which might cause a mathematical problem,
+			but there still raises other problems.
+
+	Args:
+		_chi: Maximum bond dimension of the state;
+
+	Returns:
+		Node list of the state after preparation;
+	"""
+	_qnumber = 4
+	Gates = TensorGate()
+	_qubits = tools.create_ket0Series(_qnumber)
+	# layer1
+	tools.add_gate_truncate(_qubits, Gates.h(), [0, 2])
+	tools.add_gate_truncate(_qubits, Gates.x(), [1])
+	# layer2
+	tools.add_gate_truncate(_qubits, Gates.cnot(), [0, 1])
+	tools.add_gate_truncate(_qubits, Gates.cnot(), [2, 3])
+	# layer3
+	tools.add_gate_truncate(_qubits, Gates.cnot(), [1, 2])
+	# algorithm.qr_left2right(_qubits)
+	# algorithm.svd_right2left(_qubits, _chi=_chi)
+	# layer4
+	tools.add_gate_truncate(_qubits, Gates.x(), [0, 2, 3])
+	tools.add_gate_truncate(_qubits, Gates.h(), [1])
 	return _qubits
 
 

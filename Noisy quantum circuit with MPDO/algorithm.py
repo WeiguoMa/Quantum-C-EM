@@ -35,7 +35,8 @@ def qr_left2right(_qubits: list):
                                   right_edges=_right_edges,
                                   left_name=_qubits[ii].name,
                                   edge_name='qrbond_{}_{}'.format(ii, ii + 1))
-        _r = _r @ _qubits[ii + 1]
+        _r = tn.contract_between(_r, _qubits[ii + 1], allow_outer_product=True)     # May cause math error
+        # _r = _r @ _qubits[ii + 1]
         _r.name = 'qubit_' + str(ii + 1)
         _qubits[ii], _qubits[ii + 1] = _q, _r
         # ProcessFunction, for details, see the function definition.
@@ -52,7 +53,10 @@ def svd_right2left_old(_qubits, chi: int = None):
         chi = 2 ** len(_qubits)
     # right-most rank-2 node
     idx = len(_qubits) - 1
-    contracted_two_nodes = tn.contract_between(_qubits[idx - 1], _qubits[idx], name='contracted_two_nodes')
+    contracted_two_nodes = tn.contract_between(node1=_qubits[idx - 1],
+                                               node2=_qubits[idx],
+                                               name='contracted_two_nodes',
+                                               allow_outer_product=True)    # May cause math error
     _left, _right, _ = tn.split_node(contracted_two_nodes,
                                      left_edges=[contracted_two_nodes[0], contracted_two_nodes[1]],
                                      right_edges=[contracted_two_nodes[2]],
@@ -103,10 +107,15 @@ def svd_right2left(_qubits, _chi: int = None):
         _left_edges = [_qubits[idx - 1][_left_name] for _left_name in _left_edges]
         _right_edges = [_qubits[idx][_right_name] for _right_name in _right_edges]
         # Contract
-        contracted_two_nodes = tn.contract_between(_qubits[idx - 1], _qubits[idx], name='contract_two_nodes')
+        contracted_two_nodes = tn.contract_between(_qubits[idx - 1],
+                                                   _qubits[idx],
+                                                   name='contract_two_nodes',
+                                                   allow_outer_product=True)    # May cause math error
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([contracted_two_nodes])
         # SVD
+        print('---------')
+        print(contracted_two_nodes.axis_names)
         _left, _right, _ = tn.split_node(contracted_two_nodes,
                                          left_edges=_left_edges,
                                          right_edges=_right_edges,
