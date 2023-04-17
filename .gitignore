@@ -162,3 +162,6 @@ cython_debug/
 # DataSpell
 .DS_Store
 .idea/
+
+# test4codes ipynb
+main.ipynb
