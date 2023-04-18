@@ -9,16 +9,16 @@
 Project is based on TensorNetwork, a mathematical technique that could do truncation to speed
 up the calculation with limited error, which is introduced by SVD.
 
-Package we used is TensorNetwork, which is a python package for tensor network calculations
+Package I used is TensorNetwork, which is a python package for tensornetwork calculations
 from [google](https://github.com/google/TensorNetwork). This package gets multiple backends
 like Jax, Pytorch, Tensorflow, Numpy, etc. However, this package is in alpha version, and 
-stopped updating since 2021. We adopt backend as pytorch with setting,
+stopped updating since 2021. I adopt backend as pytorch with setting,
     ```
     tensornetwork.set_default_backend("pytorch")    
     ```
 
-Problem may raise when using this package, and I have to fix it by myself. I use this package
-because of its simplicity and easy to use (actually this is the first package I know from NEW
+Problem may raise when using this package, some fixes are involve by me. I use this package
+because of its simplicity and easy to read (actually this is the first package I know from NEW
 Bing, and I just don't want to learn others, I am not good at coding). Problems like,
 
 1. Axis_names and edge_names are not consistent, which may cause bugs like in SVD (Interestingly
@@ -65,6 +65,8 @@ general high-rank situation in current model of quantum computing.
 <img src="./fig_md/qubit_axis.png" width="320" />
 </p>
 
+Noticed that the indices name is explicit with number of qubit, for 1st qubit, it has name in pic.
+
 
 ### Quantum Gate
 Quantum Gates are generally defined as a matrix, but in tensornetwork it is treated as tensor,
@@ -103,7 +105,7 @@ of a quantum circuit, it gives a probability distribution but not a series of no
 exponential disaster appear when people are trying to contract all the operated nodes together.
 Tensornetwork provide a series of contraction algorithms like DMRG, whose main idea is utilizing
 SVD function's truncation to speed up the calculation. Therefore, the implementation of adding 
-quantum gates here, we take strategy below to limit the dimension of bond between entangled 
+quantum gates here, I take strategy below to limit the dimension of bond between entangled 
 qubits.
 1. Do a local optimal approximation on inner indices by SVD, which is (this part is introduced
 by quantum noise, and I'll show it later).
@@ -180,10 +182,12 @@ construct a quantum circuit with my garbage code here;
 		tools.add_gate_truncate(qubits, Gates.cnot(), [i, i + 1])
 
 ## Add single-qubit Noise
-    # Currently, only single-qubit noise is supported, and its form is MPDO
-    # Temporarily cannot be used directly for contraction with the contract_mps function.
-    # which means that the nodes cannot be contracted, plz jump this step when you want to
-    # calculate the circuit contraction result.
+    """
+     Currently, only single-qubit noise is supported, and its form is MPDO after applied to qubit.
+     Temporarily cannot be used directly for contraction with the contract_mps function.
+     which means that the nodes cannot be contracted, plz jump this step when you want to
+     calculate the circuit contraction result.
+    """
     # Add noise for single qubit
     noise_channel.apply_noise_channel(qubits, [0], _noise_type='depolarization', _p=1e-2)
     noise_channel.apply_noise_channel(qubits, [0],
