@@ -108,18 +108,18 @@ qubits.
 1. Do a local optimal approximation on inner indices by SVD, which is (this part is introduced
 by quantum noise, and I'll show it later).
 ```math
-    T_{l_k,r_k}^{s_k,a_k} = \sum_\mu U^{s_k,\mu}_{l_k, r_k} S_\muV_{\mu,a_k}
+    T_{l_k, r_k}^{s_k, a_k} = \sum_\mu U^{s_k, \mu}_{l_k, r_k} S_\mu V_{\mu, a_k}
 ```
 Keep $\kappa$ largest singular values $S_\mu$ after a layer of noise.
 2. Apply QR-decomposition on each Tensor from left to right (which forms a canonical form of MPO),
 ```math
-    T_{l_k,r_k}^{s_k,a_k} = \sum_\mu Q^{s_k, a_k}_{l_k,\mu} R_{\mu, r_k}
+    T_{l_k, r_k}^{s_k, a_k} = \sum_\mu Q^{s_k, a_k}_{l_k,\mu} R_{\mu, r_k}
 ```
 Except the rightest tensor, all other tensors got left-orthogonalized.
 3. Apply SVD from right to left to truncate each of the bond indices,
 ```math
-    \sum_{l_{k+1}} T_{l_k,l_{k+1}}^{s_k,a_k} T_{l_{k+1},r_{k+1}}^{s_{k+1},a_{k+1}}\approx 
-    \sum_{\mu=1}^{\chi} U^{s_k,a_k}_{l_k, \mu} S_\muV_{\mu,r_{k+1}}^{s_{k+1},a_{k+1}}
+    \sum_{l_{k+1}} T_{l_k, l_{k+1}}^{s_k, a_k} T_{l_{k+1}, r_{k+1}}^{s_{k+1}, a_{k+1}}\approx 
+    \sum_{\mu=1}^{\chi} U^{s_k, a_k}_{l_k, \mu} S_\muV_{\mu, r_{k+1}}^{s_{k+1}, a_{k+1}}
 ```
 
 <span style="color:blue">
