@@ -108,7 +108,7 @@ qubits.
 1. Do a local optimal approximation on inner indices by SVD, which is (this part is introduced
 by quantum noise, and I'll show it later).
 ```math
-    T_{l_k,r_k}^{s_k,a_k} = \sum_\muU^{s_k,\mu}_{l_k, r_k}S_\muV_{\mu,a_k}
+    T_{l_k,r_k}^{s_k,a_k} = \sum_\mu U^{s_k,\mu}_{l_k, r_k} S_\muV_{\mu,a_k}
 ```
 Keep $\kappa$ largest singular values $S_\mu$ after a layer of noise.
 2. Apply QR-decomposition on each Tensor from left to right (which forms a canonical form of MPO),
@@ -118,8 +118,8 @@ Keep $\kappa$ largest singular values $S_\mu$ after a layer of noise.
 Except the rightest tensor, all other tensors got left-orthogonalized.
 3. Apply SVD from right to left to truncate each of the bond indices,
 ```math
-    \sum_{l_{k+1}}T_{l_k,l_{k+1}}^{s_k,a_k}T_{l_{k+1},r_{k+1}}^{s_{k+1},a_{k+1}}\approx 
-    \sum_{\mu=1}^{\chi}U^{s_k,a_k}_{l_k, \mu}S_\muV_{\mu,r_{k+1}}^{s_{k+1},a_{k+1}}
+    \sum_{l_{k+1}} T_{l_k,l_{k+1}}^{s_k,a_k} T_{l_{k+1},r_{k+1}}^{s_{k+1},a_{k+1}}\approx 
+    \sum_{\mu=1}^{\chi} U^{s_k,a_k}_{l_k, \mu} S_\muV_{\mu,r_{k+1}}^{s_{k+1},a_{k+1}}
 ```
 
 <span style="color:blue">
@@ -160,7 +160,6 @@ construct a quantum circuit with my garbage code here;
 
 ## Initialize the Qubits
 
----
     from basic_gates import TensorGate
     import tools
     import tensornetwork as tn
@@ -174,7 +173,6 @@ construct a quantum circuit with my garbage code here;
 
 ## Add Gates
 
----
     # Apply hardamard gate
     tools.add_gate_truncate(qubits, Gates.h(), [0])
     # Apply cnot gate
@@ -183,7 +181,6 @@ construct a quantum circuit with my garbage code here;
 
 ## Add single-qubit Noise
 
----
     # Add noise for single qubit
     noise_channel.apply_noise_channel(qubits, [0], _noise_type='depolarization', _p=1e-2)
     noise_channel.apply_noise_channel(qubits, [0],
@@ -192,14 +189,12 @@ construct a quantum circuit with my garbage code here;
 
 ## Optimization
 
----
     # Optimization
     algorithm.qr_left2right(qubits)
     algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number
 
 ## Calculate the circuit/Contract Nodes
 
----
     result = tools.contract_mps(qubits) # this calls the contraction function with a greedy algorithm
     result = torch.reshape(result.tensor, (2 ** qnumber, 1))
     print(result)
