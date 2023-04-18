@@ -12,7 +12,7 @@ up the calculation with limited error, which is introduced by SVD.
 Package I used is TensorNetwork, which is a python package for tensornetwork calculations
 from [google](https://github.com/google/TensorNetwork). This package gets multiple backends
 like Jax, Pytorch, Tensorflow, Numpy, etc. However, this package is in alpha version, and 
-stopped updating since 2021. I adopt backend as pytorch with setting,
+stopped updating since 2021. I adopt backend as pytorch with setting 
     ```
     tensornetwork.set_default_backend("pytorch")
     ```
