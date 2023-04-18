@@ -84,7 +84,7 @@ it's easy to be generalized to many-qubit gates.
 </p>
 
 Currently, I provided basic gates as: ['X', 'Y', 'Z', 'H', 'S', 'T', 'RX', 'RY', 'RZ', 'U1', 'U2',
-'U3', 'u', 'CNOT', 'CZ', 'SWAP', 'RZZ']. Their tensor form is formed with function 
+'U3', 'U', 'CNOT', 'CZ', 'SWAP', 'RZZ']. Their tensor form is formed with function 
 **torch.reshape()**, except CNOT, which tensor is derived from its truth table.
 
 ## Physics Implementation
@@ -180,7 +180,10 @@ construct a quantum circuit with my garbage code here;
 		tools.add_gate_truncate(qubits, Gates.cnot(), [i, i + 1])
 
 ## Add single-qubit Noise
-
+    # Currently, only single-qubit noise is supported, and its form is MPDO
+    # Temporarily cannot be used directly for contraction with the contract_mps function.
+    # which means that the nodes cannot be contracted, plz jump this step when you want to
+    # calculate the circuit contraction result.
     # Add noise for single qubit
     noise_channel.apply_noise_channel(qubits, [0], _noise_type='depolarization', _p=1e-2)
     noise_channel.apply_noise_channel(qubits, [0],
