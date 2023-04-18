@@ -8,7 +8,7 @@ from tools import sort_edges4dep, EdgeName2AxisName, rename_edgeAxis
 import copy
 
 def qr_left2right_old(_qubits: list):
-    """
+    r"""
     QR decomposition from left to right, old version, may cause DecompositionError.
 
     Args:
@@ -47,11 +47,15 @@ def qr_left2right_old(_qubits: list):
         EdgeName2AxisName([_qubits[ii], _qubits[ii + 1]])
 
 def svd_right2left_old(_qubits, chi: int = None):
-    """
+    r"""
     SVD decomposition from right to left.
-    :param _qubits: List of qubits (as nodes);
-    :param chi: Maximum bond dimension to be saved in SVD;
-    :return: Nodes after SVD decomposition.
+
+    Args:
+        _qubits: List of qubits, which is a list of nodes.
+        chi: The maximum bond dimension of the MPS.
+
+    Returns:
+        Nodes after SVD decomposition, on progress.
     """
     if chi is None:
         # A number who is big enough to keep all the information
@@ -88,7 +92,7 @@ def svd_right2left_old(_qubits, chi: int = None):
     _qubits[0], _qubits[1] = _left, _right
 
 def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
-    """
+    r"""
     QR decomposition from left to right.
 
     Args:
@@ -121,11 +125,13 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
         EdgeName2AxisName([_qubits[_i], _qubits[_i + 1]])
 
 def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], _chi: int = None):
-    """
+    r"""
     SVD from right to left
+
     Args:
         _qubits: list of nodes;
         _chi: bond dimension.
+
     Returns:
         _qubits: list of nodes.
     """
@@ -155,8 +161,6 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], _chi: int = 
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([contracted_two_nodes])
         # SVD
-        print('---------')
-        print(contracted_two_nodes.axis_names)
         _left, _right, _ = tn.split_node(contracted_two_nodes,
                                          left_edges=_left_edges,
                                          right_edges=_right_edges,

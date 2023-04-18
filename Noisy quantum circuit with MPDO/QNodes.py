@@ -7,11 +7,12 @@ from basic_gates import *
 import tools
 import tensornetwork as tn
 import algorithm
+import noise_channel
 
 tn.set_default_backend("pytorch")
 
 def ghzLike_edges(_qnumber):
-	"""
+	r"""
 	ghzLike state preparation with edges.
 
 	Args:
@@ -35,7 +36,7 @@ def ghzLike_edges(_qnumber):
 	return all_nodes, _qubits
 
 def ghzLike_nodes(_qnumber, _chi: int = None):
-	"""
+	r"""
 	ghzLike state preparation with nodes.
 
 	Args:
@@ -58,8 +59,8 @@ def ghzLike_nodes(_qnumber, _chi: int = None):
 	return _qubits
 
 def scalable_simulation_scheme2(_theta: float, _chi: float = None):
-	"""
-
+	r"""
+	Scalable simulation scheme 2.
 	Args:
 		_theta: The angle of rotation;
 		_chi: Maximum bond dimension to be saved in SVD.
@@ -98,7 +99,7 @@ def scalable_simulation_scheme2(_theta: float, _chi: float = None):
 	return _qubits
 
 def used4test(_chi=None):
-	"""
+	r"""
 	Generate a random circuit to test whether the program is correct and the function of add_gate, compare with qutip
 		simulation, the result is the same, which implies that the program is correct.
 
@@ -133,6 +134,8 @@ def used4test(_chi=None):
 	# layer1
 	tools.add_gate_truncate(_qubits, Gates.h(), [0, 2])
 	tools.add_gate_truncate(_qubits, Gates.x(), [1])
+	noise_channel.apply_noise_channel(_qubits, [0, 1, 2], _noise_type='depolarization', _p=11e-4)
+
 	# layer2
 	tools.add_gate_truncate(_qubits, Gates.cnot(), [0, 1])
 	tools.add_gate_truncate(_qubits, Gates.cnot(), [2, 3])

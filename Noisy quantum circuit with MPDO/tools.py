@@ -17,7 +17,7 @@ def leftORight(_op_index_: list, _bond_idx: str):
         return 'right'
 
 def rename_edgeAxis(_node, _oqs: list[int]):
-    """
+    r"""
     Rename the edge axis of a node after a double-qubit gate was applied
         Convert the index name of a tensor to 'physics_{}'.format{qnumber} if it is like 'physics_{}'.format(int).
     Args:
@@ -27,10 +27,15 @@ def rename_edgeAxis(_node, _oqs: list[int]):
         _node: the node after the edge axis was renamed.
     """
     def reNum_FromPhysics(_name: list or [str], __oq) -> list[str]:
-        """
-        :param __oq: int
-        :param _name: list of str
-        :return: list of str
+        r"""
+        Rename the edge axis of a node after a double-qubit gate was applied
+
+        Args:
+            _name: the name of the edge axis;
+            __oq: operating_qubit, the qubit that the gate was applied.
+
+        Returns:
+            _name: the name of the edge axis after rename.
         """
         def has_s_int(string):
             # detect form 's_num'
@@ -53,7 +58,7 @@ def rename_edgeAxis(_node, _oqs: list[int]):
     return _node
 
 def cluster_name4svd(_op_index: list, *args):
-    """
+    r"""
     Cluster the edges of a node according to the operator index.
 
     Args:
@@ -104,7 +109,7 @@ def cluster_name4svd(_op_index: list, *args):
     return _left_, _right_
 
 def qr_cluster(_axis_names: list, _op_idx: list[int]):
-    """
+    r"""
     Cluster the edges of a node according to the operator index in qr method.
 
     Args:
@@ -155,7 +160,7 @@ def sort_edges4dep(_node: tn.Node,
                    _right_AxisName: list[str] = None,
                    _op_idx: list = None,
                    _purpose: str = 'svd'):
-    """
+    r"""
     Sort the bond and physics edges of a node after svd.
 
     Args:
@@ -164,9 +169,13 @@ def sort_edges4dep(_node: tn.Node,
         _right_AxisName: the right edges of the node before svd
         _op_idx: the index of the operator in the node
         _purpose: the purpose of the sorting, 'svd' or 'qr'
+
     Returns:
         _left: the left edges of the node after svd
         _right: the right edges of the node after svd
+
+    Attention:
+        Some parts of program stop calling the method.
     """
     if _left_AxisName is None and _right_AxisName is None and _op_idx is None:
         raise ValueError('There is no information about the edges of the node.')
@@ -185,16 +194,20 @@ def sort_edges4dep(_node: tn.Node,
         _right = [_node[name] for name in _right]
         return _left, _right
 
-def is_nested(lst: list) -> bool:
-    """
+def is_nested(_lst: list) -> bool:
+    r"""
     Check if a list is nested
-    :param lst: list to be checked;
-    :return: return True if the list is nested, otherwise return False
+
+    Args:
+        _lst: the list to be checked
+
+    Returns:
+        True if the list is nested, False otherwise
     """
-    return any(isinstance(i, list) for i in lst)
+    return any(isinstance(_i, list) for _i in _lst)
 
 def get_spilt(_node, _oqs: list[int], _left_AxisName: list[str] = None, _right_AxisName: list[str] = None):
-    """
+    r"""
     Split node while a double-qubit gate was applied
 
     Args:
@@ -222,14 +235,22 @@ def get_spilt(_node, _oqs: list[int], _left_AxisName: list[str] = None, _right_A
     return _left, _right, _
 
 def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
-    """
-    In tensornetwork package, axis_name is not equal to _name_of_edge_. While calculating, to ensure that
-            we are using right order of axis_names, we need to set axis_names of _gate according to its edges' name.
+    r"""
+    ProcessFunction -->
+        In tensornetwork package, axis_name is not equal to _name_of_edge_. While calculating, to ensure that
+                we are using right order of axis_names, we need to set axis_names of _gate according to its edges' name.
+
     Args:
         _nodes: the node to be set axis_names.
+
+    Returns:
+        None, but the axis_names of _nodes will be set in memory.
     """
     if not isinstance(_nodes, list):
+        if not isinstance(_nodes, tn.Node) and not isinstance(_nodes, tn.AbstractNode):
+            raise ValueError('The input should be a list of nodes.')
         _nodes = [_nodes]
+
     for _node in _nodes:
         _axis_names = []
         for _edge in [_node[i] for i in range(_node.get_rank())]:
@@ -240,37 +261,86 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
         _node.axis_names = _axis_names
 
 def ket0():
-    """
-    :return: Return the state |0>
+    r"""
+    Return: Return the state |0>
     """
     return tc.tensor([1. + 0.j, 0. + 0.j], dtype=tc.complex128)
 
 def ket1():
-    """
-    :return: Return the state |1>
+    r"""
+    Return: Return the state |1>
     """
     return tc.tensor([0. + 0.j, 1. + 0.j], dtype=tc.complex128)
 
+def ket_hadamard():
+    r"""
+    Return: Return the state |+>
+    """
+    return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=tc.complex128)
+
 def create_ket0Series(_number: int) -> list:
+    r"""
+    create initial qubits
+
+    Args:
+        _number: the number of qubits.
+
+    Returns:
+        _mps: the initial mps with the state |0> * _number
     """
-    create initial mpo
-    :param _number: the number of qubits.
-    :return:
-    """
+
     _mps = [
-        tn.Node(ket0(), name='qubit_{}'.format(_ii), axis_names=['physics_{}'.format(_ii)]) for _ii in range(_number)
+        tn.Node(ket0(), name='qubit_{}'.format(_ii),
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(_number)
+    ]
+    # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
+    return _mps
+
+def create_ket1Series(_number: int) -> list:
+    r"""
+    create initial qubits
+
+    Args:
+        _number: the number of qubits.
+
+    Returns:
+        _mps: the initial mps with the state |1> * _number
+    """
+
+    _mps = [
+        tn.Node(ket1(), name='qubit_{}'.format(_ii),
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(_number)
+    ]
+    # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
+    return _mps
+
+def create_ket_hadamardSeries(_number: int) -> list:
+    r"""
+    create initial qubits
+
+    Args:
+        _number: the number of qubits.
+
+    Returns:
+        _mps: the initial mps with the state |+> * _number
+    """
+
+    _mps = [
+        tn.Node(ket_hadamard(), name='qubit_{}'.format(_ii),
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(_number)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
 def add_gate(qubit_edges, gate, operating_qubits: list):
-    """
+    r"""
     Add quantum Gate to tensor network
 
     Args:
         qubit_edges: the edges of qubits;
         gate: the gate to be added;
         operating_qubits: the qubits that the gate was applied.
+
     Returns:
         qubit_edges: the edges of qubits after the gate was added.
     """
@@ -290,12 +360,14 @@ def add_gate(qubit_edges, gate, operating_qubits: list):
             qubit_edges[bit] = _gate_list[i][1]
 
 def add_gate_truncate(_qubits: list, _gate: TensorGate, _oqs: list):
-    """
+    r"""
     Add quantum Gate to tensornetwork
+
     Args:
         _qubits: qubits;
         _gate: gate to be added;
         _oqs: operating qubits.
+
     Returns:
         _qubits: tensornetwork after adding gate.
     """
@@ -363,7 +435,7 @@ def add_gate_truncate(_qubits: list, _gate: TensorGate, _oqs: list):
 
 
 def contract_mps(_qubits):
-    """
+    r"""
     Contract all qubits to a single node.
 
     Args:
@@ -376,13 +448,17 @@ def contract_mps(_qubits):
         op = tn.contract_between(op, _qubits[i], allow_outer_product=True)
     return op
 
-def plot_nodes(nodes):
-    """
+def plot_nodes(_nodes):
+    r"""
     Plot tensor network nodes.
-    :param nodes: tensor network nodes;
-    :return:
+
+    Args:
+        _nodes: nodes to be plotted.
+
+    Returns:
+        None
     """
     raise NotImplementedError('Plotting is not supported yet.')
     # for node in nodes:
-    #     print(node)
-    #     print(to_graphviz(node))
+    #     print(_node)
+    #     print(to_graphviz(_node))
