@@ -14,7 +14,7 @@ from [google](https://github.com/google/TensorNetwork). This package gets multip
 like Jax, Pytorch, Tensorflow, Numpy, etc. However, this package is in alpha version, and 
 stopped updating since 2021. I adopt backend as pytorch with setting,
     ```
-    tensornetwork.set_default_backend("pytorch")    
+    tensornetwork.set_default_backend("pytorch")
     ```
 
 Problem may raise when using this package, some fixes are involve by me. I use this package
