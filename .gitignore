@@ -167,4 +167,4 @@ cython_debug/
 main.ipynb
 
 #
-.pptx
+*.pptx
