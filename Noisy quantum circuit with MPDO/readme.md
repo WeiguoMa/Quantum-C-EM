@@ -161,48 +161,49 @@ construct a quantum circuit with my garbage code here;
 [Basic API Tutorial](https://colab.research.google.com/drive/1Fp9DolkPT-P_Dkg_s9PLbTOKSq64EVSu)
 
 ## Initialize the Qubits
+```python
+from basic_gates import TensorGate
+import tools
+import tensornetwork as tn
+import algorithm
+import noise_channel
 
-    from basic_gates import TensorGate
-    import tools
-    import tensornetwork as tn
-    import algorithm
-    import noise_channel
-    
-    Gates = TensorGate()
-    qnumber = 3
-    # create a series of qubits in state |0>
-    qubits = tools.create_ket0series(qnumber)
-
+Gates = TensorGate()
+qnumber = 3
+# create a series of qubits in state |0>
+qubits = tools.create_ket0series(qnumber)
+```
 ## Add Gates
-
-    # Apply hardamard gate
-    tools.add_gate_truncate(qubits, Gates.h(), [0])
-    # Apply cnot gate
-    for i in range(qnumber - 1):
-		tools.add_gate_truncate(qubits, Gates.cnot(), [i, i + 1])
-
+```python
+# Apply hardamard gate
+tools.add_gate_truncate(qubits, Gates.h(), [0])
+# Apply cnot gate
+for i in range(qnumber - 1):
+	tools.add_gate_truncate(qubits, Gates.cnot(), [i, i + 1])
+```
 ## Add single-qubit Noise
-    """
-     Currently, only single-qubit noise is supported, and its form is MPDO after applied to qubit.
-     Temporarily cannot be used directly for contraction with the contract_mps function.
-     which means that the nodes cannot be contracted, plz jump this step when you want to
-     calculate the circuit contraction result.
-    """
-    # Add noise for single qubit
-    noise_channel.apply_noise_channel(qubits, [0], _noise_type='depolarization', _p=1e-2)
-    noise_channel.apply_noise_channel(qubits, [0],
-                                            _noise_type='amplitude_phase_damping_error',
-                                            _time=30, _T1=2e2, _T2=2e1)
-
+```python
+"""
+Currently, only single-qubit noise is supported, and its form is MPDO after applied to qubit.
+Temporarily cannot be used directly for contraction with the contract_mps function.
+which means that the nodes cannot be contracted, plz jump this step when you want to
+calculate the circuit contraction result.
+"""
+# Add noise for single qubit
+noise_channel.apply_noise_channel(qubits, [0], _noise_type='depolarization', _p=1e-2)
+noise_channel.apply_noise_channel(qubits, [0],
+				    _noise_type='amplitude_phase_damping_error',
+				    _time=30, _T1=2e2, _T2=2e1)
+```
 ## Optimization
-
-    # Optimization
-    algorithm.qr_left2right(qubits)
-    algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number
-
+```python
+# Optimization
+algorithm.qr_left2right(qubits)
+algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number
+```
 ## Calculate the circuit/Contract Nodes
-
-    result = tools.contract_mps(qubits) # this calls the contraction function with a greedy algorithm
-    result = torch.reshape(result.tensor, (2 ** qnumber, 1))
-    print(result)
-
+```python
+result = tools.contract_mps(qubits) # this calls the contraction function with a greedy algorithm
+result = torch.reshape(result.tensor, (2 ** qnumber, 1))
+print(result)
+```
