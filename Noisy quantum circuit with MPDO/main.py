@@ -19,17 +19,19 @@ import noise_channel
 
 tn.set_default_backend("pytorch")
 
-qnumber = 4
-# # qubits = QNodes.ghzLike_nodes(qnumber)
-# et = time.time()
-#
-qubits = QNodes.used4test()
+qnumber = 2
+qubits = QNodes.ghzLike_nodes(qnumber, _noise=True)
+# qubits = QNodes.used4test()
 
-result = tools.contract_mps(qubits)
+result = tools.contract_mps(qubits).tensor.flatten()
 
-print(tc.reshape(result.tensor, (2 ** qnumber, 1)))
-print(2 ** qnumber)
-# Contract in different chi, like chi = [1, 2, None], which spends different time as [13.757s, 21.24s, 27.86s]
+# idx_list = []
+# for i, value in enumerate(result):
+# 	if tc.abs(value) > 1e-5:
+# 		idx_list.append(i)
+# print('---------- split line in main.py ----------')
+# print(idx_list)
+
 
 
 # # Test NOISY CHANNEL

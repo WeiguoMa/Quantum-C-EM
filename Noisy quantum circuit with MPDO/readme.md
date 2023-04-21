@@ -207,3 +207,5 @@ result = tools.contract_mps(qubits) # this calls the contraction function with a
 result = torch.reshape(result.tensor, (2 ** qnumber, 1))
 print(result)
 ```
+
+# Problems may be encountered

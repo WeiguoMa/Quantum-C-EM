@@ -16,6 +16,14 @@ class TensorGate(object):
         self.axis_name = None
         self.dtype = tc.complex128
 
+    def i(self):
+        self.name = 'I'
+        self.tensor = tc.tensor([[1, 0], [0, 1]], dtype=self.dtype)
+        self.rank = 2
+        self.dimension = 2
+        self.single = True
+        return self
+
     def cnot(self):
         self.name = 'CNOT'
         self.tensor = tc.zeros((2, 2, 2, 2), dtype=self.dtype)  # rank-4 tensor
@@ -27,7 +35,6 @@ class TensorGate(object):
         self.rank = 4
         self.dimension = 2
         self.single = False
-        self.axis_name = ['inner_0', 'inner_1', 'physics_0', 'physics_1']
         return self
 
     def x(self):
@@ -36,7 +43,6 @@ class TensorGate(object):
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def y(self):
@@ -45,7 +51,6 @@ class TensorGate(object):
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def z(self):
@@ -54,7 +59,6 @@ class TensorGate(object):
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def s(self):
@@ -63,7 +67,6 @@ class TensorGate(object):
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def t(self):
@@ -72,7 +75,6 @@ class TensorGate(object):
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def h(self):
@@ -81,81 +83,73 @@ class TensorGate(object):
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def rx(self, theta):
         self.name = 'RX'
         self.tensor = tc.tensor(
-            [[np.cos(theta / 2), -1j * np.sin(theta / 2)],
-                                 [-1j * np.sin(theta / 2), np.cos(theta / 2)]]
+            [[tc.cos(theta / 2), -1j * tc.sin(theta / 2)],
+                                 [-1j * tc.sin(theta / 2), tc.cos(theta / 2)]]
             , dtype=self.dtype
         )
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def ry(self, theta):
         self.name = 'RY'
-        self.tensor = tc.tensor([[np.cos(theta / 2), -np.sin(theta / 2)],
-                                 [np.sin(theta / 2), np.cos(theta / 2)]], dtype=self.dtype)
+        self.tensor = tc.tensor([[tc.cos(theta / 2), -tc.sin(theta / 2)],
+                                 [tc.sin(theta / 2), tc.cos(theta / 2)]], dtype=self.dtype)
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def rz(self, theta):
         self.name = 'RZ'
-        self.tensor = tc.tensor([[np.exp(-1j * theta / 2), 0],
-                                 [0, np.exp(1j * theta / 2)]], dtype=self.dtype)
+        self.tensor = tc.tensor([[tc.exp(-1j * theta / 2), 0],
+                                 [0, tc.exp(1j * theta / 2)]], dtype=self.dtype)
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def u1(self, theta):
         self.name = 'U1'
-        self.tensor = tc.tensor([[1, 0], [0, np.exp(1j * theta)]], dtype=self.dtype)
+        self.tensor = tc.tensor([[1, 0], [0, tc.exp(1j * theta)]], dtype=self.dtype)
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def u2(self, phi, lam):
         self.name = 'U2'
-        self.tensor = tc.tensor([[1, -np.exp(1j * lam)],
-                                 [np.exp(1j * phi), np.exp(1j * (phi + lam))]]) / np.sqrt(2)
+        self.tensor = tc.tensor([[1, -tc.exp(1j * lam)],
+                                 [tc.exp(1j * phi), tc.exp(1j * (phi + lam))]]) / np.sqrt(2)
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def u3(self, theta, phi, lam):
         self.name = 'U3'
-        self.tensor = tc.tensor([[np.cos(theta / 2), -np.exp(1j * lam) * np.sin(theta / 2)],
-                                 [np.exp(1j * phi) * np.sin(theta / 2),
-                                  np.exp(1j * (phi + lam)) * np.cos(theta / 2)]])
+        self.tensor = tc.tensor([[tc.cos(theta / 2), -tc.exp(1j * lam) * tc.sin(theta / 2)],
+                                 [tc.exp(1j * phi) * tc.sin(theta / 2),
+                                  tc.exp(1j * (phi + lam)) * tc.cos(theta / 2)]])
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def u(self, theta, phi, lam, gamma):
         self.name = 'U'
-        self.tensor = tc.tensor([[np.cos(theta / 2), -np.exp(1j * (lam + gamma)) * np.sin(theta / 2)],
-                                 [np.exp(1j * (phi + gamma)) * np.sin(theta / 2),
-                                  np.exp(1j * (phi + lam + gamma)) * np.cos(theta / 2)]])
+        self.tensor = tc.tensor([[tc.cos(theta / 2), -tc.exp(1j * (lam + gamma)) * tc.sin(theta / 2)],
+                                 [tc.exp(1j * (phi + gamma)) * tc.sin(theta / 2),
+                                  tc.exp(1j * (phi + lam + gamma)) * tc.cos(theta / 2)]])
         self.rank = 2
         self.dimension = 2
         self.single = True
-        self.axis_name = ['inner', 'physics']
         return self
 
     def cz(self):
@@ -167,7 +161,6 @@ class TensorGate(object):
         self.rank = 4
         self.dimension = 2
         self.single = False
-        self.axis_name = ['inner_0', 'inner_1', 'physics_0', 'physics_1']
         return self
 
     def swap(self):
@@ -179,21 +172,19 @@ class TensorGate(object):
         self.rank = 4
         self.dimension = 2
         self.single = False
-        self.axis_name = ['inner_0', 'inner_1', 'physics_0', 'physics_1']
         return self
 
     def rzz(self, _theta):
         self.name = 'RZZ'
         self.tensor = tc.tensor(
             [
-                [np.exp(-1j * _theta), 0, 0, 0],
-                [0, np.exp(1j * _theta), 0, 0],
-                [0, 0, np.exp(1j * _theta), 0],
-                [0, 0, 0, np.exp(-1j * _theta)],
+                [tc.exp(-1j * _theta), 0, 0, 0],
+                [0, tc.exp(1j * _theta), 0, 0],
+                [0, 0, tc.exp(1j * _theta), 0],
+                [0, 0, 0, tc.exp(-1j * _theta)],
             ], dtype=self.dtype
         ).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = 2
         self.single = False
-        self.axis_name = ['inner_0', 'inner_1', 'physics_0', 'physics_1']
         return self

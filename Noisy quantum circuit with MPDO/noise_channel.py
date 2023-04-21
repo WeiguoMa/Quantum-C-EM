@@ -56,7 +56,7 @@ def move_index(_str: str, _idx1: int, _idx2: int):
     return ''.join(_str)
 
 
-def depolarization_noise_channel(_p: float):
+def depolarization_noise_channel(_p: float) -> tc.Tensor:
     r"""
     The depolarization noise channel.
 
@@ -90,7 +90,7 @@ def depolarization_noise_channel(_p: float):
     return _dpc_tensor
 
 
-def amp_phase_damping_error(_time: float, _T1: float, _T2: float):
+def amp_phase_damping_error(_time: float, _T1: float, _T2: float) -> tc.Tensor:
     r"""
     The amplitude-phase damping error.
 
@@ -191,9 +191,6 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
         else:
             raise NotImplementedError(f'Noise type {_noise_type_} is not implemented yet.')
 
-    def _multiply_list(_lst_: list[int]):
-        return reduce(lambda _x, _y: _x * _y, _lst_)
-
     def _hard_fix_axis_format(_node_: tn.Node or tn.AbstractNode, _oq_: int):
         _names = _node_.axis_names
         if _names == [f'bond_{_oq_ - 1}_{_oq_}', f'physics_{_oq_}', f'bond_{_oq_}_{_oq_ + 1}', f'I_{_oq_}']:
@@ -210,6 +207,9 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
                 + f' Current names: {_names}')
 
     def _find_duplicate(_lst_):
+        """
+        Find the duplicate items and their indices in a list.
+        """
         _duplicate_item_ = [item for item, count in collections.Counter(_lst_).items() if count > 1]
         _duplicate_idx_ = [idx for idx, item in enumerate(_lst_) if item in _duplicate_item_]
         return _duplicate_item_, _duplicate_idx_
@@ -237,12 +237,14 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
         # copy.deepcopy is necessary to avoid the error of node reuse.
         _noise_nodeList.append(copy.deepcopy(_noise_node))
 
-    # Operating the depolarization channel to qubits
+    # Operating the noise channel to qubits
     for _ii, _qnum in enumerate(_oqs):
         _edge = tn.connect(_qubits[_qnum]['physics_{}'.format(_qnum)], _noise_nodeList[_ii]['inner'])
         _qubits[_qnum] = tn.contract(_edge, name='qubit_{}'.format(_qnum))
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([_qubits[_qnum]])   # Tensor append a new rank call 'I_{}'.format(_qnum) here.
+        raise NotImplementedError('When double/multi errors are applied to a same qubit, problem occurs.'
+                                  'The reason is that the node connection broken while the node is working.')
 
         _dup_item, _dup_idx = _find_duplicate(_qubits[_qnum].axis_names)
         if _dup_item:
@@ -262,22 +264,21 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
             _axis_names.pop(_dup_idx[0])
             _qubits[_qnum] = tn.Node(_reshaped_tensor,
                                    name='qubit_{}'.format(_qnum),
-                                   axis_names=_axis_names)
+                                   axis_names=_axis_names)  # Node's edge's, named 'I_{}', dimension has been promoted.
 
-        _hard_fix_idx = _hard_fix_axis_format(_qubits[_qnum], _qnum)
+        # _hard_fix_idx = _hard_fix_axis_format(_qubits[_qnum], _qnum)
 
         # Shape-relating
         _shape = _qubits[_qnum].tensor.shape
-        _left_dim = _multiply_list([_shape[_ii_] for _ii_ in range(len(_shape) - 1)])
-
+        _left_edge_shape = [_shape[_ii_] for _ii_ in range(len(_shape) - 1)]
+        _left_dim = np.prod(_left_edge_shape)
         # SVD to truncate the inner dimension
-        _node_tensor = _qubits[_qnum].tensor.reshape((_left_dim, _shape[-1]))
-        _u, _s, _ = tc.linalg.svd(_qubits[_qnum].tensor, full_matrices=False)
+        _u, _s, _ = tc.linalg.svd(tc.reshape(_qubits[_qnum].tensor, (_left_dim, _shape[-1])))
         _s = _s.to(dtype=tc.complex128)
 
-        # Re-reshape and calculate U * S
-        if _shape[0] > _shape[1]:
-            _u = _u.reshape(_shape)
+        if len(_s.shape) == 1:
+            _s = tc.diag(_s)
 
-        _node_tensor = tc.einsum(_hard_fix_idx + ', ik -> ' + _hard_fix_idx.replace('i', 'k'), _u, tc.diag(_s))
-        _qubits[_qnum].tensor = _node_tensor
+        # Back to the former shape
+        _left_edge_shape.append(_s.shape[-1])
+        _qubits[_qnum].tensor = tc.reshape(tc.matmul(_u, _s), _left_edge_shape)
