@@ -40,13 +40,13 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([_qubits[_i], _qubits[_i + 1]])
 
-def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], _chi: int = None):
+def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = None):
     r"""
     SVD from right to left
 
     Args:
         _qubits: list of nodes;
-        _chi: bond dimension.
+        chi: bond dimension.
 
     Returns:
         _qubits: list of nodes.
@@ -54,9 +54,6 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], _chi: int = 
     if not isinstance(_qubits, list):
         raise TypeError('input should be a list of qubits nodes')
 
-    if _chi is None:
-        # A number who is big enough to keep all the information
-        chi = 2 ** len(_qubits)
     for idx in range(len(_qubits) - 1, 0, -1):
         # SVD name cluster
         _left_edges = copy.deepcopy(_qubits[idx - 1].axis_names)
@@ -83,4 +80,5 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], _chi: int = 
                                          left_name=_qubits[idx - 1].name,
                                          right_name=_qubits[idx].name,
                                          edge_name=_connector,
-                                         max_singular_values=_chi)
+                                         max_singular_values=chi)
+        # chi=None means no truncation
