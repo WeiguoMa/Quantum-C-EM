@@ -44,6 +44,7 @@ team, I might consider coding it with CPP with a faster contracting and controll
 be known that ** ITensor does not support its CPP package **.
 </span> 
 
+
 **Attention:**
 1. While you're trying to use spilt_node(svd or qr), be careful about the axis_names, which
 is involved in the calculation of the SVD/QR with left_edges and right_edges, I wrote some
@@ -191,16 +192,16 @@ IMPORTANT: Noisy qubits can only be shown in density matrix form.
     function: contract_mps() is available for noisy qubits, but it's not a simple ket space.
 """
 # Add noise for single qubit
-noise_channel.apply_noise_channel(qubits, [0, 1], _noise_type='depolarization', _p=1e-2)
+noise_channel.apply_noise_channel(qubits, [0, 1], noise_type='depolarization', p=1e-2)
 noise_channel.apply_noise_channel(qubits, [0, 2],
-				    _noise_type='amplitude_phase_damping_error',
-				    _time=30, _T1=2e2, _T2=2e1)
+				    noise_type='amplitude_phase_damping_error',
+				    time=30, T1=2e2, T2=2e1)
 ```
 ## Optimization
 ```python
 # Optimization
 algorithm.qr_left2right(qubits)
-algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number
+algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number, when chi is None, it's not truncated.
 ```
 ## Calculate the circuit/Contract Nodes
 ```python
@@ -209,7 +210,7 @@ result = torch.reshape(result.tensor, (2 ** qnumber, 1))
 print(result)
 ```
 
-## Calculate $| ket \rangle $ space and density matrix $\rho$
+## Calculate Ket-space and Density Matrix $\rho$
 ```python
 """
 flatten() is used to convert the tensor to a vector with Binary array sequence, same function
