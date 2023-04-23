@@ -3,6 +3,7 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
+import copy
 import tensornetwork as tn
 from tensornetwork.visualization.graphviz import to_graphviz
 from basic_gates import TensorGate
@@ -65,12 +66,12 @@ def ket_hadamard():
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=tc.complex128)
 
-def create_ket0Series(_number: int) -> list:
+def create_ket0Series(number: int) -> list:
     r"""
     create initial qubits
 
     Args:
-        _number: the number of qubits.
+        number: the number of qubits.
 
     Returns:
         _mps: the initial mps with the state |0> * _number
@@ -78,17 +79,17 @@ def create_ket0Series(_number: int) -> list:
 
     _mps = [
         tn.Node(ket0(), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(_number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket1Series(_number: int) -> list:
+def create_ket1Series(number: int) -> list:
     r"""
     create initial qubits
 
     Args:
-        _number: the number of qubits.
+        number: the number of qubits.
 
     Returns:
         _mps: the initial mps with the state |1> * _number
@@ -96,17 +97,17 @@ def create_ket1Series(_number: int) -> list:
 
     _mps = [
         tn.Node(ket1(), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(_number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket_hadamardSeries(_number: int) -> list:
+def create_ket_hadamardSeries(number: int) -> list:
     r"""
     create initial qubits
 
     Args:
-        _number: the number of qubits.
+        number: the number of qubits.
 
     Returns:
         _mps: the initial mps with the state |+> * _number
@@ -114,18 +115,18 @@ def create_ket_hadamardSeries(_number: int) -> list:
 
     _mps = [
         tn.Node(ket_hadamard(), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(_number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def add_gate(_qubits: list, _gate: TensorGate, _oqs: list):
+def add_gate(_qubits: list, gate: TensorGate, _oqs: list):
     r"""
     Add quantum Gate to tensornetwork
 
     Args:
         _qubits: qubits;
-        _gate: gate to be added;
+        gate: gate to be added;
         _oqs: operating qubits.
 
     Returns:
@@ -133,12 +134,12 @@ def add_gate(_qubits: list, _gate: TensorGate, _oqs: list):
     """
     if isinstance(_qubits, list) is False:
         raise TypeError('Qubit must be a list.')
-    if isinstance(_gate, TensorGate) is False:
+    if isinstance(gate, TensorGate) is False:
         raise TypeError('Gate must be a TensorGate.')
     if isinstance(_oqs, list) is False:
         raise TypeError('Operating qubits must be a list.')
 
-    single = _gate.single
+    single = gate.single
     if single is False:     # Two-qubit gate
         if len(_oqs) > 2:
             raise NotImplementedError('Only two-qubit gates are supported currently.')
@@ -148,7 +149,7 @@ def add_gate(_qubits: list, _gate: TensorGate, _oqs: list):
             raise NotImplementedError('Series CNOT gates are not supported yet.')
         else:
             _edges = []
-            _gate = tn.Node(_gate.tensor, name=_gate.name,
+            gate = tn.Node(gate.tensor, name=gate.name,
                             axis_names=[f'inner_{_oqs[0]}', f'inner_{_oqs[1]}', f'physics_{_oqs[0]}', f'physics_{_oqs[1]}'])
             # Created a new node in memory
             _contract_qubits = tn.contract_between(_qubits[_oqs[0]], _qubits[_oqs[1]],
@@ -156,32 +157,32 @@ def add_gate(_qubits: list, _gate: TensorGate, _oqs: list):
                                                    allow_outer_product=True)
             EdgeName2AxisName([_contract_qubits])
             for _i, _bit in enumerate(_oqs):
-                _edges.append(tn.connect(_contract_qubits['physics_{}'.format(_bit)], _gate[f'inner_{_bit}']))
+                _edges.append(tn.connect(_contract_qubits['physics_{}'.format(_bit)], gate[f'inner_{_bit}']))
 
             # contract the connected edge and inherit the name of the pre-qubit
-            _gate = tn.contract_between(_contract_qubits, _gate, name=_gate.name)
+            gate = tn.contract_between(_contract_qubits, gate, name=gate.name)
 
             # ProcessFunction, for details, see the function definition.
-            EdgeName2AxisName([_gate])
+            EdgeName2AxisName([gate])
 
             # Split back to two qubits
             _left_AxisName, _right_AxisName = _qubits[_oqs[0]].axis_names, _qubits[_oqs[1]].axis_names
-            _left_edges, _right_edges = [_gate[name] for name in _left_AxisName],\
-                                        [_gate[name] for name in _right_AxisName]
+            _left_edges, _right_edges = [gate[name] for name in _left_AxisName],\
+                                        [gate[name] for name in _right_AxisName]
 
-            _qubits[_oqs[0]], _qubits[_oqs[1]], _ = tn.split_node(_gate,
+            _qubits[_oqs[0]], _qubits[_oqs[1]], _ = tn.split_node(gate,
                                                                   left_edges=_left_edges,
                                                                   right_edges=_right_edges,
                                                                   left_name=f'qubit_{_oqs[0]}',
                                                                   right_name=f'qubit_{_oqs[1]}',
                                                                   edge_name=f'bond_{_oqs[0]}_{_oqs[1]}')
     else:
-        _gate_list = [tn.Node(_gate.tensor, name=_gate.name, axis_names=[f'inner_{_idx}', f'physics_{_idx}'])
+        gate_list = [tn.Node(gate.tensor, name=gate.name, axis_names=[f'inner_{_idx}', f'physics_{_idx}'])
                                                                                                 for _idx in _oqs]
         for _i, _bit in enumerate(_oqs):
-            tn.connect(_qubits[_bit]['physics_{}'.format(_bit)], _gate_list[_i][f'inner_{_bit}'])
+            tn.connect(_qubits[_bit][f'physics_{_bit}'], gate_list[_i][f'inner_{_bit}'])
             # contract the connected edge and inherit the name of the pre-qubit
-            _qubits[_bit] = tn.contract_between(_qubits[_bit], _gate_list[_i], name=_qubits[_bit].name)
+            _qubits[_bit] = tn.contract_between(_qubits[_bit], gate_list[_i], name=_qubits[_bit].name)
             # ProcessFunction, for details, see the function definition.
             EdgeName2AxisName([_qubits[_bit]])
 
@@ -213,3 +214,51 @@ def plot_nodes(_nodes):
     # for node in nodes:
     #     print(_node)
     #     print(to_graphviz(_node))
+
+def calculate_DM(_qubits, noisy: bool = False):
+    r"""
+    Calculate the density matrix of the state.
+
+    Args:
+        _qubits: qubits;
+        noisy: whether the density matrix is noisy.
+
+    Returns:
+        _dm: the density matrix node;
+        _dm_tensor: the density matrix tensor.
+    """
+    def _re_permute(_axis_names_: list[str]):
+        _left_, _right_ = [], []
+        for _idx_, _name_ in enumerate(_axis_names_):
+            if 'con_' not in _name_:
+                _left_.append(_idx_)
+            else:
+                _right_.append(_idx_)
+        return _left_ + _right_
+
+    _qubits_conj = copy.deepcopy(_qubits)
+    _allowed_outer_product = True
+
+    # Differential name the conjugate qubits' edges name to permute the order of the indices
+    for _i, _qubit_conj in enumerate(_qubits_conj):
+        _qubit_conj.name = 'con_' + _qubit_conj.name
+        for _ii in range(len(_qubit_conj.edges)):
+            if 'physics' in _qubit_conj[_ii].name:
+                _qubit_conj[_ii].name = 'con_' + _qubit_conj[_ii].name
+                _qubit_conj.axis_names[_ii] = 'con_' + _qubit_conj.axis_names[_ii]
+
+    _contract_nodes = []
+    for i in range(len(_qubits)):
+        if noisy is True:
+            tn.connect(_qubits[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
+            _allowed_outer_product = False      # Edges between ket-bra are now connected, outer product is not allowed.
+        _contract_nodes.append(tn.contract_between(_qubits[i], _qubits_conj[i], name=f'contracted_qubit_{i}',
+                                                   allow_outer_product=_allowed_outer_product))
+
+    _dm = _contract_nodes[0]
+    for _ii in range(1, len(_contract_nodes)):
+        _dm = tn.contract_between(_dm, _contract_nodes[_ii], allow_outer_product=True)
+    EdgeName2AxisName([_dm])
+
+    _dm.tensor = tc.permute(_dm.tensor, _re_permute(_dm.axis_names))
+    return _dm, _dm.tensor.reshape((2 ** len(_qubits), 2 ** len(_qubits)))

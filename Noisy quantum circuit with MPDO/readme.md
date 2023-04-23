@@ -40,8 +40,10 @@ calculation.
 <span style="color:red">
 For all, author(me) is not familiar with both C++ and TensorNetwork coding, so I choose
 the simplest one as a startup. Once the MPS-MPO-MPDO simulator is necessary for me and my
-team, I might consider coding it with C++ with a faster contracting and controlling.
+team, I might consider coding it with CPP with a faster contracting and controlling. Let it
+be known that ** ITensor does not support its CPP package **.
 </span> 
+
 
 **Attention:**
 1. While you're trying to use spilt_node(svd or qr), be careful about the axis_names, which
@@ -186,28 +188,37 @@ for i in range(qnumber - 1):
 ## Add single-qubit Noise
 ```python
 """
-Currently, only single-qubit noise is supported, and its form is MPDO after applied to qubit.
-Temporarily cannot be used directly for contraction with the contract_mps function.
-which means that the nodes cannot be contracted, plz jump this step when you want to
-calculate the circuit contraction result.
+IMPORTANT: Noisy qubits can only be shown in density matrix form.
+    function: contract_mps() is available for noisy qubits, but it's not a simple ket space.
 """
 # Add noise for single qubit
-noise_channel.apply_noise_channel(qubits, [0], _noise_type='depolarization', _p=1e-2)
-noise_channel.apply_noise_channel(qubits, [0],
-				    _noise_type='amplitude_phase_damping_error',
-				    _time=30, _T1=2e2, _T2=2e1)
+noise_channel.apply_noise_channel(qubits, [0, 1], noise_type='depolarization', p=1e-2)
+noise_channel.apply_noise_channel(qubits, [0, 2],
+				    noise_type='amplitude_phase_damping_error',
+				    time=30, T1=2e2, T2=2e1)
 ```
 ## Optimization
 ```python
 # Optimization
 algorithm.qr_left2right(qubits)
-algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number
+algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number, when chi is None, it's not truncated.
 ```
 ## Calculate the circuit/Contract Nodes
 ```python
 result = tools.contract_mps(qubits) # this calls the contraction function with a greedy algorithm
 result = torch.reshape(result.tensor, (2 ** qnumber, 1))
 print(result)
+```
+
+## Calculate Ket-space and Density Matrix $\rho$
+```python
+"""
+flatten() is used to convert the tensor to a vector with Binary array sequence, same function
+    as .reshape(2**qnumber, 1)
+"""
+mps_node_tensor = tools.contract_mps(qubits).tensor.flatten()
+# where node is the carrier of density matrix(contracted node), result is the density matrix.
+node, result = tools.calculate_DM(qubits, noisy=False)
 ```
 
 # Problems may be encountered
