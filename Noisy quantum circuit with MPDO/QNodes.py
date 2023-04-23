@@ -3,21 +3,22 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-from basic_gates import *
-import tools
+from Library.basic_gates import TensorGate
+import numpy as np
+import Library.tools as tools
 import tensornetwork as tn
-import algorithm
-import noise_channel
+import Library.tnn_optimizer as opt
+import Library.noise_channel as noise_channel
 
 tn.set_default_backend("pytorch")
 
-def ghzLike_nodes(_qnumber, _chi: int = None, _noise: bool = False):
+def ghzLike_nodes(_qnumber, chi: int = None, _noise: bool = False):
 	r"""
 	ghzLike state preparation with nodes.
 
 	Args:
 		_qnumber: Node number of the state;
-		_chi: Maximum bond dimension to be saved in SVD.
+		chi: Maximum bond dimension to be saved in SVD.
 		_noise: Whether to add noise channel.
 
 	Returns:
@@ -40,16 +41,16 @@ def ghzLike_nodes(_qnumber, _chi: int = None, _noise: bool = False):
 				noise_channel.apply_noise_channel(_qubits, [i + 1], noise_type='amplitude_phase_damping_error'
 				                                  , time=30, T1=2e3, T2=2e2)
 	# Optimization
-	algorithm.qr_left2right(_qubits)
-	algorithm.svd_right2left(_qubits, chi=_chi)
+	opt.qr_left2right(_qubits)
+	opt.svd_right2left(_qubits, chi=chi)
 	return _qubits
 
-def scalable_simulation_scheme2(_theta: float, _chi: float = None):
+def scalable_simulation_scheme2(theta: float, chi: float = None):
 	r"""
 	Scalable simulation scheme 2.
 	Args:
-		_theta: The angle of rotation;
-		_chi: Maximum bond dimension to be saved in SVD.
+		theta: The angle of rotation;
+		chi: Maximum bond dimension to be saved in SVD.
 
 	Returns:
 		Node list of the state after preparation.
@@ -61,13 +62,13 @@ def scalable_simulation_scheme2(_theta: float, _chi: float = None):
 	_qubits = tools.create_ket0Series(7)
 	# Initialize the state
 	print('Initializing the state...')
-	tools.add_gate(_qubits, Gates.ry(_theta), [3])
+	tools.add_gate(_qubits, Gates.ry(theta), [3])
 	print('adding h')
 	tools.add_gate(_qubits, Gates.h(), [0, 1, 2, 4, 5, 6])
 
 	# Apply rzz gate
 	print('Applying rzz gate...')
-	tools.add_gate(_qubits, Gates.rzz(np.pi/2), [0, 1])
+	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [0, 1])
 	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [2, 3])
 	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [4, 5])
 
@@ -77,14 +78,14 @@ def scalable_simulation_scheme2(_theta: float, _chi: float = None):
 
 	# Apply rx gate
 	print('Applying rx gate...')
-	tools.add_gate(_qubits, Gates.rx(np.pi/2), [0, 1, 2, 4, 5, 6])
+	tools.add_gate(_qubits, Gates.rx(np.pi / 2), [0, 1, 2, 4, 5, 6])
 	# Optimization
-	algorithm.qr_left2right(_qubits)
-	algorithm.svd_right2left(_qubits, _chi=_chi)
+	opt.qr_left2right(_qubits)
+	opt.svd_right2left(_qubits, chi=chi)
 
 	return _qubits
 
-def used4test(_chi=None):
+def used4test(chi=None):
 	r"""
 	Generate a random circuit to test whether the program is correct and the function of add_gate, compare with qutip
 		simulation, the result is the same, which implies that the program is correct.
@@ -125,8 +126,8 @@ def used4test(_chi=None):
 	tools.add_gate(_qubits, Gates.cnot(), [2, 3])
 	# layer3
 	tools.add_gate(_qubits, Gates.cnot(), [1, 2])
-	algorithm.qr_left2right(_qubits)
-	algorithm.svd_right2left(_qubits, _chi=_chi)
+	opt.qr_left2right(_qubits)
+	opt.svd_right2left(_qubits, chi=chi)
 	# layer4
 	tools.add_gate(_qubits, Gates.x(), [0, 2, 3])
 	tools.add_gate(_qubits, Gates.h(), [1])
