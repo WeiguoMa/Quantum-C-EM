@@ -42,15 +42,15 @@ def QAOA_circ(_qnumber, _theta, _gamma, _beta):
 		_qubits[_i].tensor.requires_grad = True
 
 	# Apply hardmard gate
-	tools.add_gate_truncate(_qubits, Gates.h(), [0, 2])
-	tools.add_gate_truncate(_qubits, Gates.ry(_theta), [1])
+	tools.add_gate(_qubits, Gates.h(), [0, 2])
+	tools.add_gate(_qubits, Gates.ry(_theta), [1])
 
 	# Apply ZZ gate
-	tools.add_gate_truncate(_qubits, Gates.rzz(_gamma), [0, 1])
-	tools.add_gate_truncate(_qubits, Gates.rzz(_gamma), [1, 2])
+	tools.add_gate(_qubits, Gates.rzz(_gamma), [0, 1])
+	tools.add_gate(_qubits, Gates.rzz(_gamma), [1, 2])
 
 	# Apply RX gate
-	tools.add_gate_truncate(_qubits, Gates.rx(_beta), [0, 2])
+	tools.add_gate(_qubits, Gates.rx(_beta), [0, 2])
 
 	# Gate state vector
 	_state = tc.reshape(tools.contract_mps(_qubits).tensor, (2**qnumber, 1))
