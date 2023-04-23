@@ -28,22 +28,20 @@ def ghzLike_nodes(_qnumber, _chi: int = None, _noise: bool = False):
 	# Apply hardmard gate
 	tools.add_gate(_qubits, Gates.h(), [0])
 	if _noise is True:
-		noise_channel.apply_noise_channel(_qubits, [0], _noise_type='depolarization', _p=1e-2)
-		noise_channel.apply_noise_channel(_qubits, [0], _noise_type='amplitude_phase_damping_error'
-		                                  , _time=30, _T1=2e2, _T2=2e1)
-	# Apply CNOT gate
-	for i in range(_qnumber - 1):
-		tools.add_gate(_qubits, Gates.cnot(), [i, i + 1])
-		if _noise is True:
-			print('************ ERROR ZONE ************')
-			noise_channel.apply_noise_channel(_qubits, [i + 1], _noise_type='depolarization', _p=1e-2)
-			noise_channel.apply_noise_channel(_qubits, [i + 1], _noise_type='amplitude_phase_damping_error'
-			                                  , _time=30, _T1=2e2, _T2=2e1)
-			print('************ ERROR ZONE ************')
-	# print(_qubits)
+		noise_channel.apply_noise_channel(_qubits, [0], noise_type='depolarization', p=1e-2)
+		noise_channel.apply_noise_channel(_qubits, [0], noise_type='amplitude_phase_damping_error'
+		                                  , time=30, T1=2e3, T2=2e2)
+	if _qnumber > 1:
+		# Apply CNOT gate
+		for i in range(_qnumber - 1):
+			tools.add_gate(_qubits, Gates.cnot(), [i, i + 1])
+			if _noise is True:
+				noise_channel.apply_noise_channel(_qubits, [i + 1], noise_type='depolarization', p=1e-2)
+				noise_channel.apply_noise_channel(_qubits, [i + 1], noise_type='amplitude_phase_damping_error'
+				                                  , time=30, T1=2e3, T2=2e2)
 	# Optimization
-	# algorithm.qr_left2right(_qubits)
-	# algorithm.svd_right2left(_qubits, _chi=_chi)
+	algorithm.qr_left2right(_qubits)
+	algorithm.svd_right2left(_qubits, chi=_chi)
 	return _qubits
 
 def scalable_simulation_scheme2(_theta: float, _chi: float = None):
@@ -134,15 +132,3 @@ def used4test(_chi=None):
 	tools.add_gate(_qubits, Gates.h(), [1])
 
 	return _qubits
-
-
-if __name__ == '__main__':
-	import numpy as np
-	qnumber = 2
-	qubits = tools.create_ket0Series(qnumber)
-	# Apply hardmard gate
-	tools.add_gate(qubits, TensorGate().h(), [0])
-	tools.add_gate(qubits, TensorGate().cnot(), [0, 1])
-	# print(qubits)
-	result = tools.contract_mps(qubits)
-	print(tc.reshape(result.tensor, (2 ** qnumber, 1)))
