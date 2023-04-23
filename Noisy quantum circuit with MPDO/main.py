@@ -3,7 +3,7 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-
+import copy
 import time
 import torch as tc
 import numpy as np
@@ -19,11 +19,19 @@ import noise_channel
 
 tn.set_default_backend("pytorch")
 
-qnumber = 2
-qubits = QNodes.ghzLike_nodes(qnumber, _noise=True)
+qnumber = 10
+qubits = QNodes.ghzLike_nodes(qnumber, _noise=False)
 # qubits = QNodes.used4test()
 
-result = tools.contract_mps(qubits).tensor.flatten()
+# qubits = tools.create_ket0Series(qnumber)
+node, result = tools.calculate_DM(qubits, noisy=False)
+print(result)
+
+# print(result.tensor.reshape(2 ** qnumber, 2 ** qnumber))
+#
+# print(qubits)
+# result = tools.contract_mps(qubits).tensor.flatten()
+# print(result)
 
 # idx_list = []
 # for i, value in enumerate(result):
@@ -42,10 +50,8 @@ result = tools.contract_mps(qubits).tensor.flatten()
 #                                            _time=30, _T1=2e2, _T2=2e1)
 # # print('----------------------------')
 #
-#
-# print(qubits)
-#
 # result0 = tc.einsum('ij, kj -> ik', qubits[1].tensor, qubits[1].tensor.conj())
-# print('result0:', result0)
-# result1 = tc.einsum('ij, kj -> ik', qubits[3].tensor, qubits[3].tensor.conj())
-# print('result1', result1)
+# print(qubits[1].tensor)
+# # print('result0:', result0)
+# # result1 = tc.einsum('ij, kj -> ik', qubits[3].tensor, qubits[3].tensor.conj())
+# # print('result1', result1)
