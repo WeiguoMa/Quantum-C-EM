@@ -158,12 +158,12 @@ def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: in
 	Additional information:
 		A UNIFORM random circuit is defined as below:
 
-			[q0] ---[RX: float_para]---[cx or      -----------------[RZ: float_para]---
-			[q1] ---[RX: float_para]---      pass]---[cx or      ---[RZ: float_para]---
-			[q2] ---[RX: float_para]---[cx or               pass]---[RZ: float_para]---
-			[q3] ---[RX: float_para]---      pass]---[cx or      ---[RZ: float_para]---
+			[q0] ---[RY: float_para]---[cx or      -----------------[RX: float_para]---
+			[q1] ---[RY: float_para]---      pass]---[cx or      ---[RX: float_para]---
+			[q2] ---[RY: float_para]---[cx or               pass]---[RX: float_para]---
+			[q3] ---[RY: float_para]---      pass]---[cx or      ---[RX: float_para]---
 				......
-			[qn] ---[RX: float_para]---      pass]------------------[RZ: float_para]---
+			[qn] ---[RY: float_para]---      pass]------------------[RX: float_para]---
 
 		Where:
 			[RX: float_para] is a RX gate with a random parameter;
@@ -222,7 +222,7 @@ def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: in
 		# A layer of Single-qubit gates
 		_random_paraList1 = tc.rand(qnumber) * tc.pi
 		for _qnum in range(qnumber):
-			tools.add_gate(_qubits, Gates.rx(_random_paraList1[_qnum]), [_qnum])
+			tools.add_gate(_qubits, Gates.rz(_random_paraList1[_qnum]), [_qnum])
 
 		if qnumber >= 2 and depth >= 2:
 			_random_double_gate(_qubits, _start=0, _double_gate_choice_=_double_gate_choice)   # Independent random selection
@@ -232,7 +232,7 @@ def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: in
 			# A layer of Single-qubit gates
 			_random_paraList2 = tc.rand(qnumber) * tc.pi
 			for _qnum in range(qnumber):
-				tools.add_gate(_qubits, Gates.rz(_random_paraList2[_qnum]), [_qnum])
+				tools.add_gate(_qubits, Gates.rx(_random_paraList2[_qnum]), [_qnum])
 
 			_random_paraList1 = tc.cat((_random_paraList1, _random_paraList2), dim=0)
 
