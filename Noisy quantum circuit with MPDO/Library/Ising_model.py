@@ -5,7 +5,7 @@ Contact: weiguo.m@iphy.ac.cn
 """
 import torch as tc
 import numpy as np
-from basic_operations import tensorDot
+from Library.basic_operations import tensorDot
 
 def pauli_z():
 	_tensor = tc.tensor(
