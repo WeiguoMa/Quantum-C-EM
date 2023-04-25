@@ -15,20 +15,20 @@ import torch as tc
 tn.set_default_backend("pytorch")
 
 qnumber = 3
-# qubits = QNodes.ghzLike_nodes(qnumber, noise=False)
-qubits = QNodes.used4test()
+qubits = QNodes.ghzLike_nodes(qnumber, noise=True)
+# qubits = QNodes.used4test()
 
 # qubits = tools.create_ket0Series(qnumber)
-# node, dm = tools.calculate_DM(qubits, noisy=False)
-# print(dm)
+node, dm = tools.calculate_DM(qubits, noisy=True, reduced_index=[0, 1])
+print(dm)
 # prob = tools.density2prob(dm)
 # tools.plot_histogram(prob)
 
 # print(result.tensor.reshape(2 ** qnumber, 2 ** qnumber))
 #
 # print(qubits)
-result = tools.contract_mps(qubits).tensor.reshape(2 ** 4, 1)
-print(result)
+# result = tools.contract_mps(qubits).tensor.reshape(2 ** qnumber, 1)
+# print(result)
 # dm = tc.einsum('ij, kj -> ik', result, result.conj())
 # prob = tools.density2prob(dm)
 # tools.plot_histogram(prob)
