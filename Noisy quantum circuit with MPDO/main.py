@@ -19,7 +19,7 @@ qubits = QNodes.ghzLike_nodes(qnumber, noise=True)
 # qubits = QNodes.used4test()
 
 # qubits = tools.create_ket0Series(qnumber)
-node, dm = tools.calculate_DM(qubits, noisy=True, reduced_index=[0, 1])
+node, dm = tools.calculate_DM(qubits, noisy=True)
 print(dm)
 # prob = tools.density2prob(dm)
 # tools.plot_histogram(prob)
