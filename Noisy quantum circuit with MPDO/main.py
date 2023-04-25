@@ -3,15 +3,10 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import copy
-import time
-import torch as tc
-import numpy as np
 import tensornetwork as tn
 import QNodes
-import tools
-import warnings
-import noise_channel
+import Library.tools as tools
+import torch as tc
 
 # # Ignore warnings from tensornetwork package when using pytorch backend for svd
 # warnings.filterwarnings("ignore")
@@ -19,19 +14,24 @@ import noise_channel
 
 tn.set_default_backend("pytorch")
 
-qnumber = 10
-qubits = QNodes.ghzLike_nodes(qnumber, _noise=False)
+qnumber = 3
+qubits = QNodes.ghzLike_nodes(qnumber, noise=True)
 # qubits = QNodes.used4test()
 
 # qubits = tools.create_ket0Series(qnumber)
-node, result = tools.calculate_DM(qubits, noisy=False)
-print(result)
+node, dm = tools.calculate_DM(qubits, noisy=True, reduced_index=[0, 1])
+print(dm)
+# prob = tools.density2prob(dm)
+# tools.plot_histogram(prob)
 
 # print(result.tensor.reshape(2 ** qnumber, 2 ** qnumber))
 #
 # print(qubits)
-# result = tools.contract_mps(qubits).tensor.flatten()
+# result = tools.contract_mps(qubits).tensor.reshape(2 ** qnumber, 1)
 # print(result)
+# dm = tc.einsum('ij, kj -> ik', result, result.conj())
+# prob = tools.density2prob(dm)
+# tools.plot_histogram(prob)
 
 # idx_list = []
 # for i, value in enumerate(result):

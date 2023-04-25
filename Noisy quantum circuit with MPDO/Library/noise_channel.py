@@ -11,7 +11,7 @@ import warnings
 import numpy as np
 import tensornetwork as tn
 import torch as tc
-from tools import EdgeName2AxisName
+from Library.tools import EdgeName2AxisName
 
 
 tn.set_default_backend("pytorch")
@@ -189,21 +189,6 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
             return amp_phase_damping_error(time, T1, T2)
         else:
             raise NotImplementedError(f'Noise type {_noise_type_} is not implemented yet.')
-
-    def _hard_fix_axis_format(_node_: tn.Node or tn.AbstractNode, _oq_: int):
-        _names = _node_.axis_names
-        if _names == [f'bond_{_oq_ - 1}_{_oq_}', f'physics_{_oq_}', f'bond_{_oq_}_{_oq_ + 1}', f'I_{_oq_}']:
-            return 'lpri'
-        elif _names == [f'physics_{_oq_}', f'bond_{_oq_}_{_oq_ + 1}', f'I_{_oq_}']:
-            return 'pri'
-        elif _names == [f'bond_{_oq_ - 1}_{_oq_}', f'physics_{_oq_}', f'I_{_oq_}']:
-            return 'lpi'
-        elif _names == [f'physics_{_oq_}', f'I_{_oq_}']:
-            return 'pi'
-        else:
-            raise ValueError(
-                'This hard-code is bonded to the circuit structure, please check the circuit structure first.'
-                + f' Current names: {_names}')
 
     def _find_duplicate(_lst_):
         """

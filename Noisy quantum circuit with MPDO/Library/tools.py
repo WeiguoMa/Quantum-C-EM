@@ -4,9 +4,11 @@ Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 import copy
+import itertools
+import numpy as np
+import matplotlib.pyplot as plt
 import tensornetwork as tn
-from tensornetwork.visualization.graphviz import to_graphviz
-from basic_gates import TensorGate
+from Library.basic_gates import TensorGate
 import torch as tc
 
 
@@ -167,6 +169,11 @@ def add_gate(_qubits: list, gate: TensorGate, _oqs: list):
 
             # Split back to two qubits
             _left_AxisName, _right_AxisName = _qubits[_oqs[0]].axis_names, _qubits[_oqs[1]].axis_names
+            if 'bond_{}_{}'.format(_oqs[0], _oqs[1]) in _left_AxisName:
+                # remove the bond_name between two qubits, which take appearance in both qubits simultaneously
+                _left_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
+                _right_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
+
             _left_edges, _right_edges = [gate[name] for name in _left_AxisName],\
                                         [gate[name] for name in _right_AxisName]
 
@@ -211,17 +218,16 @@ def plot_nodes(_nodes):
         None
     """
     raise NotImplementedError('Plotting is not supported yet.')
-    # for node in nodes:
-    #     print(_node)
-    #     print(to_graphviz(_node))
 
-def calculate_DM(_qubits, noisy: bool = False):
+def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
     r"""
     Calculate the density matrix of the state.
 
     Args:
         _qubits: qubits;
-        noisy: whether the density matrix is noisy.
+        noisy: whether the density matrix is noisy;
+        reduced_index: the _qubits[index] to be reduced, which means the physics_con-physics of sub-density matrix
+                            will be connected and contracted.
 
     Returns:
         _dm: the density matrix node;
@@ -254,11 +260,139 @@ def calculate_DM(_qubits, noisy: bool = False):
             _allowed_outer_product = False      # Edges between ket-bra are now connected, outer product is not allowed.
         _contract_nodes.append(tn.contract_between(_qubits[i], _qubits_conj[i], name=f'contracted_qubit_{i}',
                                                    allow_outer_product=_allowed_outer_product))
+    EdgeName2AxisName(_contract_nodes)
+
+    # Reduced density matrix
+    # Bra--Ket space of each qubit in memory are now contracted into a higher rank tensor with two physical indices.
+    if reduced_index is not None:
+        if isinstance(reduced_index, int):
+            reduced_index = [reduced_index]
+        if not isinstance(reduced_index, list):
+            raise TypeError('reduced_index should be int or list[int]')
+        for _idx in reduced_index:
+            tn.connect(_contract_nodes[_idx][f'physics_{_idx}'], _contract_nodes[_idx][f'con_physics_{_idx}'])
+            _contract_nodes[_idx] = tn.contract_trace_edges(_contract_nodes[_idx])
 
     _dm = _contract_nodes[0]
     for _ii in range(1, len(_contract_nodes)):
-        _dm = tn.contract_between(_dm, _contract_nodes[_ii], allow_outer_product=True)
+        _dm = tn.contract_between(_dm, _contract_nodes[_ii], allow_outer_product=True, name='Contracted_DM_NODE')
     EdgeName2AxisName([_dm])
 
     _dm.tensor = tc.permute(_dm.tensor, _re_permute(_dm.axis_names))
-    return _dm, _dm.tensor.reshape((2 ** len(_qubits), 2 ** len(_qubits)))
+
+    _reshape_size = len(_qubits) - len(reduced_index)
+    return _dm, _dm.tensor.reshape((2 ** _reshape_size, 2 ** _reshape_size))
+
+def tc_expect(operator: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
+    if not isinstance(operator, tc.Tensor) or not isinstance(state, tc.Tensor):
+        raise TypeError('torch.Tensor should be input')
+    if state.shape[0] == state.shape[1]:
+        matrix = tc.matmul(state, operator)
+        return tc.abs(tc.sum(tc.diag(matrix)))
+    else:
+        if state.shape[0] == 1:
+            # state is row
+            state.reshape((state.shape[0], 1))
+        result = tc.matmul(state.T.conj(), tc.matmul(operator, state))
+        return tc.abs(result)
+
+def basis_name_list(N: int) -> list:
+    r"""
+    Generate a series of bases' name, like
+            N = 2, ['00', '01', '10', '11']
+    """
+    _binary_rep = ['0', '1']
+    _b_set = [''.join(ii) for ii in itertools.product(_binary_rep, repeat=N)]
+    return _b_set
+
+def basis_list(N: int) -> list:
+    r"""
+    Generate a series of bases, like
+                |00> = tensor([basis(2, 0), basis(2, 0)])
+                |10> = tensor([basis(2, 1), basis(2, 0)])
+
+    Attention:
+            different from qutip.basis(4, 0), which != |00>
+
+    Notice:
+        Author didn't find whether there exists another fast way to generate such basis set,
+            main goal is to get probability distribution from a density matrix.
+                That is, p_{basis} = qutip.expect(density_matrix, basis)
+                            --> p = <\psi|density_matrix|\psi>
+    """
+    _view_basis = []
+    for ii in range(2 ** N):
+        _basis = tc.zeros((2 ** N, 1), dtype=tc.complex128)
+        _basis[ii] = 1
+        _view_basis.append(_basis)
+    return _view_basis
+
+def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None, tolerant: float = 5e-4) -> dict:
+    r"""
+    Transform density matrix into probability distribution with provided bases.
+
+    Args:
+        rho_in: density matrix;
+        bases: provided projected bases;
+        basis_name: name of bases, like '00000';
+        tolerant: probability under this threshold will not be shown.
+
+    Additional information:
+        function utilized:
+                tc_expect()
+    """
+    raise NotImplementedError('This function may cause error now.')
+    _qn = int(np.log(rho_in.shape[0]) / np.log(2))
+
+    if bases is None:
+        bases = basis_list(_qn)
+
+    _prob = []
+    for ii in range(rho_in.shape[0]):
+        _prob.append(tc_expect(rho_in, bases[ii]))
+
+    # Form a dictionary
+    if basis_name is None:
+        basis_name = basis_name_list(_qn)
+    _dc = {}
+    for _i in range(len(basis_name)):
+        _dc[basis_name[_i]] = tc.abs(_prob[_i])
+
+    # Normalization
+    _sum_result = 0
+    for _value in _dc.values():
+        _sum_result += _value
+    for _name in _dc.keys():
+        _dc[_name] = _dc[_name] / _sum_result
+
+    # Remove prob. under threshold
+    for _name in list(_dc.keys()):
+        if _dc[_name] < tolerant:
+            del _dc[_name]
+            continue
+    return _dc
+
+def plot_histogram(prob_psi: dict, filename: str = None):
+    r"""
+    Plot a histogram of probability distribution.
+
+    Args:
+        prob_psi: probability of states, should be input as a dict;
+        filename: location to save the fig, while None, it does not work.
+    """
+    if not isinstance(prob_psi, dict):
+        raise TypeError('Prob distribution should be input as a dict, with keys as basis_name.')
+
+    qnumber = len(list(prob_psi.keys())[0])
+
+    plt.figure(figsize=(10, 8), dpi=300)
+    plt.bar(prob_psi.keys(), prob_psi.values(), color='b')
+    plt.ylim(ymax=1)
+    plt.xticks(rotation=-45)
+    plt.title(f'Probability distribution qnumber={qnumber}')
+    plt.xlabel('State')
+    plt.ylabel('Prob')
+
+    if filename is not None:
+        plt.savefig(filename)
+    plt.show()

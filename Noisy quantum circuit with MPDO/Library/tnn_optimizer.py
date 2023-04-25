@@ -4,7 +4,7 @@ Time: 04.13.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 import tensornetwork as tn
-from tools import EdgeName2AxisName
+from Library.tools import EdgeName2AxisName
 import copy
 
 def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
@@ -34,7 +34,10 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
                                   left_name=f'qubit_{_i}',
                                   right_name='right_waiting4contract2form_right',
                                   edge_name=f'qrbond_{_i}_{_i+1}')
-        _r = tn.contract_between(_r, _qubits[_i+1])
+
+        """ allow_outer_product=True may cause mathematical error """
+        _r = tn.contract_between(_r, _qubits[_i+1], allow_outer_product=True)
+
         _r.name = 'qubit_{}'.format(_i+1)
         _qubits[_i], _qubits[_i+1] = _q, _r
         # ProcessFunction, for details, see the function definition.
