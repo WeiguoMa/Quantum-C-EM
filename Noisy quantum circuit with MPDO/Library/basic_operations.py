@@ -46,8 +46,9 @@ def tc_expect(operator: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
         if state.shape[0] == 1:
             # state is row
             state.reshape((state.shape[0], 1))
-        result = tc.matmul(state.T.conj(), tc.matmul(operator, state))
-        return tc.abs(result)
+        _result = tc.matmul(state.T.conj(), tc.matmul(operator, state))
+        return tc.abs(_result)
+        # while in physics fact, it should be real, but in computation, it is complex for technical reason.
 
 def tc_basis(dimension: int, N: int = 0):
     ls = np.array([0] * dimension).reshape(dimension, 1)

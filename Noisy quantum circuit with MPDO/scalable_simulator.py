@@ -3,28 +3,25 @@ Author: weiguo_ma
 Time: 04.20.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-from basic_gates import TensorGate
-from Ising_model import ham_near_matrix
-from basic_operations import tensorDot, tc_expect
-import tools
-import algorithm
+from Library.ADGate import TensorGate
+from Library.Ising_model import ham_near_matrix
+from Library.basic_operations import tc_expect
+import Library.tools as tools
 import torch as tc
 import tensornetwork as tn
 from torch.optim import Adam
-import matplotlib.pyplot as plt
-import numpy as np
 
 tn.set_default_backend("pytorch")
 Gates = TensorGate()
 
 # Parameters
 qnumber = 3
-lr, it_time = 1e-3, 10
+lr, it_time = 1e-3, 50
 
 # Basic coefficients
-theta = tc.tensor(0. + 0.j)
-gamma = tc.tensor(0. + 0.j, requires_grad=True)
-beta = tc.tensor(0. + 0.j, requires_grad=True)
+theta = tc.tensor(3*tc.pi/4, dtype=tc.complex128)
+gamma = tc.tensor(tc.pi, requires_grad=True, dtype=tc.complex128)
+beta = tc.tensor(tc.pi, requires_grad=True, dtype=tc.complex128)
 
 # Hamiltonian
 hamiltonian = ham_near_matrix(qnumber)
@@ -60,8 +57,8 @@ def QAOA_circ(_qnumber, _theta, _gamma, _beta):
 # print('Start Optimizing...')
 for t in range(it_time):
 	state = QAOA_circ(qnumber, theta, gamma, beta)
+	print(gamma.grad)
 	result_expect = tc_expect(hamiltonian, state)
-	print(result_expect.requires_grad)
 	result_expect.backward()
 	optimizer.step()
 	optimizer.zero_grad()
@@ -70,8 +67,7 @@ for t in range(it_time):
 		print('Epoch={:d}, Loss={:4f}'.format(t, result_expect.item()))
 
 
-plt.plot(loss_rec)
-plt.xlabel('iteration time')
-plt.ylabel('loss/expectation')
-plt.show()
-tc.linalg.svd()
+# plt.plot(loss_rec)
+# plt.xlabel('iteration time')
+# plt.ylabel('loss/expectation')
+# plt.show()
