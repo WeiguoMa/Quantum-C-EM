@@ -219,13 +219,15 @@ def plot_nodes(_nodes):
     """
     raise NotImplementedError('Plotting is not supported yet.')
 
-def calculate_DM(_qubits, noisy: bool = False):
+def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
     r"""
     Calculate the density matrix of the state.
 
     Args:
         _qubits: qubits;
-        noisy: whether the density matrix is noisy.
+        noisy: whether the density matrix is noisy;
+        reduced_index: the _qubits[index] to be reduced, which means the physics_con-physics of sub-density matrix
+                            will be connected and contracted.
 
     Returns:
         _dm: the density matrix node;
@@ -258,14 +260,28 @@ def calculate_DM(_qubits, noisy: bool = False):
             _allowed_outer_product = False      # Edges between ket-bra are now connected, outer product is not allowed.
         _contract_nodes.append(tn.contract_between(_qubits[i], _qubits_conj[i], name=f'contracted_qubit_{i}',
                                                    allow_outer_product=_allowed_outer_product))
+    EdgeName2AxisName(_contract_nodes)
+
+    # Reduced density matrix
+    # Bra--Ket space of each qubit in memory are now contracted into a higher rank tensor with two physical indices.
+    if reduced_index is not None:
+        if isinstance(reduced_index, int):
+            reduced_index = [reduced_index]
+        if not isinstance(reduced_index, list):
+            raise TypeError('reduced_index should be int or list[int]')
+        for _idx in reduced_index:
+            tn.connect(_contract_nodes[_idx][f'physics_{_idx}'], _contract_nodes[_idx][f'con_physics_{_idx}'])
+            _contract_nodes[_idx] = tn.contract_trace_edges(_contract_nodes[_idx])
 
     _dm = _contract_nodes[0]
     for _ii in range(1, len(_contract_nodes)):
-        _dm = tn.contract_between(_dm, _contract_nodes[_ii], allow_outer_product=True)
+        _dm = tn.contract_between(_dm, _contract_nodes[_ii], allow_outer_product=True, name='Contracted_DM_NODE')
     EdgeName2AxisName([_dm])
 
     _dm.tensor = tc.permute(_dm.tensor, _re_permute(_dm.axis_names))
-    return _dm, _dm.tensor.reshape((2 ** len(_qubits), 2 ** len(_qubits)))
+
+    _reshape_size = len(_qubits) - len(reduced_index)
+    return _dm, _dm.tensor.reshape((2 ** _reshape_size, 2 ** _reshape_size))
 
 def tc_expect(operator: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
     if not isinstance(operator, tc.Tensor) or not isinstance(state, tc.Tensor):
