@@ -30,7 +30,7 @@ def ghzLike_nodes(_qnumber, chi: int = None, noise: bool = False):
 	# Apply hardmard gate
 	tools.add_gate(_qubits, Gates.h(), [0])
 	if noise is True:
-		noise_channel.apply_noise_channel(_qubits[0], [0], noise_type='depolarization', p=1e-2)
+		noise_channel.apply_noise_channel(_qubits, [0], noise_type='depolarization', p=1e-2)
 		noise_channel.apply_noise_channel(_qubits, [0], noise_type='amplitude_phase_damping_error'
 		                                  , time=30, T1=2e3, T2=2e2)
 	if _qnumber > 1:
