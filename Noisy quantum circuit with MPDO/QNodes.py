@@ -3,7 +3,7 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-from Library.basic_gates import TensorGate
+from Library.ADGate import TensorGate
 import numpy as np
 import Library.tools as tools
 import tensornetwork as tn
