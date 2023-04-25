@@ -272,6 +272,8 @@ def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
         for _idx in reduced_index:
             tn.connect(_contract_nodes[_idx][f'physics_{_idx}'], _contract_nodes[_idx][f'con_physics_{_idx}'])
             _contract_nodes[_idx] = tn.contract_trace_edges(_contract_nodes[_idx])
+    else:
+        reduced_index = []
 
     _dm = _contract_nodes[0]
     for _ii in range(1, len(_contract_nodes)):
