@@ -3,12 +3,13 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
+import warnings
 import copy
 import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 import tensornetwork as tn
-from Library.basic_gates import TensorGate
+from Library.ADGate import TensorGate
 import torch as tc
 
 
@@ -398,3 +399,16 @@ def plot_histogram(prob_psi: dict, filename: str = None):
     if filename is not None:
         plt.savefig(filename)
     plt.show()
+
+def select_device(device: str or int = 'cpu'):
+    if isinstance(device, str):
+        return device
+    else:
+        if tc.cuda.is_available():
+            if device is None:
+                return 'cuda:0'
+            else:
+                return f'cuda:{device}'
+        else:
+            warnings.warn('CUDA is not available, use CPU instead.')
+            return 'cpu'
