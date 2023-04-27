@@ -268,7 +268,7 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
         # Shape-relating
         _shape = _qubits[_qnum].tensor.shape
         _left_edge_shape = [_shape[_ii_] for _ii_ in range(len(_shape) - 1)]
-        _left_dim = np.prod(_left_edge_shape)
+        _left_dim = int(np.prod(_left_edge_shape))
         # SVD to truncate the inner dimension
         _u, _s, _ = tc.linalg.svd(tc.reshape(_qubits[_qnum].tensor, (_left_dim, _shape[-1])), full_matrices=False)
         _s = _s.to(dtype=tc.complex128)
