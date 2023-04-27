@@ -4,6 +4,7 @@ Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 from Library.ADGate import TensorGate
+from Library.ADCircuits import TensorCircuit
 import numpy as np
 import Library.tools as tools
 import tensornetwork as tn
@@ -13,12 +14,12 @@ import torch as tc
 
 tn.set_default_backend("pytorch")
 
-def ghzLike_nodes(_qnumber, chi: int = None, noise: bool = False):
+def ghzLike_nodes(qnumber, chi: int = None, noise: bool = False):
 	r"""
 	ghzLike state preparation with nodes.
 
 	Args:
-		_qnumber: Node number of the state;
+		qnumber: Node number of the state;
 		chi: Maximum bond dimension to be saved in SVD.
 		noise: Whether to add noise channel.
 
@@ -26,25 +27,19 @@ def ghzLike_nodes(_qnumber, chi: int = None, noise: bool = False):
 		Node list of the state after preparation.
 	"""
 	Gates = TensorGate()
-	_qubits = tools.create_ket0Series(_qnumber)
+	_circuit = TensorCircuit(qnumber, initState='ket0', ideal=True)
 	# Apply hardmard gate
-	tools.add_gate(_qubits, Gates.h(), [0])
-	if noise is True:
-		noise_channel.apply_noise_channel(_qubits, [0], noise_type='depolarization', p=1e-2)
-		noise_channel.apply_noise_channel(_qubits, [0], noise_type='amplitude_phase_damping_error'
-		                                  , time=30, T1=2e3, T2=2e2)
-	if _qnumber > 1:
+	_circuit.add_gate(Gates.h(), [0])
+
+	if qnumber > 1:
 		# Apply CNOT gate
-		for i in range(_qnumber - 1):
-			tools.add_gate(_qubits, Gates.cnot(), [i, i + 1])
-			if noise is True:
-				noise_channel.apply_noise_channel(_qubits, [i + 1], noise_type='depolarization', p=1e-2)
-				noise_channel.apply_noise_channel(_qubits, [i + 1], noise_type='amplitude_phase_damping_error'
-				                                  , time=30, T1=2e3, T2=2e2)
+		for i in range(qnumber - 1):
+			_circuit.add_gate(Gates.cnot(), [i, i + 1])
+
 	# Optimization
-	opt.qr_left2right(_qubits)
-	opt.svd_right2left(_qubits, chi=chi)
-	return _qubits
+	opt.qr_left2right(_circuit)
+	opt.svd_right2left(_circuit, chi=chi)
+	return _circuit
 
 def scalable_simulation_scheme2(theta: float, chi: int = None):
 	r"""
@@ -60,31 +55,29 @@ def scalable_simulation_scheme2(theta: float, chi: int = None):
 		Currently did not use the Adam to optimize the parameters.
 	"""
 	Gates = TensorGate()
-	_qubits = tools.create_ket0Series(7)
+	_circuit = TensorCircuit(7, initState='ket0', ideal=True)
 	# Initialize the state
-	print('Initializing the state...')
-	tools.add_gate(_qubits, Gates.ry(theta), [3])
-	print('adding h')
-	tools.add_gate(_qubits, Gates.h(), [0, 1, 2, 4, 5, 6])
+	_circuit.add_gate(Gates.ry(theta), [3])
+
+	_circuit.add_gate(Gates.h(), [0, 1, 2, 4, 5, 6])
 
 	# Apply rzz gate
-	print('Applying rzz gate...')
-	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [0, 1])
-	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [2, 3])
-	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [4, 5])
+	_circuit.add_gate(Gates.rzz(np.pi / 2), [0, 1])
+	_circuit.add_gate(Gates.rzz(np.pi / 2), [2, 3])
+	_circuit.add_gate(Gates.rzz(np.pi / 2), [4, 5])
 
-	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [1, 2])
-	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [3, 4])
-	tools.add_gate(_qubits, Gates.rzz(np.pi / 2), [5, 6])
+	_circuit.add_gate(Gates.rzz(np.pi / 2), [1, 2])
+	_circuit.add_gate(Gates.rzz(np.pi / 2), [3, 4])
+	_circuit.add_gate(Gates.rzz(np.pi / 2), [5, 6])
 
 	# Apply rx gate
-	print('Applying rx gate...')
-	tools.add_gate(_qubits, Gates.rx(np.pi / 2), [0, 1, 2, 4, 5, 6])
-	# Optimization
-	opt.qr_left2right(_qubits)
-	opt.svd_right2left(_qubits, chi=chi)
+	_circuit.add_gate(Gates.rx(np.pi / 2), [0, 1, 2, 4, 5, 6])
 
-	return _qubits
+	# Optimization
+	opt.qr_left2right(_circuit)
+	opt.svd_right2left(_circuit, chi=chi)
+
+	return _circuit
 
 def used4test(chi: int = None):
 	r"""
@@ -118,24 +111,22 @@ def used4test(chi: int = None):
 	"""
 	_qnumber = 4
 	Gates = TensorGate()
-	_qubits = tools.create_ket0Series(_qnumber)
+	_circuit = TensorCircuit(_qnumber, initState='ket0', ideal=True)
 	# layer1
-	tools.add_gate(_qubits, Gates.h(), [0, 2])
-	tools.add_gate(_qubits, Gates.x(), [1])
+	_circuit.add_gate(Gates.h(), [0, 2])
+	_circuit.add_gate(Gates.x(), [1])
 	# layer2
-	tools.add_gate(_qubits, Gates.cnot(), [0, 1])
-	tools.add_gate(_qubits, Gates.cnot(), [2, 3])
+	_circuit.add_gate(Gates.cnot(), [0, 1])
+	_circuit.add_gate(Gates.cnot(), [2, 3])
 	# layer3
-	tools.add_gate(_qubits, Gates.cnot(), [1, 2])
-	opt.qr_left2right(_qubits)
-	opt.svd_right2left(_qubits, chi=chi)
-	opt.qr_left2right(_qubits)
-	opt.svd_right2left(_qubits, chi=chi)
+	_circuit.add_gate(Gates.cnot(), [1, 2])
+	opt.qr_left2right(_circuit)
+	opt.svd_right2left(_circuit, chi=chi)
 	# layer4
-	tools.add_gate(_qubits, Gates.x(), [0, 2, 3])
-	tools.add_gate(_qubits, Gates.h(), [1])
+	_circuit.add_gate(Gates.x(), [0, 2, 3])
+	_circuit.add_gate(Gates.h(), [1])
 
-	return _qubits
+	return _circuit
 
 
 def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: int = None):
@@ -189,7 +180,7 @@ def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: in
 		_string[0], _string[1] = _string[1], _string[0]
 		return ''.join(_string)
 
-	def _random_double_gate(_qubits, _start: int, _double_gate_choice_: list):
+	def _random_double_gate(_circuit_, _start: int, _double_gate_choice_: list):
 		r""" Generate a random double gate """
 		assert _start == 0 or _start == 1   # 0 --> Even layers, 1 --> Odd layers
 		_Gates = TensorGate()
@@ -207,7 +198,7 @@ def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: in
 			if _random_gate_choice == 'ci' or 'ic':
 				pass        # No actions were taken
 			else:
-				tools.add_gate(_qubits, _Gates.cnot(), [_control, _target])
+				_circuit_.add_gate(_Gates.cnot(), [_control, _target])
 
 	if qnumber <= 0 or isinstance(qnumber, int) is False:
 		raise ValueError('Qnumber must be a positive integer.')
@@ -218,35 +209,36 @@ def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: in
 	_double_gate_choice = []
 
 	Gates = TensorGate()
-	_qubits = tools.create_ket0Series(qnumber)
+	_circuit = TensorCircuit(qnumber, initState='ket0', ideal=True)
 
 	for _depth in range(depth):
 		# A layer of Single-qubit gates
 		_random_paraList1 = tc.rand(qnumber) * tc.pi
 		for _qnum in range(qnumber):
-			tools.add_gate(_qubits, Gates.rz(_random_paraList1[_qnum]), [_qnum])
+			_circuit.add_gate(Gates.rz(_random_paraList1[_qnum]), [_qnum])
 
 		if qnumber >= 2 and depth >= 2:
-			_random_double_gate(_qubits, _start=0, _double_gate_choice_=_double_gate_choice)   # Independent random selection
-			_random_double_gate(_qubits, _start=1, _double_gate_choice_=_double_gate_choice)   # Independent random selection
+			_random_double_gate(_circuit, _start=0, _double_gate_choice_=_double_gate_choice)   # Independent random selection
+			_random_double_gate(_circuit, _start=1, _double_gate_choice_=_double_gate_choice)   # Independent random selection
 			_double_gate_choice.append('|')
 
 			# A layer of Single-qubit gates
 			_random_paraList2 = tc.rand(qnumber) * tc.pi
 			for _qnum in range(qnumber):
-				tools.add_gate(_qubits, Gates.rx(_random_paraList2[_qnum]), [_qnum])
+				_circuit.add_gate(Gates.rx(_random_paraList2[_qnum]), [_qnum])
 
 			_random_paraList1 = tc.cat((_random_paraList1, _random_paraList2), dim=0)
 
 			# Tensor Optimization
-			opt.qr_left2right(_qubits)
-			opt.svd_right2left(_qubits, chi=chi)
+			opt.qr_left2right(_circuit.state)
+			opt.svd_right2left(_circuit.state, chi=chi)
 
 			# Record the parameters
 			_random_paraList = tc.vstack((_random_paraList, _random_paraList1))
 
 	# Calculate Density Matrix
-	_, _dm = tools.calculate_DM(_qubits)
+	_circuit.calculate_DM()
+	_dm = _circuit.DM
 
 	if qnumber == 1 or depth == 1:
 		return _dm, _random_paraList1, _double_gate_choice
@@ -255,7 +247,7 @@ def random_circuit_DM4Train(qnumber: int, depth: int, chi: int = None, kappa: in
 
 
 if __name__ == '__main__':
-	dm, paralist, gate_choice = random_circuit_DM4Train(qnumber=5, depth=10)
+	dm, paraList, gate_choice = random_circuit_DM4Train(qnumber=5, depth=10)
 	print('density matrix:\n', dm)
-	print('parameter list:\n', paralist)
+	print('parameter list:\n', paraList)
 	print('gate choice:\n', gate_choice)
