@@ -313,8 +313,11 @@ class TensorCircuit(nn.Module):
 			_contract_nodes = []
 			for i in range(len(self.state)):
 				if self.ideal is False:
-					tn.connect(self.state[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
-					_allowed_outer_product = False  # Edges between ket-bra are now connected, outer product is not allowed.
+					try:
+						tn.connect(self.state[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
+						_allowed_outer_product = False  # Edges between ket-bra are now connected, outer product is not allowed.
+					except ValueError:
+						_allowed_outer_product = True   # Cases that not every qubit has been added noise.
 				_contract_nodes.append(tn.contract_between(self.state[i], _qubits_conj[i], name=f'contracted_qubit_{i}',
 				                                           allow_outer_product=_allowed_outer_product))
 			tools.EdgeName2AxisName(_contract_nodes)
@@ -342,7 +345,7 @@ class TensorCircuit(nn.Module):
 			_reshape_size = self.qnumber - len(reduced_index)
 
 			self.DM, self.DMNode = _dm.tensor.reshape((2 ** _reshape_size, 2 ** _reshape_size)), self.DMNode
-			return _dm.tensor.reshape((2 ** _reshape_size, 2 ** _reshape_size))
+			return self.DM
 		else:
 			if self.ideal is False:
 				raise ValueError('Noisy circuit cannot be represented by state vector efficiently.')
@@ -352,7 +355,9 @@ class TensorCircuit(nn.Module):
 			_vector = self.state[0]
 			for _i in range(1, len(self.state)):
 				_vector = tn.contract_between(_vector, self.state[_i], allow_outer_product=True)
-			return _vector.tensor.reshape((2 ** self.qnumber, 1))
+
+			self.DM = _vector.tensor.reshape((2 ** self.qnumber, 1))
+			return self.DM
 
 
 if __name__ == '__main__':
@@ -360,6 +365,6 @@ if __name__ == '__main__':
 	circuit = TensorCircuit(2, initState='0', ideal=False)
 	circuit.add_gate(Gates.h(), oqs=[0])
 	circuit.add_gate(Gates.cnot(), oqs=[0, 1])
-	print(circuit)
+	print(circuit.state)
 	dm = circuit.calculate_DM()
 	print(dm)
