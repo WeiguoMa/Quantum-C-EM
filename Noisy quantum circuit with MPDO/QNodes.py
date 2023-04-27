@@ -30,17 +30,18 @@ def ghzLike_nodes(_qnumber, chi: int = None, noise: bool = False):
 	# Apply hardmard gate
 	tools.add_gate(_qubits, Gates.h(), [0])
 	if noise is True:
-		noise_channel.apply_noise_channel(_qubits, [0], noise_type='depolarization', p=1e-2)
-		noise_channel.apply_noise_channel(_qubits, [0], noise_type='amplitude_phase_damping_error'
+		noise_channel.apply_noise_channel(_qubits, [0, 1], noise_type='depolarization', p=1e-2)
+		noise_channel.apply_noise_channel(_qubits, [0, 1], noise_type='amplitude_phase_damping_error'
 		                                  , time=30, T1=2e3, T2=2e2)
 	if _qnumber > 1:
 		# Apply CNOT gate
 		for i in range(_qnumber - 1):
 			tools.add_gate(_qubits, Gates.cnot(), [i, i + 1])
 			if noise is True:
-				noise_channel.apply_noise_channel(_qubits, [i + 1], noise_type='depolarization', p=1e-2)
-				noise_channel.apply_noise_channel(_qubits, [i + 1], noise_type='amplitude_phase_damping_error'
-				                                  , time=30, T1=2e3, T2=2e2)
+				noise_channel.apply_noise_channel(_qubits, [i, i + 1], noise_type='depolarization', p=1e-2)
+				# noise_channel.apply_noise_channel(_qubits, [i, i + 1], noise_type='amplitude_phase_damping_error'
+				#                                   , time=30, T1=2e3, T2=2e2)
+		print(_qubits)
 	# Optimization
 	opt.qr_left2right(_qubits)
 	opt.svd_right2left(_qubits, chi=chi)
