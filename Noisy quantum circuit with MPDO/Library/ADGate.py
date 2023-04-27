@@ -6,7 +6,7 @@ Contact: weiguo.m@iphy.ac.cn
 import torch as tc
 import numpy as np
 from torch import nn
-import Library.tools as tools
+from Library.tools import select_device
 
 class TensorGate(nn.Module):
     def __init__(self, requires_grad: bool = False, device: str or int = 'cpu'):
@@ -18,7 +18,7 @@ class TensorGate(nn.Module):
         self.single = None
 
         self.dtype = tc.complex128
-        self.device = tools.select_device(device)
+        self.device = select_device(device)
         self.requires_grad = requires_grad
         self.variational = self.requires_grad
 
@@ -146,7 +146,7 @@ class TensorGate(nn.Module):
         theta.to(device=self.device)
         return self
 
-    def ry(self, theta: tc.Tensor = None):
+    def ry(self, theta: tc.Tensor or float = None):
         if theta is None:
             theta = tc.randn(1, dtype=self.dtype)
         if isinstance(theta, float) or isinstance(theta, int):
@@ -162,7 +162,7 @@ class TensorGate(nn.Module):
         self.variational = True
         return self
 
-    def rz(self, theta: tc.Tensor = None):
+    def rz(self, theta: tc.Tensor or float = None):
         if theta is None:
             theta = tc.randn(1, dtype=self.dtype)
         if isinstance(theta, float) or isinstance(theta, int):
@@ -178,7 +178,7 @@ class TensorGate(nn.Module):
         self.variational = True
         return self
 
-    def u1(self, theta: tc.Tensor = None):
+    def u1(self, theta: tc.Tensor or float = None):
         if theta is None:
             theta = tc.randn(1, dtype=self.dtype)
         if isinstance(theta, float) or isinstance(theta, int):
@@ -193,7 +193,7 @@ class TensorGate(nn.Module):
         self.variational = True
         return self
 
-    def u2(self, phi: tc.Tensor = None, lam: tc.Tensor = None):
+    def u2(self, phi: tc.Tensor or float = None, lam: tc.Tensor or float = None):
         if phi is None:
             phi = tc.randn(1, dtype=self.dtype)
         if lam is None:
@@ -214,7 +214,7 @@ class TensorGate(nn.Module):
         self.variational = True
         return self
 
-    def u3(self, theta: tc.Tensor = None, phi: tc.Tensor = None, lam: tc.Tensor = None):
+    def u3(self, theta: tc.Tensor or float = None, phi: tc.Tensor or float = None, lam: tc.Tensor or float = None):
         if theta is None:
             theta = tc.randn(1, dtype=self.dtype)
         if phi is None:
@@ -241,7 +241,7 @@ class TensorGate(nn.Module):
         self.variational = True
         return self
 
-    def rzz(self, theta: tc.Tensor = None):
+    def rzz(self, theta: tc.Tensor or float = None):
         if theta is None:
             theta = tc.randn(1, dtype=self.dtype)
         if isinstance(theta, float) or isinstance(theta, int):
