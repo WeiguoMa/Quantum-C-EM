@@ -1,0 +1,45 @@
+"""
+Author: weiguo_ma
+Time: 04.27.2023
+Contact: weiguo.m@iphy.ac.cn
+"""
+class Chip_information(object):
+	def __init__(self, query_time: str = None):
+		self.queryTime = query_time
+		self.status = None
+
+		self.gateTime = None
+		self.T1 = None
+		self.T2 = None
+		self.chipName = None
+		self.dpc_errorRate = None
+
+		self.timeUnit = 'ns'
+
+	def __getattr__(self, item):
+		try:
+			return self.__getattribute__(item)
+		except AttributeError:
+			raise AttributeError(f'Chip: {item} is not supported.')
+
+	def beta4Test(self):
+		self.chipName = 'beta4Test'
+		if self.queryTime is None:
+			self.gateTime = 30
+			self.T1 = 2e4
+			self.T2 = 2e3
+			self.dpc_errorRate = 11e-4
+			self.status = True
+		return self
+
+	def show_property(self):
+		print('The chip name is: {}'.format(self.chipName))
+		print('The gate time is: {} {}'.format(self.gateTime, self.timeUnit))
+		print('The T1 time is: {} {}'.format(self.T1, self.timeUnit))
+		print('The T2 time is: {} {}'.format(self.T2, self.timeUnit))
+		print('The depolarization error rate is: {}'.format(self.dpc_errorRate))
+		print('The status of the chip is: {}'.format(self.status))
+
+
+if __name__ == '__main__':
+	chipInfo = Chip_information().__getattr__('beta4Test')().show_property()
