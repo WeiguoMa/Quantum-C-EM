@@ -48,7 +48,8 @@ class TensorCircuit(nn.Module):
 		self.DM = None
 		self.DMNode = None
 
-	def _add_gate(self, gate: TensorGate, _oqs: list):
+	def _add_gate(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
+	              gate: TensorGate, _oqs: list):
 		r"""
 		Add quantum Gate to tensornetwork
 
@@ -59,7 +60,7 @@ class TensorCircuit(nn.Module):
 		Returns:
 			Tensornetwork after adding gate.
 		"""
-		if isinstance(self.state, list) is False:
+		if isinstance(_qubits, list) is False:
 			raise TypeError('Qubit must be a list.')
 		if isinstance(gate, TensorGate) is False:
 			raise TypeError('Gate must be a TensorGate.')
@@ -80,7 +81,7 @@ class TensorCircuit(nn.Module):
 				               axis_names=[f'inner_{_oqs[0]}', f'inner_{_oqs[1]}', f'physics_{_oqs[0]}',
 				                           f'physics_{_oqs[1]}'])
 				# Created a new node in memory
-				_contract_qubits = tn.contract_between(self.state[_oqs[0]], self.state[_oqs[1]],
+				_contract_qubits = tn.contract_between(_qubits[_oqs[0]], _qubits[_oqs[1]],
 				                                       name='q_{}_{}'.format(_oqs[0], _oqs[1]),
 				                                       allow_outer_product=True)
 				tools.EdgeName2AxisName([_contract_qubits])
@@ -94,7 +95,7 @@ class TensorCircuit(nn.Module):
 				tools.EdgeName2AxisName([gate])
 
 				# Split back to two qubits
-				_left_AxisName, _right_AxisName = self.state[_oqs[0]].axis_names, self.state[_oqs[1]].axis_names
+				_left_AxisName, _right_AxisName = _qubits[_oqs[0]].axis_names, _qubits[_oqs[1]].axis_names
 				if 'bond_{}_{}'.format(_oqs[0], _oqs[1]) in _left_AxisName:
 					# remove the bond_name between two qubits, which take appearance in both qubits simultaneously
 					_left_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
@@ -103,7 +104,7 @@ class TensorCircuit(nn.Module):
 				_left_edges, _right_edges = [gate[name] for name in _left_AxisName], \
 				                            [gate[name] for name in _right_AxisName]
 
-				self.state[_oqs[0]], self.state[_oqs[1]], _ = tn.split_node(gate,
+				_qubits[_oqs[0]], _qubits[_oqs[1]], _ = tn.split_node(gate,
 				                                                      left_edges=_left_edges,
 				                                                      right_edges=_right_edges,
 				                                                      left_name=f'qubit_{_oqs[0]}',
@@ -113,13 +114,14 @@ class TensorCircuit(nn.Module):
 			gate_list = [tn.Node(gate.tensor, name=gate.name, axis_names=[f'inner_{_idx}', f'physics_{_idx}'])
 			             for _idx in _oqs]
 			for _i, _bit in enumerate(_oqs):
-				tn.connect(self.state[_bit][f'physics_{_bit}'], gate_list[_i][f'inner_{_bit}'])
+				tn.connect(_qubits[_bit][f'physics_{_bit}'], gate_list[_i][f'inner_{_bit}'])
 				# contract the connected edge and inherit the name of the pre-qubit
-				self.state[_bit] = tn.contract_between(self.state[_bit], gate_list[_i], name=self.state[_bit].name)
+				_qubits[_bit] = tn.contract_between(_qubits[_bit], gate_list[_i], name=_qubits[_bit].name)
 				# ProcessFunction, for details, see the function definition.
-				tools.EdgeName2AxisName([self.state[_bit]])
+				tools.EdgeName2AxisName([_qubits[_bit]])
 
-	def add_noise(self, oqs: list[int] or int,
+	def add_noise(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
+	                        oqs: list[int] or int,
 	                        noise_type: str,
 	                        p: float = None,
 	                        time: float = None,
@@ -129,6 +131,7 @@ class TensorCircuit(nn.Module):
 		r"""
 		Apply the noise channel to the qubits.
 		Args:
+			_qubits: The qubits to be applied the noise channel;
 			oqs: The qubits to be applied the noise channel;
 			noise_type: The type of the noise channel;
 			p: The probability of the noise channel;
@@ -137,7 +140,7 @@ class TensorCircuit(nn.Module):
 			T2: The T2 time of the noise channel;
 			kappa: Truncation dimension upper bond of the noise channel.
 		Returns:
-			The qubits after applying the noise channel.
+			_qubits: The qubits after applying the noise channel.
 				!!! Actually no return, but the qubits are changed in the memory. !!!
 		Additional information:
 			The noise channel is applied to the qubits by the following steps:
@@ -173,17 +176,17 @@ class TensorCircuit(nn.Module):
 			_duplicate_idx_ = [idx for idx, item in enumerate(_lst_) if item in _duplicate_item_]
 			return _duplicate_item_, _duplicate_idx_
 
-		if not isinstance(self.state, list):
-			if not isinstance(self.state, tn.Node) or not isinstance(self.state, tn.AbstractNode):
-				raise TypeError(f'qubits must be a list of tn.Node or tn.AbstractNode, but got {type(self.state)}')
-			self.state = [self.state]
+		if not isinstance(_qubits, list):
+			if not isinstance(_qubits, tn.Node) or not isinstance(_qubits, tn.AbstractNode):
+				raise TypeError(f'qubits must be a list of tn.Node or tn.AbstractNode, but got {type(_qubits)}')
+			_qubits = [_qubits]
 		if not isinstance(oqs, list):
 			if not isinstance(oqs, int):
 				raise TypeError(f'oqs must be a list of int, but got {type(oqs)}')
 			oqs = [oqs]
-		if len(oqs) > len(self.state):
+		if len(oqs) > len(_qubits):
 			raise ValueError(f'len(oqs) must be less than or equal to to len(qubits),'
-			                 f' but got {len(oqs)} and {len(self.state)}')
+			                 f' but got {len(oqs)} and {len(_qubits)}')
 		if p is None and (time is None or T1 is None or T2 is None):
 			raise ValueError('The noise parameter must be specified.')
 
@@ -198,19 +201,18 @@ class TensorCircuit(nn.Module):
 
 		# Operating the noise channel to qubits
 		for _ii, _qnum in enumerate(oqs):
-			_edge = tn.connect(self.state[_qnum][f'physics_{_qnum}'], _noise_nodeList[_ii]['inner'])
-			self.state[_qnum] = tn.contract(_edge, name=f'qubit_{_qnum}')
+			# Contract the noise channel with the qubits
+			tn.connect(_qubits[_qnum][f'physics_{_qnum}'], _noise_nodeList[_ii]['inner'])
+			_qubits[_qnum] = tn.contract_between(_qubits[_qnum], _noise_nodeList[_ii], name=f'qubit_{_qnum}')
 			# ProcessFunction, for details, see the function definition.
-			tools.EdgeName2AxisName([self.state[_qnum]])  # Tensor append a new rank call 'I_{}'.format(_qnum) here.
-			# raise NotImplementedError('When double/multi errors are applied to a same qubit, problem occurs.'
-			#                           'The reason is that the node connection broken while the node is working.')
+			tools.EdgeName2AxisName([_qubits[_qnum]])  # Tensor append a new rank call 'I_{}'.format(_qnum) here.
 
-			_dup_item, _dup_idx = _find_duplicate(self.state[_qnum].axis_names)
+			_dup_item, _dup_idx = _find_duplicate(_qubits[_qnum].axis_names)
 			if _dup_item:
 				# Number of axis name before the reshape operation(contain duplicates)
-				_length = len(self.state[_qnum].axis_names)
+				_length = len(_qubits[_qnum].axis_names)
 				# Find the shape of the tensor after the reshape operation
-				_reshape_shape = copy.deepcopy(list(self.state[_qnum].tensor.shape))
+				_reshape_shape = list(_qubits[_qnum].tensor.shape)
 				_reshape_shape[_dup_idx[1]] = _reshape_shape[_dup_idx[0]] * _reshape_shape[_dup_idx[1]]
 				_reshape_shape.pop(_dup_idx[0])
 				# Generate a random string without duplicates, if len = 4, then the string is 'abcd' as Einstein notation.
@@ -218,35 +220,57 @@ class TensorCircuit(nn.Module):
 				_random_string_reorder = tools.move_index(_random_string, _dup_idx[0],
 				                                    _dup_idx[1] - 1)  # Like 'ifcvbj' -> 'fcvbij'
 				# Reshape the tensor
-				_reshaped_tensor = tc.einsum(_random_string + ' -> ' + _random_string_reorder, self.state[_qnum].tensor) \
+				_reshaped_tensor = tc.einsum(_random_string + ' -> ' + _random_string_reorder, _qubits[_qnum].tensor) \
 					.reshape(_reshape_shape)
-				_axis_names = copy.deepcopy(self.state[_qnum].axis_names)
+				_axis_names = copy.deepcopy(_qubits[_qnum].axis_names)
 				_axis_names.pop(_dup_idx[0])
 
-				""" Though we clarify a new node called _left_node, in memory, 
-							it is still the same node as connected to self.state[_qnum]. """
-				_left_node, _right_node = self.state[_qnum][0].get_nodes()  # 0 is the hard code that bond_idx at first pos
-				if _right_node is not None:  # Which means that the node's the most left edge is not bond_edge
-					if 'bond' not in self.state[_qnum][0].name:
-						raise ValueError(f'HardCodeERROR. The edge name must be bond, but got {self.state[_qnum][0].name}')
-					_left_edge_name = _left_node.axis_names[-1]  # -1 is the hard code that bond_idx at last pos
-					self.state[_qnum][0].disconnect(_left_edge_name, 'right_edge')
-					# ProcessFunction, for details, see the function definition
-					tools.EdgeName2AxisName([_left_node])
+				""" Reform the qubit from adding noise channel, which causes edges' error in tensornetwork,
+						easily speaking, reform the tensor. TensorNetwork package is not perfect. """
+				_bond_list, _l_name, _r_name = [], None, None
+				for _name in _qubits[_qnum].axis_names:
+					if 'bond' in _name:
+						_bond_list.append(_name)
+						for _string_lst in _bond_list:
+							_string_lst = _name.split('_')
+							if int(_string_lst[-1]) == int(_qnum):
+								_l_name = _name
+							elif int(_string_lst[-2]) == int(_qnum):
+								_r_name = _name
 
-				self.state[_qnum] = tn.Node(_reshaped_tensor,
+				if _l_name is not None:
+					_left_qubit, _reforming_qubit = _qubits[_qnum][_l_name].get_nodes()
+					_qubits[_qnum][_l_name].disconnect(_l_name, 'middle2left_edge')
+				else:
+					_left_qubit = None
+				if _r_name is not None:
+					_reforming_qubit, _right_qubit = _qubits[_qnum][_r_name].get_nodes()
+					_qubits[_qnum][_r_name].disconnect('middle2right_edge', _r_name)
+				else:
+					_right_qubit = None
+
+				# Previous information of _qubits[_qnum] is extracted, now we remade a new _qubits[_qnum]
+				_qubits[_qnum] = tn.Node(_reshaped_tensor,
 				                         name=f'qubit_{_qnum}',
-				                         axis_names=_axis_names)  # Node's edge's, named 'I_{}', dimension has been promoted.
-				if _right_node is not None:
-					tn.connect(_left_node[_left_edge_name], self.state[_qnum][0], name=self.state[_qnum].axis_names[0])
-					tools.EdgeName2AxisName([self.state[_qnum]])
+				                         axis_names=_axis_names)  # Node's dimension of Edge f'I_{_qnum}' has been promoted.
+
+				if _l_name is not None:
+					tn.connect(_left_qubit[_l_name], _qubits[_qnum][_l_name], name=_l_name)
+				else:
+					pass
+				if _r_name is not None:
+					tn.connect(_qubits[_qnum][_r_name], _right_qubit[_r_name], name=_r_name)
+				else:
+					pass
+				# ProcessFunction, for details, see the function definition
+				tools.EdgeName2AxisName([_qubits[_qnum]])
 
 			# Shape-relating
-			_shape = self.state[_qnum].tensor.shape
+			_shape = _qubits[_qnum].tensor.shape
 			_left_edge_shape = [_shape[_ii_] for _ii_ in range(len(_shape) - 1)]
 			_left_dim = int(np.prod(_left_edge_shape))
 			# SVD to truncate the inner dimension
-			_u, _s, _ = tc.linalg.svd(tc.reshape(self.state[_qnum].tensor, (_left_dim, _shape[-1])), full_matrices=False)
+			_u, _s, _ = tc.linalg.svd(tc.reshape(_qubits[_qnum].tensor, (_left_dim, _shape[-1])), full_matrices=False)
 			_s = _s.to(dtype=tc.complex128)
 
 			# Truncate the inner dimension
@@ -260,7 +284,7 @@ class TensorCircuit(nn.Module):
 
 			# Back to the former shape
 			_left_edge_shape.append(_s.shape[-1])
-			self.state[_qnum].tensor = tc.reshape(tc.matmul(_u, _s), _left_edge_shape)
+			_qubits[_qnum].tensor = tc.reshape(tc.matmul(_u, _s), _left_edge_shape)
 
 	def add_gate(self, gate: TensorGate, oqs: list):
 		r"""
@@ -281,10 +305,10 @@ class TensorCircuit(nn.Module):
 			raise TypeError('Operating qubits must be a list.')
 
 		self.layers.add_module(gate.name + str(oqs), gate)
-		self._add_gate(gate, oqs)
+		self._add_gate(self.state, gate, oqs)
 		if self.ideal is False:
-			self.add_noise(oqs=oqs, noise_type='depolarization', p=self.dpc_errorRate)
-			self.add_noise(oqs=oqs, noise_type='amplitude_phase_damping_error'
+			self.add_noise(self.state, oqs=oqs, noise_type='depolarization', p=self.dpc_errorRate)
+			self.add_noise(self.state, oqs=oqs, noise_type='amplitude_phase_damping_error'
 			                                  , time=self.GateTime, T1=self.T1, T2=self.T2)
 
 	def forward(self):
@@ -394,6 +418,5 @@ if __name__ == '__main__':
 	circuit = TensorCircuit(2, initState='0', ideal=False)
 	circuit.add_gate(Gates.h(), oqs=[0])
 	circuit.add_gate(Gates.cnot(), oqs=[0, 1])
-	print(circuit.state)
 	dm = circuit.calculate_DM()
 	print(dm)
