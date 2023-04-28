@@ -5,7 +5,9 @@ Contact: weiguo.m@iphy.ac.cn
 """
 import tensornetwork as tn
 import QNodes
+from Library.basic_gates import TensorGate
 import Library.tools as tools
+import Library.noise_channel as noise_channel
 import torch as tc
 
 # # Ignore warnings from tensornetwork package when using pytorch backend for svd
@@ -14,12 +16,12 @@ import torch as tc
 
 tn.set_default_backend("pytorch")
 
-qnumber = 2
-qubits = QNodes.ghzLike_nodes(qnumber, noise=True)
+# qnumber = 2
+# qubits = QNodes.ghzLike_nodes(qnumber, noise=True)
 # qubits = QNodes.used4test()
 
 # qubits = tools.create_ket0Series(qnumber)
-node, dm = tools.calculate_DM(qubits, noisy=True)
+# node, dm = tools.calculate_DM(qubits, noisy=True)
 # print(dm)
 # prob = tools.density2prob(dm)
 # tools.plot_histogram(prob)
@@ -42,16 +44,14 @@ node, dm = tools.calculate_DM(qubits, noisy=True)
 
 
 
-# # Test NOISY CHANNEL
-# qnumber = 5
-# qubits = tools.create_ket_hadamardSeries(qnumber)
-# noise_channel.apply_noise_channel(qubits, [1, 3], _noise_type='depolarization', _p=1e-2)
-# noise_channel.apply_noise_channel(qubits, [1, 3], _noise_type='amplitude_phase_damping_error',
-#                                            _time=30, _T1=2e2, _T2=2e1)
-# # print('----------------------------')
-#
-# result0 = tc.einsum('ij, kj -> ik', qubits[1].tensor, qubits[1].tensor.conj())
-# print(qubits[1].tensor)
-# # print('result0:', result0)
-# # result1 = tc.einsum('ij, kj -> ik', qubits[3].tensor, qubits[3].tensor.conj())
-# # print('result1', result1)
+# Test NOISY CHANNEL
+qnumber = 2
+Gates = TensorGate()
+qubits = tools.create_ket_hadamardSeries(qnumber)
+tools.add_gate(qubits, Gates.cnot(), [0, 1])
+noise_channel.apply_noise_channel(qubits, [0], noise_type='depolarization', p=1e-2)
+noise_channel.apply_noise_channel(qubits, [0], noise_type='amplitude_phase_damping_error',
+                                           time=30, T1=2e2, T2=2e1)
+
+_, result = tools.calculate_DM(qubits, noisy=True, reduced_index=[1])
+print(result)
