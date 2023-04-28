@@ -51,9 +51,11 @@ class TensorCircuit(nn.Module):
 	def _add_gate(self, gate: TensorGate, _oqs: list):
 		r"""
 		Add quantum Gate to tensornetwork
+
 		Args:
 			gate: gate to be added;
 			_oqs: operating qubits.
+
 		Returns:
 			Tensornetwork after adding gate.
 		"""
@@ -261,6 +263,23 @@ class TensorCircuit(nn.Module):
 			self.state[_qnum].tensor = tc.reshape(tc.matmul(_u, _s), _left_edge_shape)
 
 	def add_gate(self, gate: TensorGate, oqs: list):
+		r"""
+		        Add quantum gate to circuit layer by layer.
+
+		        Args:
+		            gate: gate to be added;
+		            oqs: operating qubits.
+
+		        Returns:
+		            None
+		        """
+		if isinstance(gate, TensorGate) is False:
+			raise TypeError('Gate must be a TensorGate.')
+		if isinstance(oqs, int):
+			oqs = [oqs]
+		if isinstance(oqs, list) is False:
+			raise TypeError('Operating qubits must be a list.')
+
 		self.layers.add_module(gate.name + str(oqs), gate)
 		self._add_gate(gate, oqs)
 		if self.ideal is False:
@@ -270,8 +289,11 @@ class TensorCircuit(nn.Module):
 
 	def forward(self):
 		r"""
-		Apply the circuit to the state
-		"""
+        Forward propagation of tensornetwork.
+
+        Returns:
+            self.state: tensornetwork after forward propagation.
+        """
 		self.state = self.layers(self.state)
 		return self.state
 
@@ -280,13 +302,20 @@ class TensorCircuit(nn.Module):
 		Calculate the density matrix of the state.
 
 		Args:
-			state_vector: whether the density matrix is state vector;
+			state_vector: if True, the state is a state vector, otherwise, the state is a density matrix.
 			reduced_index: the state[index] to be reduced, which means the physics_con-physics of sub-density matrix
 								will be connected and contracted.
 
 		Returns:
 			_dm: the density matrix node;
 			_dm_tensor: the density matrix tensor.
+
+		Additional information:
+            A mixed state(noisy situation) is generally cannot be efficiently represented by a state vector but DM.
+
+        Raises:
+            ValueError: if the state is chosen to be a vector but is noisy;
+            ValueError: Reduced index should be empty as [] or None.
 		"""
 
 		def _re_permute(_axis_names_: list[str]):
