@@ -8,11 +8,12 @@ import copy
 import random
 import string
 import warnings
+
 import numpy as np
 import tensornetwork as tn
 import torch as tc
-from Library.tools import EdgeName2AxisName
 
+from Library.tools import EdgeName2AxisName
 
 tn.set_default_backend("pytorch")
 
@@ -223,19 +224,18 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
 
     # Operating the noise channel to qubits
     for _ii, _qnum in enumerate(oqs):
-        _edge = tn.connect(_qubits[_qnum][f'physics_{_qnum}'], _noise_nodeList[_ii]['inner'])
-        _qubits[_qnum] = tn.contract(_edge, name=f'qubit_{_qnum}')
+        # Contract the noise channel with the qubits
+        tn.connect(_qubits[_qnum][f'physics_{_qnum}'], _noise_nodeList[_ii]['inner'])
+        _qubits[_qnum] = tn.contract_between(_qubits[_qnum], _noise_nodeList[_ii], name=f'qubit_{_qnum}')
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([_qubits[_qnum]])   # Tensor append a new rank call 'I_{}'.format(_qnum) here.
-        # raise NotImplementedError('When double/multi errors are applied to a same qubit, problem occurs.'
-        #                           'The reason is that the node connection broken while the node is working.')
 
         _dup_item, _dup_idx = _find_duplicate(_qubits[_qnum].axis_names)
         if _dup_item:
             # Number of axis name before the reshape operation(contain duplicates)
             _length = len(_qubits[_qnum].axis_names)
             # Find the shape of the tensor after the reshape operation
-            _reshape_shape = copy.deepcopy(list(_qubits[_qnum].tensor.shape))
+            _reshape_shape = list(_qubits[_qnum].tensor.shape)
             _reshape_shape[_dup_idx[1]] = _reshape_shape[_dup_idx[0]] * _reshape_shape[_dup_idx[1]]
             _reshape_shape.pop(_dup_idx[0])
             # Generate a random string without duplicates, if len = 4, then the string is 'abcd' as Einstein notation.
@@ -247,23 +247,45 @@ def apply_noise_channel(_qubits: list[tn.Node] or list[tn.AbstractNode],
             _axis_names = copy.deepcopy(_qubits[_qnum].axis_names)
             _axis_names.pop(_dup_idx[0])
 
-            """ Though we clarify a new node called _left_node, in memory, 
-                        it is still the same node as connected to _qubits[_qnum]. """
-            _left_node, _right_node = _qubits[_qnum][0].get_nodes()     # 0 is the hard code that bond_idx at first pos
-            if _right_node is not None:     # Which means that the node's the most left edge is not bond_edge
-                if 'bond' not in _qubits[_qnum][0].name:
-                    raise ValueError(f'HardCodeERROR. The edge name must be bond, but got {_qubits[_qnum][0].name}')
-                _left_edge_name = _left_node.axis_names[-1]     # -1 is the hard code that bond_idx at last pos
-                _qubits[_qnum][0].disconnect(_left_edge_name, 'right_edge')
-                # ProcessFunction, for details, see the function definition
-                EdgeName2AxisName([_left_node])
+            """ Reform the qubit from adding noise channel, which causes edges' error in tensornetwork,
+                    easily speaking, reform the tensor. TensorNetwork package is not perfect. """
+            _bond_list, _l_name, _r_name = [], None, None
+            for _name in _qubits[_qnum].axis_names:
+                if 'bond' in _name:
+                    _bond_list.append(_name)
+                    for _string_lst in _bond_list:
+                        _string_lst = _name.split('_')
+                        if int(_string_lst[-1]) == int(_qnum):
+                            _l_name = _name
+                        elif int(_string_lst[-2]) == int(_qnum):
+                            _r_name = _name
 
+            if _l_name is not None:
+                _left_qubit, _reforming_qubit = _qubits[_qnum][_l_name].get_nodes()
+                _qubits[_qnum][_l_name].disconnect(_l_name, 'middle2left_edge')
+            else:
+                _left_qubit = None
+            if _r_name is not None:
+                _reforming_qubit, _right_qubit = _qubits[_qnum][_r_name].get_nodes()
+                _qubits[_qnum][_r_name].disconnect('middle2right_edge', _r_name)
+            else:
+                _right_qubit = None
+
+            # Previous information of _qubits[_qnum] is extracted, now we remade a new _qubits[_qnum]
             _qubits[_qnum] = tn.Node(_reshaped_tensor,
-                                   name=f'qubit_{_qnum}',
-                                   axis_names=_axis_names)  # Node's edge's, named 'I_{}', dimension has been promoted.
-            if _right_node is not None:
-                tn.connect(_left_node[_left_edge_name], _qubits[_qnum][0], name=_qubits[_qnum].axis_names[0])
-                EdgeName2AxisName([_qubits[_qnum]])
+                                     name=f'qubit_{_qnum}',
+                                     axis_names=_axis_names)  # Node's dimension of Edge f'I_{_qnum}' has been promoted.
+
+            if _l_name is not None:
+                tn.connect(_left_qubit[_l_name], _qubits[_qnum][_l_name], name=_l_name)
+            else:
+                pass
+            if _r_name is not None:
+                tn.connect(_qubits[_qnum][_r_name], _right_qubit[_r_name], name=_r_name)
+            else:
+                pass
+            # ProcessFunction, for details, see the function definition
+            EdgeName2AxisName([_qubits[_qnum]])
 
         # Shape-relating
         _shape = _qubits[_qnum].tensor.shape
