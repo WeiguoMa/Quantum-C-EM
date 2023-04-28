@@ -256,8 +256,11 @@ def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
     _contract_nodes = []
     for i in range(len(_qubits)):
         if noisy is True:
-            tn.connect(_qubits[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
-            _allowed_outer_product = False      # Edges between ket-bra are now connected, outer product is not allowed.
+            try:
+                tn.connect(_qubits[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
+                _allowed_outer_product = False  # Edges between ket-bra are now connected, outer product is not allowed.
+            except ValueError:
+                _allowed_outer_product = True
         _contract_nodes.append(tn.contract_between(_qubits[i], _qubits_conj[i], name=f'contracted_qubit_{i}',
                                                    allow_outer_product=_allowed_outer_product))
     EdgeName2AxisName(_contract_nodes)
@@ -270,6 +273,7 @@ def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
         if not isinstance(reduced_index, list):
             raise TypeError('reduced_index should be int or list[int]')
         for _idx in reduced_index:
+
             tn.connect(_contract_nodes[_idx][f'physics_{_idx}'], _contract_nodes[_idx][f'con_physics_{_idx}'])
             _contract_nodes[_idx] = tn.contract_trace_edges(_contract_nodes[_idx])
     else:
