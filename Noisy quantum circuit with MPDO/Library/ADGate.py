@@ -5,22 +5,18 @@ Contact: weiguo.m@iphy.ac.cn
 """
 import torch as tc
 import numpy as np
-from torch import nn
 from Library.tools import select_device
 
-class TensorGate(nn.Module):
-    def __init__(self, requires_grad: bool = False, device: str or int = 'cpu'):
-        super(TensorGate, self).__init__()
+class TensorGate(object):
+    def __init__(self, device: str or int = 'cpu', dtype=tc.complex128):
         self.name = None
         self.tensor = None
         self.rank = None
         self.dimension = None
         self.single = None
 
-        self.dtype = tc.complex128
         self.device = select_device(device)
-        self.requires_grad = requires_grad
-        self.variational = self.requires_grad
+        self.dtype = dtype
 
     def i(self):
         self.name = 'I'
@@ -28,7 +24,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = False
         return self
 
     def x(self):
@@ -37,7 +32,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = False
         return self
 
     def y(self):
@@ -46,7 +40,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = False
         return self
 
     def z(self):
@@ -55,7 +48,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = False
         return self
 
     def s(self):
@@ -64,7 +56,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = False
         return self
 
     def t(self):
@@ -73,7 +64,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = False
         return self
 
     def h(self):
@@ -82,7 +72,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = False
         return self
 
     def cz(self):
@@ -94,7 +83,6 @@ class TensorGate(nn.Module):
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
-        self.variational = False
         return self
 
     def swap(self):
@@ -106,7 +94,6 @@ class TensorGate(nn.Module):
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
-        self.variational = False
         return self
 
     def cnot(self):
@@ -120,7 +107,6 @@ class TensorGate(nn.Module):
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
-        self.variational = False
         return self
 
     # Variational gates
@@ -141,9 +127,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = True
-
-        theta.to(device=self.device)
         return self
 
     def ry(self, theta: tc.Tensor or float = None):
@@ -159,7 +142,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = True
         return self
 
     def rz(self, theta: tc.Tensor or float = None):
@@ -175,7 +157,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = True
         return self
 
     def u1(self, theta: tc.Tensor or float = None):
@@ -190,7 +171,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = True
         return self
 
     def u2(self, phi: tc.Tensor or float = None, lam: tc.Tensor or float = None):
@@ -211,7 +191,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = True
         return self
 
     def u3(self, theta: tc.Tensor or float = None, phi: tc.Tensor or float = None, lam: tc.Tensor or float = None):
@@ -238,7 +217,6 @@ class TensorGate(nn.Module):
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = True
         return self
 
     def rzz(self, theta: tc.Tensor or float = None):
@@ -260,7 +238,6 @@ class TensorGate(nn.Module):
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
-        self.variational = True
         return self
 
     def arbGateSingle(self, tensor: tc.Tensor = None):
@@ -273,11 +250,13 @@ class TensorGate(nn.Module):
             self.tensor = tensor.to(device=self.device, dtype=self.dtype)
         else:
             raise TypeError('Tensor must be a numpy array or a torch tensor')
+        if tensor.shape != (2, 2):
+            raise ValueError('Tensor must be of shape (2, 2)')
+
         self.name = 'ArbGateSingle'
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
-        self.variational = True
         return self
 
     def arbGateDouble(self, tensor: tc.Tensor = None):
@@ -290,10 +269,11 @@ class TensorGate(nn.Module):
             self.tensor = tensor.to(device=self.device, dtype=self.dtype)
         else:
             raise TypeError('Tensor must be a numpy array or a torch tensor')
+        if tensor.shape != (2, 2, 2, 2):
+            raise ValueError('Tensor must be of shape (2, 2, 2, 2)')
 
         self.name = 'ArbGateDouble'
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
-        self.variational = True
         return self
