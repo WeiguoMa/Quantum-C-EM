@@ -13,6 +13,7 @@ import torch as tc
 from torch import nn
 
 import Library.tools as tools
+from Library.AbstractGate import AbstractGate
 from Library.ADGate import TensorGate
 from Library.chipInfo import Chip_information
 from Library.noise_channel import depolarization_noise_channel, amp_phase_damping_error
@@ -40,14 +41,13 @@ class TensorCircuit(nn.Module):
 		self.dpc_errorRate = self.chip.dpc_errorRate
 
 		self.layers = nn.Sequential()
-		self.layers_name = []
-		self.layers_para = []
+		self._oqs_list = []
 
 		self.DM = None
 		self.DMNode = None
 
 	def _add_gate(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
-	              gate: TensorGate, _oqs: list):
+	              _layer_num: int, _oqs: list):
 		r"""
 		Add quantum Gate to tensornetwork
 
@@ -58,12 +58,16 @@ class TensorCircuit(nn.Module):
 		Returns:
 			Tensornetwork after adding gate.
 		"""
+		gate = self.layers[_layer_num].gate
+
 		if isinstance(_qubits, list) is False:
 			raise TypeError('Qubit must be a list of nodes.')
 		if isinstance(gate, TensorGate) is False:
 			raise TypeError('Gate must be a TensorGate.')
 		if isinstance(_oqs, list) is False:
 			raise TypeError('Operating qubits must be a list.')
+		if _oqs[np.argmax(_oqs)] > self.qnumber - 1:
+			raise ValueError('Qubit index out of range.')
 
 		single = gate.single
 		if single is False:  # Two-qubit gate
@@ -118,7 +122,7 @@ class TensorCircuit(nn.Module):
 				# ProcessFunction, for details, see the function definition.
 				tools.EdgeName2AxisName([_qubits[_bit]])
 
-	def add_noise(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
+	def _add_noise(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
 	                        oqs: list[int] or int,
 	                        noise_type: str,
 	                        p: float = None,
@@ -284,29 +288,29 @@ class TensorCircuit(nn.Module):
 			_left_edge_shape.append(_s.shape[-1])
 			_qubits[_qnum].tensor = tc.reshape(tc.matmul(_u, _s), _left_edge_shape)
 
-	def add_gate(self, gate: TensorGate, oqs: list):
+	def add_gate(self, gate: AbstractGate, oqs: list):
 		r"""
-		        Add quantum gate to circuit layer by layer.
+        Add quantum gate to circuit layer by layer.
 
-		        Args:
-		            gate: gate to be added;
-		            oqs: operating qubits.
+        Args:
+            gate: gate to be added;
+            oqs: operating qubits.
 
-		        Returns:
-		            None
-		        """
-		if isinstance(gate, TensorGate) is False:
-			raise TypeError('Gate must be a TensorGate.')
+        Returns:
+            None
+        """
+		if isinstance(gate, AbstractGate) is False:
+			raise TypeError('Gate must be a AbstractGate.')
 		if isinstance(oqs, int):
 			oqs = [oqs]
 		if isinstance(oqs, list) is False:
 			raise TypeError('Operating qubits must be a list.')
 
 		self.layers.add_module(gate.name + str(oqs), gate)
-		self.layers_name.append(gate.name + '_' + str(oqs))
-		self.layers_para.append(gate.gatePara)
+		self._oqs_list.append(oqs)
+		self.singleGate = gate.single
 
-	def forward(self, _state: list[tn.Node] = None):
+	def forward(self, _state: list[tn.Node] = None) -> list[tn.Node]:
 		r"""
         Forward propagation of tensornetwork.
 
@@ -316,25 +320,19 @@ class TensorCircuit(nn.Module):
 		self.initState = _state
 		self.qnumber = len(_state)
 
-		_Gates = TensorGate()
-
-		for _i, _name in enumerate(self.layers_name):
-			if self.layers_para[_i] is not None:
-				gate = _Gates.__getattribute__(_name.split('_')[0].lower())(self.layers_para[_i])
-			else:
-				gate = _Gates.__getattribute__(_name.split('_')[0].lower())()
-			oqs = ast.literal_eval(_name.split('_')[1])
-			self._add_gate(_state, gate, oqs)
+		for _i in range(len(self.layers)):
+			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
 			if self.ideal is False:
-				if gate.single is False:
-					oqs = oqs[-1]  # The second qubit is the target qubit
-				self.add_noise(_state, oqs=oqs, noise_type='depolarization', p=self.dpc_errorRate)
-				self.add_noise(_state, oqs=oqs, noise_type='amplitude_phase_damping_error'
+				_oqs = self._oqs_list[_i]
+				if self.singleGate is False:
+					_oqs = self._oqs_list[_i][-1]   # The second qubit is the target qubit
+				self._add_noise(_state, oqs=_oqs, noise_type='depolarization', p=self.dpc_errorRate)
+				self._add_noise(_state, oqs=_oqs, noise_type='amplitude_phase_damping_error'
 				               , time=self.GateTime, T1=self.T1, T2=self.T2)
 			self.state = _state
 		return _state
 
-	def calculate_DM(self, state_vector: bool = False, reduced_index: list = None):
+	def calculate_DM(self, state_vector: bool = False, reduced_index: list = None) -> tuple[tn.Node, tc.Tensor]:
 		r"""
 		Calculate the density matrix of the state.
 
@@ -427,19 +425,15 @@ class TensorCircuit(nn.Module):
 
 
 if __name__ == '__main__':
-	Gates = TensorGate()
 
 	# Initialize the circuit
 	circuit = TensorCircuit(ideal=False)
-	circuit.add_gate(Gates.h(), oqs=[0])
-	circuit.add_gate(Gates.cnot(), oqs=[0, 1])
-	circuit.add_gate(Gates.rx(np.pi / 2), oqs=[1])
-	# print(circuit.layers_name)
-	# print(circuit.layers_para)
+	circuit.add_gate(AbstractGate().h(), oqs=[0])
+	circuit.add_gate(AbstractGate().cnot(), oqs=[0, 1])
 
 	qnumber = 2
-	state = tools.create_ket0Series(qnumber, dtype=tc.complex128)
+	state = tools.create_ket0Series(qnumber)
 	state = circuit(state)
 
-	dm = circuit.calculate_DM(reduced_index=[1])
-	print(dm)
+	dm = circuit.calculate_DM()
+	print(np.array(dm))
