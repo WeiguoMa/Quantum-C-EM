@@ -3,26 +3,33 @@ Author: weiguo_ma
 Time: 04.26.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import torch as tc
-import copy
 import collections
-import tensornetwork as tn
-from noise_channel import depolarization_noise_channel, amp_phase_damping_error
+import copy
+import ast
+
 import numpy as np
-from ADGate import TensorGate
+import tensornetwork as tn
+import torch as tc
 from torch import nn
-from chipInfo import Chip_information
+
 import Library.tools as tools
+from Library.ADGate import TensorGate
+from Library.chipInfo import Chip_information
+from Library.noise_channel import depolarization_noise_channel, amp_phase_damping_error
+
 
 class TensorCircuit(nn.Module):
-	def __init__(self, qnumber: int = None, initState: str or tc.Tensor = None, ideal: bool = True,
-	            chi: int = None, kappa: int = None,
+	def __init__(self, ideal: bool = True,
+	            chi: int = None, kappa: int = None, truncate: bool = True,
 	            chip: str = None, device: str or int = 'cpu'):
 		super(TensorCircuit, self).__init__()
-		self.qnumber = qnumber
+		self.qnumber = None
+		self.state = None
+		self.initState = None
 		self.ideal = ideal
 		self.device = tools.select_device(device)
 		self.dtype = tc.complex128
+		self.singleGate = None
 
 		if chip is None:
 			chip = 'beta4Test'
@@ -32,18 +39,9 @@ class TensorCircuit(nn.Module):
 		self.GateTime = self.chip.gateTime
 		self.dpc_errorRate = self.chip.dpc_errorRate
 
-		if initState == '0' or 'ket0':
-			self.state = tools.create_ket0Series(qnumber, dtype=self.dtype)
-		elif initState == '1' or 'ket1':
-			self.state = tools.create_ket1Series(qnumber, dtype=self.dtype)
-		elif initState == '+' or 'ket+':
-			self.state = tools.create_ketPlusSeries(qnumber, dtype=self.dtype)
-		elif initState == '-' or 'ket-':
-			self.state = tools.create_ketMinusSeries(qnumber, dtype=self.dtype)
-		else:
-			self.state = tools.create_ketRandomSeries(qnumber, initState, dtype=self.dtype)
-
 		self.layers = nn.Sequential()
+		self.layers_name = []
+		self.layers_para = []
 
 		self.DM = None
 		self.DMNode = None
@@ -61,7 +59,7 @@ class TensorCircuit(nn.Module):
 			Tensornetwork after adding gate.
 		"""
 		if isinstance(_qubits, list) is False:
-			raise TypeError('Qubit must be a list.')
+			raise TypeError('Qubit must be a list of nodes.')
 		if isinstance(gate, TensorGate) is False:
 			raise TypeError('Gate must be a TensorGate.')
 		if isinstance(_oqs, list) is False:
@@ -305,21 +303,36 @@ class TensorCircuit(nn.Module):
 			raise TypeError('Operating qubits must be a list.')
 
 		self.layers.add_module(gate.name + str(oqs), gate)
-		self._add_gate(self.state, gate, oqs)
-		if self.ideal is False:
-			self.add_noise(self.state, oqs=oqs, noise_type='depolarization', p=self.dpc_errorRate)
-			self.add_noise(self.state, oqs=oqs, noise_type='amplitude_phase_damping_error'
-			                                  , time=self.GateTime, T1=self.T1, T2=self.T2)
+		self.layers_name.append(gate.name + '_' + str(oqs))
+		self.layers_para.append(gate.gatePara)
 
-	def forward(self):
+	def forward(self, _state: list[tn.Node] = None):
 		r"""
         Forward propagation of tensornetwork.
 
         Returns:
             self.state: tensornetwork after forward propagation.
         """
-		self.state = self.layers(self.state)
-		return self.state
+		self.initState = _state
+		self.qnumber = len(_state)
+
+		_Gates = TensorGate()
+
+		for _i, _name in enumerate(self.layers_name):
+			if self.layers_para[_i] is not None:
+				gate = _Gates.__getattribute__(_name.split('_')[0].lower())(self.layers_para[_i])
+			else:
+				gate = _Gates.__getattribute__(_name.split('_')[0].lower())()
+			oqs = ast.literal_eval(_name.split('_')[1])
+			self._add_gate(_state, gate, oqs)
+			if self.ideal is False:
+				if gate.single is False:
+					oqs = oqs[-1]  # The second qubit is the target qubit
+				self.add_noise(_state, oqs=oqs, noise_type='depolarization', p=self.dpc_errorRate)
+				self.add_noise(_state, oqs=oqs, noise_type='amplitude_phase_damping_error'
+				               , time=self.GateTime, T1=self.T1, T2=self.T2)
+			self.state = _state
+		return _state
 
 	def calculate_DM(self, state_vector: bool = False, reduced_index: list = None):
 		r"""
@@ -415,8 +428,18 @@ class TensorCircuit(nn.Module):
 
 if __name__ == '__main__':
 	Gates = TensorGate()
-	circuit = TensorCircuit(2, initState='0', ideal=False)
+
+	# Initialize the circuit
+	circuit = TensorCircuit(ideal=False)
 	circuit.add_gate(Gates.h(), oqs=[0])
 	circuit.add_gate(Gates.cnot(), oqs=[0, 1])
-	dm = circuit.calculate_DM()
+	circuit.add_gate(Gates.rx(np.pi / 2), oqs=[1])
+	# print(circuit.layers_name)
+	# print(circuit.layers_para)
+
+	qnumber = 2
+	state = tools.create_ket0Series(qnumber, dtype=tc.complex128)
+	state = circuit(state)
+
+	dm = circuit.calculate_DM(reduced_index=[1])
 	print(dm)
