@@ -3,10 +3,12 @@ Author: weiguo_ma
 Time: 04.29.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-from torch import nn
 import torch as tc
-from Library.tools import select_device
+from torch import nn
+
 from Library.ADGate import TensorGate
+from Library.tools import select_device
+
 
 class AbstractGate(nn.Module):
 	def __init__(self, requires_grad: bool = True, device: str or int = 'cpu', dtype=tc.complex128):
@@ -103,7 +105,7 @@ class AbstractGate(nn.Module):
 	def rx(self, theta: tc.Tensor = None):
 		self.variational = True
 		self.para = theta
-		self.gate = TensorGate().rx(self.para)()
+		self.gate = TensorGate().rx(self.para)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -111,7 +113,7 @@ class AbstractGate(nn.Module):
 	def ry(self, theta: tc.Tensor = None):
 		self.variational = True
 		self.para = theta
-		self.gate = TensorGate().ry(self.para)()
+		self.gate = TensorGate().ry(self.para)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -119,7 +121,7 @@ class AbstractGate(nn.Module):
 	def rz(self, theta: tc.Tensor = None):
 		self.variational = True
 		self.para = theta
-		self.gate = TensorGate().rz(self.para)()
+		self.gate = TensorGate().rz(self.para)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -127,7 +129,7 @@ class AbstractGate(nn.Module):
 	def u1(self, theta: tc.Tensor = None):
 		self.variational = True
 		self.para = theta
-		self.gate = TensorGate().u1(self.para)()
+		self.gate = TensorGate().u1(self.para)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -135,7 +137,7 @@ class AbstractGate(nn.Module):
 	def u2(self, lam, phi):
 		self.variational = True
 		self.para = [lam, phi]
-		self.gate = TensorGate().u2(self.para[0], self.para[1])()
+		self.gate = TensorGate().u2(self.para[0], self.para[1])
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -143,7 +145,7 @@ class AbstractGate(nn.Module):
 	def u3(self, theta, phi, lam):
 		self.variational = True
 		self.para = [theta, phi, lam]
-		self.gate = TensorGate().u3(self.para[0], self.para[1], self.para[2])()
+		self.gate = TensorGate().u3(self.para[0], self.para[1], self.para[2])
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -151,7 +153,7 @@ class AbstractGate(nn.Module):
 	def rzz(self, theta):
 		self.variational = True
 		self.para = theta
-		self.gate = TensorGate().rzz(self.para)()
+		self.gate = TensorGate().rzz(self.para)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -159,7 +161,7 @@ class AbstractGate(nn.Module):
 	def arbGateSingle(self, tensor: tc.Tensor):
 		self.variational = True
 		self.para = tensor
-		self.gate = TensorGate().arbGateSingle(self.para)()
+		self.gate = TensorGate().arbGateSingle(self.para)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
@@ -167,7 +169,7 @@ class AbstractGate(nn.Module):
 	def arbGateDouble(self, tensor: tc.Tensor):
 		self.variational = True
 		self.para = tensor
-		self.gate = TensorGate().arbGateDouble(self.para)()
+		self.gate = TensorGate().arbGateDouble(self.para)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self
