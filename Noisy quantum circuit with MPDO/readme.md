@@ -149,7 +149,7 @@ And the entanglement are naturally to be spread between qubits with following op
 # Inplementation of Quantum Noise
 Quantum noise is a sophisticated topic in quantum physics, in quantum computation, it can
 be roughly divided into several types/channels, like amplitude damping, phase damping, which
-is shown in picture below.
+is shown in picture below,
 
 <p align="center">
 <img src="./fig_md/UnitedErrorModel.svg" width="1600" />
@@ -163,10 +163,16 @@ of a low probability.
 
 In future work, I'll provide a **TRUE** quantum noise simulation with the QPT on **REAL** quantum
 computer in double-qubit gate, like CZ-gate. A real quantum noise takes places in actual physical
-control of the superconducting qubits, two examples are shown in picture below.
+control of the superconducting qubits, two examples are shown in picture below,
 
 <p align="center">
 <img src="./fig_md/TrueError.svg" width="1600" />
+</p>
+
+You might be curious of the pulse-controlled quantum computing system, a sketch is shown below,
+
+<p align="center">
+<img src="./fig_md/PulseControl.svg" width=1600" />
 </p>
 
 # Structure of the Project
