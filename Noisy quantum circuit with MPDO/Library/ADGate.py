@@ -3,9 +3,11 @@ Author: weiguo_ma
 Time: 04.25.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import torch as tc
 import numpy as np
+import torch as tc
+
 from Library.tools import select_device
+
 
 class TensorGate(object):
     def __init__(self, device: str or int = 'cpu', dtype=tc.complex128):
