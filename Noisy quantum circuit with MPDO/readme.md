@@ -64,7 +64,7 @@ in python, it easily makes mistakes. I designed it for qubit/tensor in picture b
 general high-rank situation in current model of quantum computing.
 
 <p align="center">
-<img src="./fig_md/qubit_axis.png" width="320" />
+<img src="./fig_md/qubit_axis.svg" width="320" />
 </p>
 
 Noticed that the indices name is explicit with number of qubit, for 1st qubit, it has name in pic.
@@ -84,7 +84,7 @@ in python, it easily makes mistakes. I designed it for gates/tensors in picture 
 it's easy to be generalized to many-qubit gates.
 
 <p align="center">
-<img src="./fig_md/gate_axis.png" width="320" />
+<img src="./fig_md/gate_axis.svg" width="320" />
 </p>
 
 Currently, I provided basic gates as: ['X', 'Y', 'Z', 'H', 'S', 'T', 'RX', 'RY', 'RZ', 'U1', 'U2',
@@ -97,7 +97,7 @@ Adding quantum gates to qubits is the basic operation in quantum computing, and 
 to be show in tensornetwork form like picture below.
 
 <p align="center">
-<img src="./fig_md/gate_add_strategy.png" width="400" />
+<img src="./fig_md/gate_add_strategy.svg" width="500" />
 </p>
 
 Quantum entanglement between qubits is the key to quantum computing, it's introduced by many-
@@ -141,10 +141,33 @@ is spanning in subspaces with "legs", we could just choose the right legs to con
 qubits, it works directly without any permutation.
 
 <p align="center">
-<img src="./fig_md/gate_stepover.png" width="400" />
+<img src="./fig_md/gate_stepover.svg" width="400" />
 </p>
 
 And the entanglement are naturally to be spread between qubits with following operations.
+
+# Inplementation of Quantum Noise
+Quantum noise is a sophisticated topic in quantum physics, in quantum computation, it can
+be roughly divided into several types/channels, like amplitude damping, phase damping, which
+is shown in picture below.
+
+<p align="center">
+<img src="./fig_md/UnitedErrorModel.svg" width="1600" />
+</p>
+
+Detailed quantum noise simulation or noise channels can be easily found in books or papers,
+like QCQI, Nielsen, etc. I implemented quantum noise easily with the strategy like the
+**Actual circuit** in picture, which is important is that in double-qubit gate, the **DC** 
+is only applied to the **target qubit**, besides, **SPAM** is not implemented, because 
+of a low probability.
+
+In future work, I'll provide a **TRUE** quantum noise simulation with the QPT on **REAL** quantum
+computer in double-qubit gate, like CZ-gate. A real quantum noise takes places in actual physical
+control of the superconducting qubits, two examples are shown in picture below.
+
+<p align="center">
+<img src="./fig_md/TrueError.svg" width="1600" />
+</p>
 
 # Structure of the Project
 
