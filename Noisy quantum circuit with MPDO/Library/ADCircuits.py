@@ -5,7 +5,6 @@ Contact: weiguo.m@iphy.ac.cn
 """
 import collections
 import copy
-import ast
 
 import numpy as np
 import tensornetwork as tn
@@ -13,15 +12,16 @@ import torch as tc
 from torch import nn
 
 import Library.tools as tools
-from Library.AbstractGate import AbstractGate
 from Library.ADGate import TensorGate
+from Library.AbstractGate import AbstractGate
+from Library.NoiseChannel import depolarization_noise_channel, amp_phase_damping_error
+from Library.TNNOptimizer import svd_right2left, qr_left2right
 from Library.chipInfo import Chip_information
-from Library.noise_channel import depolarization_noise_channel, amp_phase_damping_error
 
 
 class TensorCircuit(nn.Module):
 	def __init__(self, ideal: bool = True,
-	            chi: int = None, kappa: int = None, truncate: bool = True,
+	            chi: int = None, kappa: int = None, tnn_optimize: bool = True,
 	            chip: str = None, device: str or int = 'cpu'):
 		super(TensorCircuit, self).__init__()
 		self.qnumber = None
@@ -45,6 +45,10 @@ class TensorCircuit(nn.Module):
 
 		self.DM = None
 		self.DMNode = None
+
+		self.chi = chi
+		self.kappa = kappa
+		self.tnn_optimize = tnn_optimize
 
 	def _add_gate(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
 	              _layer_num: int, _oqs: list):
@@ -276,10 +280,10 @@ class TensorCircuit(nn.Module):
 			_s = _s.to(dtype=tc.complex128)
 
 			# Truncate the inner dimension
-			if kappa is None:
-				kappa = _s.nelement()
-			_s = _s[: kappa]
-			_u = _u[:, : kappa]
+			if self.kappa is None:
+				self.kappa = _s.nelement()
+			_s = _s[: self.kappa]
+			_u = _u[:, : self.kappa]
 
 			if len(_s.shape) == 1:
 				_s = tc.diag(_s)
@@ -310,29 +314,7 @@ class TensorCircuit(nn.Module):
 		self._oqs_list.append(oqs)
 		self.singleGate = gate.single
 
-	def forward(self, _state: list[tn.Node] = None) -> list[tn.Node]:
-		r"""
-        Forward propagation of tensornetwork.
-
-        Returns:
-            self.state: tensornetwork after forward propagation.
-        """
-		self.initState = _state
-		self.qnumber = len(_state)
-
-		for _i in range(len(self.layers)):
-			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
-			if self.ideal is False:
-				_oqs = self._oqs_list[_i]
-				if self.singleGate is False:
-					_oqs = self._oqs_list[_i][-1]   # The second qubit is the target qubit
-				self._add_noise(_state, oqs=_oqs, noise_type='depolarization', p=self.dpc_errorRate)
-				self._add_noise(_state, oqs=_oqs, noise_type='amplitude_phase_damping_error'
-				               , time=self.GateTime, T1=self.T1, T2=self.T2)
-			self.state = _state
-		return _state
-
-	def calculate_DM(self, state_vector: bool = False, reduced_index: list = None) -> tuple[tn.Node, tc.Tensor]:
+	def calculate_DM(self, state_vector: bool = False, reduced_index: list = None) -> tc.Tensor:
 		r"""
 		Calculate the density matrix of the state.
 
@@ -361,6 +343,9 @@ class TensorCircuit(nn.Module):
 				else:
 					_right_.append(_idx_)
 			return _left_ + _right_
+
+		if not reduced_index:
+			reduced_index = None
 
 		if state_vector is False:
 			_qubits_conj = copy.deepcopy(self.state)
@@ -394,14 +379,16 @@ class TensorCircuit(nn.Module):
 				if not isinstance(reduced_index, list):
 					raise TypeError('reduced_index should be int or list[int]')
 				for _idx in reduced_index:
-					tn.connect(_contract_nodes[_idx][f'physics_{_idx}'], _contract_nodes[_idx][f'con_physics_{_idx}'])
+					tn.connect(_contract_nodes[_idx][f'physics_{_idx}'],
+					           _contract_nodes[_idx][f'con_physics_{_idx}'])
 					_contract_nodes[_idx] = tn.contract_trace_edges(_contract_nodes[_idx])
 			else:
 				reduced_index = []
 
 			_dm = _contract_nodes[0]
 			for _ii in range(1, len(_contract_nodes)):
-				_dm = tn.contract_between(_dm, _contract_nodes[_ii], allow_outer_product=True, name='Contracted_DM_NODE')
+				_dm = tn.contract_between(_dm, _contract_nodes[_ii], allow_outer_product=True,
+				                          name='Contracted_DM_NODE')
 			tools.EdgeName2AxisName([_dm])
 
 			_dm.tensor = tc.permute(_dm.tensor, _re_permute(_dm.axis_names))
@@ -423,17 +410,30 @@ class TensorCircuit(nn.Module):
 			self.DM = _vector.tensor.reshape((2 ** self.qnumber, 1))
 			return self.DM
 
+	def forward(self, _state: list[tn.Node] = None,
+	            state_vector: bool = False, reduced_index: list = None,) -> tc.Tensor:
+		r"""
+        Forward propagation of tensornetwork.
 
-if __name__ == '__main__':
+        Returns:
+            self.state: tensornetwork after forward propagation.
+        """
+		self.initState = _state
+		self.qnumber = len(_state)
 
-	# Initialize the circuit
-	circuit = TensorCircuit(ideal=False)
-	circuit.add_gate(AbstractGate().h(), oqs=[0])
-	circuit.add_gate(AbstractGate().cnot(), oqs=[0, 1])
+		for _i in range(len(self.layers)):
+			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
+			if self.ideal is False:
+				_oqs = self._oqs_list[_i]
+				if self.singleGate is False:
+					_oqs = self._oqs_list[_i][-1]   # The second qubit is the target qubit
+				self._add_noise(_state, oqs=_oqs, noise_type='depolarization', p=self.dpc_errorRate)
+				self._add_noise(_state, oqs=_oqs, noise_type='amplitude_phase_damping_error'
+				               , time=self.GateTime, T1=self.T1, T2=self.T2)
+			if self.tnn_optimize is True:
+				qr_left2right(_state)
+				svd_right2left(_state, chi=self.chi)
+		self.state = _state
+		_dm = self.calculate_DM(state_vector=state_vector, reduced_index=reduced_index)
 
-	qnumber = 2
-	state = tools.create_ket0Series(qnumber)
-	state = circuit(state)
-
-	dm = circuit.calculate_DM()
-	print(np.array(dm))
+		return _dm
