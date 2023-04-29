@@ -81,7 +81,7 @@ def ket_minus(dtype):
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype)
 
-def create_ket0Series(number: int, dtype) -> list:
+def create_ket0Series(number: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
@@ -100,7 +100,7 @@ def create_ket0Series(number: int, dtype) -> list:
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket1Series(number: int, dtype) -> list:
+def create_ket1Series(number: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
@@ -119,7 +119,7 @@ def create_ket1Series(number: int, dtype) -> list:
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket_hadamardSeries(number: int, dtype) -> list:
+def create_ket_hadamardSeries(number: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
@@ -138,7 +138,7 @@ def create_ket_hadamardSeries(number: int, dtype) -> list:
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketPlusSeries(number: int, dtype) -> list:
+def create_ketPlusSeries(number: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
@@ -157,7 +157,7 @@ def create_ketPlusSeries(number: int, dtype) -> list:
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketMinusSeries(number: int, dtype) -> list:
+def create_ketMinusSeries(number: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
@@ -176,7 +176,7 @@ def create_ketMinusSeries(number: int, dtype) -> list:
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketRandomSeries(number: int, tensor: tc.Tensor, dtype) -> list:
+def create_ketRandomSeries(number: int, tensor: tc.Tensor, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
