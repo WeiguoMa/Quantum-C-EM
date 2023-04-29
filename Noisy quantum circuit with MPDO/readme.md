@@ -217,6 +217,7 @@ Example:
     q[2] ----[H]----[CONTROL     ----         NOT]----[X]----
     q[3] -----------         NOT]---------------------[X]----
 """
+
 # layer1
 circuit.add_gate(AbstractGate().h(), [0, 2])
 circuit.add_gate(AbstractGate().x(), [1])
@@ -234,15 +235,14 @@ circuit.add_gate(AbstractGate().h(), [1])
 ```python
 """
 In tools.py, I provide several initial state like,
-        |00..00>: create_ket0Series(qnumber)
-        |11..11>: create_ket1Series(qnumber)
-        |++..++>: create_ketPlusSeries(qnumber)
-        |--..--> create_ketMinusSeries(qnumber)
+        |00..00>: create_ket0Series(qnumber)        |11..11>: create_ket1Series(qnumber)
+        |++..++>: create_ketPlusSeries(qnumber)     |--..--> create_ketMinusSeries(qnumber)
     Or a random/wanted state with,
         |**..**>: create_ketRandomSeries(qnumber, tensor)
 Certainly, people can input an arbitrary state with 
         list[tensornetwork.Node] or list[tensornetwork.AbstractNode]
 """
+
 initState = tools.create_ket0Series(qnumber)
 ```
 
@@ -255,6 +255,7 @@ State returns a state vector for pure quantum state, or a density matrix.
      	state_vector: bool, if True, return a state vector, else return a density matrix.
      	reduced_index: list, calculate the reduced density matrix with the given index qubit is reduced.
 """
+
 state = circuit(state, state_vector=False, reduced_index=[])
 ```
 
