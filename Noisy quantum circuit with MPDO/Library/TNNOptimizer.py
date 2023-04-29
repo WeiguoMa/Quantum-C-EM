@@ -3,9 +3,12 @@ Author: weiguo_ma
 Time: 04.13.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import tensornetwork as tn
-from Library.tools import EdgeName2AxisName
 import copy
+
+import tensornetwork as tn
+
+from Library.tools import EdgeName2AxisName
+
 
 def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
     r"""
