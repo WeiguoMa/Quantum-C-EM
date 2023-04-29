@@ -3,14 +3,15 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import warnings
 import itertools
-import numpy as np
-import matplotlib.pyplot as plt
-import tensornetwork as tn
-import torch as tc
 import random
 import string
+import warnings
+
+import matplotlib.pyplot as plt
+import numpy as np
+import tensornetwork as tn
+import torch as tc
 
 
 def is_nested(_lst: list) -> bool:
@@ -81,12 +82,12 @@ def ket_minus(dtype):
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype)
 
-def create_ket0Series(number: int, dtype=tc.complex128) -> list:
+def create_ket0Series(qnumber: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
     Args:
-        number: the number of qubits;
+        qnumber: the number of qubits;
         dtype: the data type of the tensor.
 
     Returns:
@@ -95,17 +96,17 @@ def create_ket0Series(number: int, dtype=tc.complex128) -> list:
 
     _mps = [
         tn.Node(ket0(dtype), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket1Series(number: int, dtype=tc.complex128) -> list:
+def create_ket1Series(qnumber: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
     Args:
-        number: the number of qubits;
+        qnumber: the number of qubits;
         dtype: the data type of the tensor.
 
     Returns:
@@ -114,17 +115,17 @@ def create_ket1Series(number: int, dtype=tc.complex128) -> list:
 
     _mps = [
         tn.Node(ket1(dtype), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket_hadamardSeries(number: int, dtype=tc.complex128) -> list:
+def create_ket_hadamardSeries(qnumber: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
     Args:
-        number: the number of qubits;
+        qnumber: the number of qubits;
         dtype: the data type of the tensor.
 
     Returns:
@@ -133,17 +134,17 @@ def create_ket_hadamardSeries(number: int, dtype=tc.complex128) -> list:
 
     _mps = [
         tn.Node(ket_hadamard(dtype), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketPlusSeries(number: int, dtype=tc.complex128) -> list:
+def create_ketPlusSeries(qnumber: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
     Args:
-        number: the number of qubits;
+        qnumber: the number of qubits;
         dtype
 
     Returns:
@@ -152,17 +153,17 @@ def create_ketPlusSeries(number: int, dtype=tc.complex128) -> list:
 
     _mps = [
         tn.Node(ket_plus(dtype), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketMinusSeries(number: int, dtype=tc.complex128) -> list:
+def create_ketMinusSeries(qnumber: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
     Args:
-        number: the number of qubits;
+        qnumber: the number of qubits;
         dtype: the data type of the tensor.
 
     Returns:
@@ -171,17 +172,17 @@ def create_ketMinusSeries(number: int, dtype=tc.complex128) -> list:
 
     _mps = [
         tn.Node(ket_minus(dtype), name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketRandomSeries(number: int, tensor: tc.Tensor, dtype=tc.complex128) -> list:
+def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
     Args:
-        number: the number of qubits;
+        qnumber: the number of qubits;
         tensor: the tensor to be used to create nodes;
         dtype: the data type of the tensor.
 
@@ -192,7 +193,7 @@ def create_ketRandomSeries(number: int, tensor: tc.Tensor, dtype=tc.complex128) 
     tensor = tensor.to(dtype=dtype)
     _mps = [
         tn.Node(tensor, name='qubit_{}'.format(_ii),
-                axis_names=['physics_{}'.format(_ii)]) for _ii in range(number)
+                axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
