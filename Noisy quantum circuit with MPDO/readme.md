@@ -3,6 +3,9 @@
 ###### I have to emphasize that this project is not intended for High Performance Computing
 
 ## Computer Implementation
+Main Packages Required:
+- TensorNetwork -- Latest Version
+- Pytorch -- Version 2.0 or Version 1.10
 
 ### TensorNetwork Package
 
