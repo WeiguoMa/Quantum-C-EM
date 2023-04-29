@@ -148,77 +148,93 @@ And the entanglement are naturally to be spread between qubits with following op
 
 # Structure of the Project
 
-- tools: Introduces a set of tools for implementing operations on tensor-based quantum
-circuits. Some strategies are out of date, but I keep them here for future reference;
-- algorithm: Provided functions for QR-decomposition from left to right and SVD from right 
-to left. Let it as known that the decomposition can be implemented **ONLY** in situation 
-where the nodes are all connected with at least one routine, or it raises Error, I think
-this bug is caused by the code author's coding ability :) And might be fixed in future version;
-- QNodes: Some quantum circuits for testing are constructed here, reader may learn how to 
-construct a quantum circuit with my garbage code here;
-- basic_gate: Provided basic quantum gates in torch.tensor;
-- noise_channel: Provided single-qubit noise for quantum circuit;
-- main: Execute the program.
+- main: Test file for the project, passed while the environment is set up correctly.
+
+**Library**:
+- AbstractGate: Introduces an abstract class of quantum gates;
+- ADCircuits: Provides a class of quantum circuit with multiple methods, like add_gate;
+- ADGate: Provides basic information of quantum gates;
+- chipInfo: Provides basic information of quantum chips(Mainly used for noise simulation);
+- ElderFunc: Original codes in previous versions;
+- NoiseChannel: Provides noise channel for quantum circuit;
+- TNNOptimizer: Provides a class of optimizer for tensornetwork algorithm;
+- tools: Introduces a set of tools for implementing operations for inside program or outer program.
 
 # Tutorial
 
 [Basic API Tutorial](https://colab.research.google.com/drive/1Fp9DolkPT-P_Dkg_s9PLbTOKSq64EVSu)
 
-## Initialize the Qubits
+## Initialize Program
 ```python
-from basic_gates import TensorGate
-import tools
 import tensornetwork as tn
-import algorithm
-import noise_channel
+import Library.tools as tools
+from Library.ADCircuits import TensorCircuit
+from Library.AbstractGate import AbstractGate
 
-Gates = TensorGate()
-qnumber = 3
-# create a series of qubits in state |0>
-qubits = tools.create_ket0series(qnumber)
+tn.set_default_backend("pytorch")
 ```
-## Add Gates
+
+## Basic Information of Quantum Circuit
 ```python
-# Apply hardamard gate
-tools.add_gate_truncate(qubits, Gates.h(), [0])
-# Apply cnot gate
-for i in range(qnumber - 1):
-	tools.add_gate_truncate(qubits, Gates.cnot(), [i, i + 1])
+qnumber = 4
+ideal_circuit = False # or True
+"""
+While ideal_circuit is False, simulator is working with a noisy quantum circuit.
+"""
 ```
-## Add single-qubit Noise
+
+## Establish a Quantum Circuit
+```python
+# Instantiation
+circuit = TensorCircuit(ideal=ideal_circuit)
+"""
+Example:
+    q[0] ----[H]----[CONTROL     ---------------------[X]----
+    q[1] ----[X]----         NOT]----[CONTROL     ----[H]----
+    q[2] ----[H]----[CONTROL     ----         NOT]----[X]----
+    q[3] -----------         NOT]---------------------[X]----
+"""
+# layer1
+circuit.add_gate(AbstractGate().h(), [0, 2])
+circuit.add_gate(AbstractGate().x(), [1])
+# layer2
+circuit.add_gate(AbstractGate().cnot(), [0, 1])
+circuit.add_gate(AbstractGate().cnot(), [2, 3])
+# layer3
+circuit.add_gate(AbstractGate().cnot(), [1, 2])
+# layer4
+circuit.add_gate(AbstractGate().x(), [0, 2, 3])
+circuit.add_gate(AbstractGate().h(), [1])
+
+```
+## An Initial Quantum State
 ```python
 """
-IMPORTANT: Noisy qubits can only be shown in density matrix form.
-    function: contract_mps() is available for noisy qubits, but it's not a simple ket space.
+In tools.py, I provide several initial state like,
+        |00..00>: create_ket0Series(qnumber)
+        |11..11>: create_ket1Series(qnumber)
+        |++..++>: create_ketPlusSeries(qnumber)
+        |--..--> create_ketMinusSeries(qnumber)
+    Or a random/wanted state with,
+        |**..**>: create_ketRandomSeries(qnumber, tensor)
+Certainly, people can input an arbitrary state with 
+        list[tensornetwork.Node] or list[tensornetwork.AbstractNode]
 """
-# Add noise for single qubit
-noise_channel.apply_noise_channel(qubits, [0, 1], noise_type='depolarization', p=1e-2)
-noise_channel.apply_noise_channel(qubits, [0, 2],
-				    noise_type='amplitude_phase_damping_error',
-				    time=30, T1=2e2, T2=2e1)
-```
-## Optimization
-```python
-# Optimization
-algorithm.qr_left2right(qubits)
-algorithm.svd_right2left(qubits, chi=chi)   # chi is the truncation number, when chi is None, it's not truncated.
-```
-## Calculate the circuit/Contract Nodes
-```python
-result = tools.contract_mps(qubits) # this calls the contraction function with a greedy algorithm
-result = torch.reshape(result.tensor, (2 ** qnumber, 1))
-print(result)
+initState = tools.create_ket0Series(qnumber)
 ```
 
 ## Calculate Ket-space and Density Matrix $\rho$
 ```python
 """
-flatten() is used to convert the tensor to a vector with Binary array sequence, same function
-    as .reshape(2**qnumber, 1)
+State returns a state vector for pure quantum state, or a density matrix.
+
+    Args:
+     	state_vector: bool, if True, return a state vector, else return a density matrix.
+     	reduced_index: list, calculate the reduced density matrix with the given index qubit is reduced.
 """
-mps_node_tensor = tools.contract_mps(qubits).tensor.flatten()
-# where node is the carrier of density matrix(contracted node), result is the density matrix.
-node, result = tools.calculate_DM(qubits, noisy=False)
+state = circuit(state, state_vector=False, reduced_index=[])
 ```
 
 # Problems may be encountered
+**VQA** is not supported in this version, bugs still exist in the implementation of forward()
+and updating the parameters.
