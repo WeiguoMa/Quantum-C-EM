@@ -268,22 +268,22 @@ def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None,
         function utilized:
                 tc_expect()
     """
-    raise NotImplementedError('This function may cause error now.')
     _qn = int(np.log(rho_in.shape[0]) / np.log(2))
 
     if bases is None:
         bases = basis_list(_qn)
 
     _prob = []
-    for ii in range(rho_in.shape[0]):
-        _prob.append(tc_expect(rho_in, bases[ii]))
+    for _ii in range(len(bases)):
+        _prob.append(float(tc_expect(rho_in, bases[_ii])))
 
     # Form a dictionary
     if basis_name is None:
         basis_name = basis_name_list(_qn)
+
     _dc = {}
     for _i in range(len(basis_name)):
-        _dc[basis_name[_i]] = tc.abs(_prob[_i])
+        _dc[basis_name[_i]] = _prob[_i]
 
     # Normalization
     _sum_result = 0
