@@ -76,6 +76,28 @@ class TensorGate(object):
         self.single = True
         return self
 
+    def cx(self):
+        self.name = 'CX'
+        self.tensor = tc.tensor([[1, 0, 0, 0],
+                                 [0, 1, 0, 0],
+                                 [0, 0, 0, 1],
+                                 [0, 0, 1, 0]], dtype=self.dtype).reshape((2, 2, 2, 2))
+        self.rank = 4
+        self.dimension = [[2, 2], [2, 2]]
+        self.single = False
+        return self
+
+    def cy(self):
+        self.name = 'CY'
+        self.tensor = tc.tensor([[1, 0, 0, 0],
+                                 [0, 1, 0, 0],
+                                 [0, 0, 0, -1j],
+                                 [0, 0, 1j, 0]], dtype=self.dtype).reshape((2, 2, 2, 2))
+        self.rank = 4
+        self.dimension = [[2, 2], [2, 2]]
+        self.single = False
+        return self
+
     def cz(self):
         self.name = 'CZ'
         self.tensor = tc.tensor([[1, 0, 0, 0],
@@ -100,12 +122,10 @@ class TensorGate(object):
 
     def cnot(self):
         self.name = 'CNOT'
-        self.tensor = tc.zeros((2, 2, 2, 2), dtype=self.dtype)  # rank-4 tensor
-        # Rank-4 tensor CNOT is constructed by its truth table
-        self.tensor[0, 0, 0, 0] = 1  #
-        self.tensor[0, 1, 0, 1] = 1
-        self.tensor[1, 0, 1, 1] = 1
-        self.tensor[1, 1, 1, 0] = 1
+        self.tensor = tc.tensor([[1, 0, 0, 0],
+                                 [0, 1, 0, 0],
+                                 [0, 0, 0, 1],
+                                 [0, 0, 1, 0]], dtype=self.dtype).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
