@@ -18,7 +18,7 @@ tn.set_default_backend("pytorch")
 qnumber = 4
 
 # Establish a quantum circuit
-circuit = TensorCircuit(ideal=False)
+circuit = TensorCircuit(ideal=False, tnn_optimize=True)
 # layer1
 circuit.add_gate(AbstractGate().h(), [0, 2])
 circuit.add_gate(AbstractGate().x(), [1])
@@ -34,7 +34,7 @@ circuit.add_gate(AbstractGate().h(), [1])
 
 # Generate an initial quantum state
 state = tools.create_ket0Series(qnumber)
-state = circuit(state, state_vector=False, reduced_index=[0])
+state = circuit(state, state_vector=False, reduced_index=[])
 
 # Calculate probability distribution
 prob_dict = tools.density2prob(state)
