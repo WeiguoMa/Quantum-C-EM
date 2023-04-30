@@ -15,12 +15,12 @@ import Library.tools as tools
 from Library.ADGate import TensorGate
 from Library.AbstractGate import AbstractGate
 from Library.NoiseChannel import NoiseChannel
-from Library.TNNOptimizer import svd_right2left, qr_left2right
+from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity
 from Library.chipInfo import Chip_information
 
 
 class TensorCircuit(nn.Module):
-	def __init__(self, ideal: bool = True,
+	def __init__(self, ideal: bool = True, realNoise: bool = False,
 	            chi: int = None, kappa: int = None, tnn_optimize: bool = True,
 	            chip: str = None, device: str or int = 'cpu'):
 		super(TensorCircuit, self).__init__()
@@ -28,6 +28,8 @@ class TensorCircuit(nn.Module):
 		self.state = None
 		self.initState = None
 		self.ideal = ideal
+		self.chip = chip
+		self.realNoise = realNoise
 		self.device = tools.select_device(device)
 		self.dtype = tc.complex128
 		self.singleGate = None
@@ -48,12 +50,12 @@ class TensorCircuit(nn.Module):
 		Add quantum Gate to tensornetwork
 
 		Args:
-			gate: gate to be added;
 			_oqs: operating qubits.
 
 		Returns:
 			Tensornetwork after adding gate.
 		"""
+
 		gate = self.layers[_layer_num].gate
 
 		if isinstance(_qubits, list) is False:
@@ -76,8 +78,8 @@ class TensorCircuit(nn.Module):
 			else:
 				_edges = []
 				gate = tn.Node(gate.tensor, name=gate.name,
-				               axis_names=[f'inner_{_oqs[0]}', f'inner_{_oqs[1]}', f'physics_{_oqs[0]}',
-				                           f'physics_{_oqs[1]}'])
+				               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
+				                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}'])
 				# Created a new node in memory
 				_contract_qubits = tn.contract_between(_qubits[_oqs[0]], _qubits[_oqs[1]],
 				                                       name='q_{}_{}'.format(_oqs[0], _oqs[1]),
@@ -109,7 +111,7 @@ class TensorCircuit(nn.Module):
 				                                                      right_name=f'qubit_{_oqs[1]}',
 				                                                      edge_name=f'bond_{_oqs[0]}_{_oqs[1]}')
 		else:
-			gate_list = [tn.Node(gate.tensor, name=gate.name, axis_names=[f'inner_{_idx}', f'physics_{_idx}'])
+			gate_list = [tn.Node(gate.tensor, name=gate.name, axis_names=[f'physics_{_idx}', f'inner_{_idx}'])
 			             for _idx in _oqs]
 			for _i, _bit in enumerate(_oqs):
 				tn.connect(_qubits[_bit][f'physics_{_bit}'], gate_list[_i][f'inner_{_bit}'])
@@ -177,7 +179,7 @@ class TensorCircuit(nn.Module):
 		_noise_nodeList = []
 		for _oq in oqs:
 			_noise_node = tn.Node(_noise_tensor, name='noise_node',
-			                      axis_names=['inner', f'physics_{_oq}', f'I_{_oq}'])
+			                      axis_names=[f'physics_{_oq}', 'inner', f'I_{_oq}'])
 			# copy.deepcopy is necessary to avoid the error of node reuse.
 			_noise_nodeList.append(copy.deepcopy(_noise_node))
 
@@ -325,6 +327,8 @@ class TensorCircuit(nn.Module):
 
 		if state_vector is False:
 			_qubits_conj = copy.deepcopy(self.state)
+			for _n in range(self.qnumber):
+				_qubits_conj[_n].tensor = _qubits_conj[_n].tensor.conj()
 			_allowed_outer_product = True
 
 			# Differential name the conjugate qubits' edges name to permute the order of the indices
@@ -400,16 +404,33 @@ class TensorCircuit(nn.Module):
 		for _i in range(len(self.layers)):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
 			if self.ideal is False:
-				Noise = NoiseChannel()
+				Noise = NoiseChannel(chip=self.chip)
 				_oqs = self._oqs_list[_i]
 				if self.singleGate is False:
-					_oqs = self._oqs_list[_i][-1]   # The second qubit is the target qubit
+					if self.realNoise is False:
+						_oqs = self._oqs_list[_i][-1]   # The second qubit is the target qubit
+					else:
+						_oqs = []
 				self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='depolarization')
 				self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='amplitude_phase_damping_error')
 			if self.tnn_optimize is True:
-				qr_left2right(_state)
-				svd_right2left(_state, chi=self.chi)
+				check = checkConnectivity(_state)
+				if check is True:
+					qr_left2right(_state)
+					svd_right2left(_state, chi=self.chi)
 		self.state = _state
 		_dm = self.calculate_DM(state_vector=state_vector, reduced_index=reduced_index)
 
 		return _dm
+
+
+if __name__ == '__main__':
+	qnumber = 3
+	circuit = TensorCircuit(ideal=False, tnn_optimize=True)
+	# layer1
+	circuit.add_gate(AbstractGate().h(), [0])
+	circuit.add_gate(AbstractGate().rx(np.pi/4), [1])
+
+	state = tools.create_ket0Series(qnumber)
+	state = circuit(state, state_vector=False, reduced_index=[])
+	print(state)
