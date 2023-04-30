@@ -1,6 +1,6 @@
 """
 Author: weiguo_ma
-Time: 04.07.2023
+Time: 04.30.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 import tensornetwork as tn
@@ -31,7 +31,13 @@ circuit.add_gate(AbstractGate().cnot(), [1, 2])
 circuit.add_gate(AbstractGate().x(), [0, 2, 3])
 circuit.add_gate(AbstractGate().h(), [1])
 
+
 # Generate an initial quantum state
 state = tools.create_ket0Series(qnumber)
 state = circuit(state, state_vector=False, reduced_index=[0])
-print(state)
+
+# Calculate probability distribution
+prob_dict = tools.density2prob(state)
+
+# plot probability distribution
+tools.plot_histogram(prob_dict)
