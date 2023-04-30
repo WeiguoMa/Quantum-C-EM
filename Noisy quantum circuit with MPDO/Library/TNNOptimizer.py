@@ -9,6 +9,23 @@ import tensornetwork as tn
 
 from Library.tools import EdgeName2AxisName
 
+def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
+
+    assert len(_qubits) >= 1, 'input should be a list of qubits nodes'
+    connectivity = True
+    if len(_qubits) == 1:
+        connectivity = False
+        return connectivity
+    elif len(_qubits) == 2:
+        return _qubits[0].has_nondangling_edge()
+    else:
+        for _n in range(1, len(_qubits) - 1):
+            try:
+                _, _ = _qubits[_n][f'bond_{_n - 1}_{_n}'], _qubits[_n][f'bond_{_n}_{_n + 1}']
+                return connectivity
+            except ValueError:
+                connectivity = False
+                return connectivity
 
 def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
     r"""
@@ -38,8 +55,7 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
                                   right_name='right_waiting4contract2form_right',
                                   edge_name=f'qrbond_{_i}_{_i+1}')
 
-        """ allow_outer_product=True may cause mathematical error """
-        _r = tn.contract_between(_r, _qubits[_i+1], allow_outer_product=True)
+        _r = tn.contract_between(_r, _qubits[_i+1])
 
         _r.name = 'qubit_{}'.format(_i+1)
         _qubits[_i], _qubits[_i+1] = _q, _r
@@ -75,8 +91,7 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
         # Contract
         contracted_two_nodes = tn.contract_between(_qubits[idx - 1],
                                                    _qubits[idx],
-                                                   name='contract_two_nodes',
-                                                   allow_outer_product=True)    # May cause math error
+                                                   name='contract_two_nodes')
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([contracted_two_nodes])
         # SVD
