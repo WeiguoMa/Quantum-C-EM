@@ -14,7 +14,7 @@ from torch import nn
 import Library.tools as tools
 from Library.ADGate import TensorGate
 from Library.AbstractGate import AbstractGate
-from Library.NoiseChannel import depolarization_noise_channel, amp_phase_damping_error
+from Library.NoiseChannel import NoiseChannel
 from Library.TNNOptimizer import svd_right2left, qr_left2right
 from Library.chipInfo import Chip_information
 
@@ -31,14 +31,6 @@ class TensorCircuit(nn.Module):
 		self.device = tools.select_device(device)
 		self.dtype = tc.complex128
 		self.singleGate = None
-
-		if chip is None:
-			chip = 'beta4Test'
-		self.chip = Chip_information().__getattribute__(chip)()
-		self.T1 = self.chip.T1
-		self.T2 = self.chip.T2
-		self.GateTime = self.chip.gateTime
-		self.dpc_errorRate = self.chip.dpc_errorRate
 
 		self.layers = nn.Sequential()
 		self._oqs_list = []
@@ -128,49 +120,34 @@ class TensorCircuit(nn.Module):
 
 	def _add_noise(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
 	                        oqs: list[int] or int,
-	                        noise_type: str,
-	                        p: float = None,
-	                        time: float = None,
-	                        T1: float = None,
-	                        T2: float = None,
-	                        kappa: int = None):
+	                        noiseInfo: NoiseChannel,
+	                        noise_type: str):
 		r"""
 		Apply the noise channel to the qubits.
+
 		Args:
 			_qubits: The qubits to be applied the noise channel;
 			oqs: The qubits to be applied the noise channel;
-			noise_type: The type of the noise channel;
-			p: The probability of the noise channel;
-			time: The time of the noise channel;
-			T1: The T1 time of the noise channel;
-			T2: The T2 time of the noise channel;
-			kappa: Truncation dimension upper bond of the noise channel.
+			noiseInfo: The information of the noise channel;
+			noise_type: The type of the noise channel.
+
 		Returns:
 			_qubits: The qubits after applying the noise channel.
 				!!! Actually no return, but the qubits are changed in the memory. !!!
+
 		Additional information:
 			The noise channel is applied to the qubits by the following steps:
 				1. Construct the noise channel;
 				2. Construct the error tensor;
 				3. Contract the error tensor with the qubits;
 				4. Fix the axis format of the qubits.
-		Attention:
-			On account for the function _hard_fix_axis_format,
-				The qubits should be in the following format:
-					1. The first edge is the bond edge;
-					2. The second edge is the physics edge;
-					3. The third edge is the bond edge.
-				The qubits should be in the following format:
-					1. The first edge is the bond edge;
-					2. The second edge is the physics edge;
-					3. The third edge is the bond edge.
 		"""
 
-		def _import_error_tensor(_noise_type_: str, _p_: float):
+		def _import_error_tensor(_noise_type_: str):
 			if _noise_type_ == 'depolarization':
-				return depolarization_noise_channel(_p_)
+				return noiseInfo.dpCTensor
 			elif _noise_type_ == 'amplitude_phase_damping_error':
-				return amp_phase_damping_error(time, T1, T2)
+				return noiseInfo.apdeCTensor
 			else:
 				raise NotImplementedError(f'Noise type {_noise_type_} is not implemented yet.')
 
@@ -193,11 +170,10 @@ class TensorCircuit(nn.Module):
 		if len(oqs) > len(_qubits):
 			raise ValueError(f'len(oqs) must be less than or equal to to len(qubits),'
 			                 f' but got {len(oqs)} and {len(_qubits)}')
-		if p is None and (time is None or T1 is None or T2 is None):
-			raise ValueError('The noise parameter must be specified.')
 
 		# Create Node for noise channel
-		_noise_tensor = _import_error_tensor(_noise_type_=noise_type, _p_=p)
+		_noise_tensor = _import_error_tensor(_noise_type_=noise_type)
+
 		_noise_nodeList = []
 		for _oq in oqs:
 			_noise_node = tn.Node(_noise_tensor, name='noise_node',
@@ -424,12 +400,12 @@ class TensorCircuit(nn.Module):
 		for _i in range(len(self.layers)):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
 			if self.ideal is False:
+				Noise = NoiseChannel()
 				_oqs = self._oqs_list[_i]
 				if self.singleGate is False:
 					_oqs = self._oqs_list[_i][-1]   # The second qubit is the target qubit
-				self._add_noise(_state, oqs=_oqs, noise_type='depolarization', p=self.dpc_errorRate)
-				self._add_noise(_state, oqs=_oqs, noise_type='amplitude_phase_damping_error'
-				               , time=self.GateTime, T1=self.T1, T2=self.T2)
+				self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='depolarization')
+				self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='amplitude_phase_damping_error')
 			if self.tnn_optimize is True:
 				qr_left2right(_state)
 				svd_right2left(_state, chi=self.chi)
