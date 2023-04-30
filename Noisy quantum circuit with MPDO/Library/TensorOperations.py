@@ -7,7 +7,7 @@ import numpy as np
 import torch as tc
 
 
-def tensorDot(*args):
+def tensorDot(*args) -> tc.Tensor:
     if not args:
         raise TypeError("Requires at least one input argument")
 
