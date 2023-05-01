@@ -7,6 +7,7 @@ import torch as tc
 from torch import nn
 
 from Library.ADGate import TensorGate
+from Library.ADNGate import NoisyTensorGate
 from Library.tools import select_device
 
 
@@ -177,6 +178,15 @@ class AbstractGate(nn.Module):
 		self.variational = True
 		self.para = tensor
 		self.gate = TensorGate().arbGateDouble(self.para)
+		self.name = self.gate.name
+		self.single = self.gate.single
+		return self
+
+	# Experimental noisy gates
+
+	def czEXP(self):
+		self.variational = False
+		self.gate = NoisyTensorGate().czEXP()
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self

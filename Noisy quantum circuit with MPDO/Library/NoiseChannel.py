@@ -8,8 +8,9 @@ import warnings
 import numpy as np
 import tensornetwork as tn
 import torch as tc
-from Library.tools import select_device, readExpChi, czNoisyTensor
+
 from Library.chipInfo import Chip_information
+from Library.tools import select_device
 
 tn.set_default_backend("pytorch")
 
@@ -31,8 +32,6 @@ class NoiseChannel(object):
         # Noise channels' tensor
         self.dpCTensor = self.depolarization_noise_channel(p=self.dpc_errorRate)
         self.apdeCTensor = self.amp_phase_damping_error(time=self.GateTime, T1=self.T1, T2=self.T2)
-        if realCZ is True:
-            self.czCTensor = self.czExp_channel()
 
     def depolarization_noise_channel(self, p: float) -> tc.Tensor:
         r"""
@@ -117,10 +116,3 @@ class NoiseChannel(object):
                                                      [0, 0]]], dtype=self.dtype, device=self.device)
         _apdc_tensor = tc.einsum('ijk -> jki', _apdc_tensor)
         return _apdc_tensor
-
-    @staticmethod
-    def czExp_channel():
-        _chi = readExpChi()
-        _czExp_tensor = tc.stack(czNoisyTensor(_chi))
-        _czExp_tensor = tc.einsum('ijlmn -> jlmni', _czExp_tensor)
-        return _czExp_tensor
