@@ -9,6 +9,7 @@ import tensornetwork as tn
 
 from Library.tools import EdgeName2AxisName
 
+
 def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
 
     assert len(_qubits) >= 1, 'input should be a list of qubits nodes'
