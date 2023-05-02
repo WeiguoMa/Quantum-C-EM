@@ -374,7 +374,7 @@ class TensorCircuit(nn.Module):
 			raise TypeError('Operating qubits must be a list.')
 
 		if self.realNoise is True:
-			_transpile_gateList, _transpile_oqsList = _transpile_gate(gate, oqs)
+			_transpile_gateList, _transpile_oqsList = self._transpile_gate(gate, oqs)
 		else:
 			_transpile_gateList, _transpile_oqsList = [gate], [oqs]
 
