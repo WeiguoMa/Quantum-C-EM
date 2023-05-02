@@ -423,6 +423,10 @@ class TensorCircuit(nn.Module):
 		if not reduced_index:
 			reduced_index = None
 
+		if reduced_index is not None:
+			if reduced_index[np.argmax(reduced_index)] >= self.qnumber:
+				raise ValueError('Reduced index should not be larger than the qubit number.')
+
 		if state_vector is False:
 			_qubits_conj = copy.deepcopy(self.state)
 			for _n in range(self.qnumber):
