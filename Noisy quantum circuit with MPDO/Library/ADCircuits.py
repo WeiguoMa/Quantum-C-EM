@@ -203,6 +203,7 @@ class TensorCircuit(nn.Module):
 				                                                      left_name=f'qubit_{_oqs[0]}',
 				                                                      right_name=f'qubit_{_oqs[1]}',
 				                                                      edge_name=f'bond_{_oqs[0]}_{_oqs[1]}')
+				tools.EdgeName2AxisName([_qubits[_oqs[0]], _qubits[_oqs[1]]])
 		else:
 			gate_list = [tn.Node(gate.tensor, name=gate.name, axis_names=[f'physics_{_idx}', f'inner_{_idx}'])
 			             for _idx in _oqs]
