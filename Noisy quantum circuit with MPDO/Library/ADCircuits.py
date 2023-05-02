@@ -15,29 +15,8 @@ from Library.ADGate import TensorGate
 from Library.ADNGate import NoisyTensorGate
 from Library.AbstractGate import AbstractGate
 from Library.NoiseChannel import NoiseChannel
+from Library.realNoise import czExp_channel
 from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity
-
-
-def _transpile_gate(_gate_: AbstractGate, _oqs_: list):
-	_gateName_ = _gate_.name.lower()
-	if _gateName_ == 'cnot' or _gateName_ == 'cx':
-		_gateList_ = [AbstractGate().ry(-np.pi/2), AbstractGate().czEXP(), AbstractGate().ry(np.pi/2)]
-		_oqsList_ = [[_oqs_[-1]], _oqs_, [_oqs_[-1]]]
-	elif _gateName_ == 'rzz':
-		_gateList_ = [AbstractGate().cnot(), AbstractGate().rz(_gate_.para), AbstractGate().cnot()]
-		_oqsList_ = [_oqs_, [_oqs_[-1]], _oqs_]
-	elif _gateName_ == 'rxx':
-		_gateList_ = [AbstractGate().h(), AbstractGate().cnot(), AbstractGate().rz(_gate_.para),
-		                            AbstractGate().cnot(), AbstractGate().h()]
-		_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
-	elif _gateName_ == 'ryy':
-		_gateList_ = [AbstractGate().rx(np.pi/2), AbstractGate().cnot(), AbstractGate().rz(_gate_.para),
-					                AbstractGate().cnot(), AbstractGate().rx(-np.pi/2)]
-		_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
-	else:
-		_gateList_, _oqsList_ = [_gate_], [_oqs_]
-
-	return _gateList_, _oqsList_
 
 class TensorCircuit(nn.Module):
 	def __init__(self, ideal: bool = True, realNoise: bool = False,
@@ -50,7 +29,12 @@ class TensorCircuit(nn.Module):
 		self.initState = None
 		self.ideal = ideal
 		self.chip = chip
+
 		self.realNoise = realNoise
+		self.realNoiseChannelTensor = None
+		if self.realNoise is True:
+			self.realNoiseChannelTensor = czExp_channel()
+
 		self.device = tools.select_device(device)
 		self.dtype = tc.complex128
 
@@ -63,6 +47,29 @@ class TensorCircuit(nn.Module):
 		self.chi = chi
 		self.kappa = kappa
 		self.tnn_optimize = tnn_optimize
+
+	def _transpile_gate(self, _gate_: AbstractGate, _oqs_: list):
+		_gateName_ = _gate_.name.lower()
+		if _gateName_ == 'cnot' or _gateName_ == 'cx':
+			_gateList_ = [AbstractGate().ry(-np.pi / 2),
+			              AbstractGate().czEXP(EXPTensor=self.realNoiseChannelTensor),
+			                                             AbstractGate().ry(np.pi / 2)]
+			_oqsList_ = [[_oqs_[-1]], _oqs_, [_oqs_[-1]]]
+		elif _gateName_ == 'rzz':
+			_gateList_ = [AbstractGate().cnot(), AbstractGate().rz(_gate_.para), AbstractGate().cnot()]
+			_oqsList_ = [_oqs_, [_oqs_[-1]], _oqs_]
+		elif _gateName_ == 'rxx':
+			_gateList_ = [AbstractGate().h(), AbstractGate().cnot(), AbstractGate().rz(_gate_.para),
+			              AbstractGate().cnot(), AbstractGate().h()]
+			_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
+		elif _gateName_ == 'ryy':
+			_gateList_ = [AbstractGate().rx(np.pi / 2), AbstractGate().cnot(), AbstractGate().rz(_gate_.para),
+			              AbstractGate().cnot(), AbstractGate().rx(-np.pi / 2)]
+			_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
+		else:
+			_gateList_, _oqsList_ = [_gate_], [_oqs_]
+
+		return _gateList_, _oqsList_
 
 	def _add_gate(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
 	              _layer_num: int, _oqs: list):

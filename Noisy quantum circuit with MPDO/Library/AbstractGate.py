@@ -184,9 +184,9 @@ class AbstractGate(nn.Module):
 
 	# Experimental noisy gates
 
-	def czEXP(self):
+	def czEXP(self, EXPTensor: tc.Tensor = None):
 		self.variational = False
-		self.gate = NoisyTensorGate().czEXP()
+		self.gate = NoisyTensorGate().czEXP(tensor=EXPTensor)
 		self.name = self.gate.name
 		self.single = self.gate.single
 		return self

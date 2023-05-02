@@ -20,9 +20,12 @@ class NoisyTensorGate(object):
 		self.device = select_device(device)
 		self.dtype = dtype
 
-	def czEXP(self):
+	def czEXP(self, tensor: tc.Tensor = None):
 		self.name = 'CZEXP'
-		self.tensor = czExp_channel()
+		if tensor is None:  # NO input may cause high memory cost and time cose
+			self.tensor = czExp_channel()
+		else:
+			self.tensor = tensor
 		self.rank = 5
 		self.dimension = [[2, 2], [2, 2], ['int[According2EXP]']]
 		self.single = False
