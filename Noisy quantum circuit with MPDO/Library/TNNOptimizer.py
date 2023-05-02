@@ -13,20 +13,20 @@ from Library.tools import EdgeName2AxisName
 def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
 
     assert len(_qubits) >= 1, 'input should be a list of qubits nodes'
-    connectivity = True
+    connectivity = None
     if len(_qubits) == 1:
         connectivity = False
         return connectivity
     elif len(_qubits) == 2:
         return _qubits[0].has_nondangling_edge()
     else:
-        for _n in range(1, len(_qubits) - 1):
-            try:
+        try:
+            for _n in range(1, len(_qubits) - 1, 1):
                 _, _ = _qubits[_n][f'bond_{_n - 1}_{_n}'], _qubits[_n][f'bond_{_n}_{_n + 1}']
-                return connectivity
-            except ValueError:
-                connectivity = False
-                return connectivity
+                connectivity = True
+        except ValueError:
+            connectivity = False
+        return connectivity
 
 def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
     r"""
