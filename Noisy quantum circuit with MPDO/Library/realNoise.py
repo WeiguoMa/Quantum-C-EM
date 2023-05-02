@@ -13,8 +13,7 @@ from Library.tools import gates_list, name2matrix
 
 def readExpChi(filename: str = None):
     if filename is None:
-        filename = '../data/chi/chi1.mat'
-
+        filename = 'data/chi/chi1.mat'
     if '.mat' in filename:
         data = loadmat(filename)['exp']
         return data
