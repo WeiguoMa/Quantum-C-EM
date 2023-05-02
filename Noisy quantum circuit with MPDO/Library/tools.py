@@ -52,6 +52,10 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
             # hardcode, which is relating to code design from weiguo
             if 'qr' in _edge.name:
                 _edge.name = _edge.name.replace('qr', '')
+            if 'bond_' in _edge.name:          # Fact that 'bond_a_b' is the same as 'bond_b_a'
+                _split = _edge.name.split('_')
+                if int(_split[1]) > int(_split[2]):
+                    _edge.name = f'bond_{_split[2]}_{_split[1]}'
             _axis_names.append(_edge.name)
         _node.axis_names = _axis_names
 
@@ -123,7 +127,7 @@ def create_ket1Series(qnumber: int, dtype=tc.complex128) -> list:
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket_hadamardSeries(qnumber: int, dtype=tc.complex128) -> list:
+def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128) -> list:
     r"""
     create initial qubits
 
@@ -257,7 +261,7 @@ def basis_list(N: int) -> list:
         _view_basis.append(_basis)
     return _view_basis
 
-def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None, tolerant: float = 5e-4) -> dict:
+def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None, tolerant: float or None = 5e-4) -> dict:
     r"""
     Transform density matrix into probability distribution with provided bases.
 
@@ -295,19 +299,21 @@ def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None,
     for _name in _dc.keys():
         _dc[_name] = _dc[_name] / _sum_result
 
-    # Remove prob. under threshold
-    for _name in list(_dc.keys()):
-        if _dc[_name] < tolerant:
-            del _dc[_name]
-            continue
+    if tolerant is not None:
+        # Remove prob. under threshold
+        for _name in list(_dc.keys()):
+            if _dc[_name] < tolerant:
+                del _dc[_name]
+                continue
     return _dc
 
-def plot_histogram(prob_psi: dict, filename: str = None):
+def plot_histogram(prob_psi: dict, title: str = None, filename: str = None):
     r"""
     Plot a histogram of probability distribution.
 
     Args:
         prob_psi: probability of states, should be input as a dict;
+        title: title of the fig, while None, it does not work;
         filename: location to save the fig, while None, it does not work.
     """
     if not isinstance(prob_psi, dict):
@@ -319,7 +325,12 @@ def plot_histogram(prob_psi: dict, filename: str = None):
     plt.bar(prob_psi.keys(), prob_psi.values(), color='b')
     plt.ylim(ymax=1)
     plt.xticks(rotation=-45)
-    plt.title(f'Probability distribution qnumber={qnumber}')
+
+    if title is None:
+        plt.title(f'Probability distribution qnumber={qnumber}')
+    else:
+        plt.title(title)
+
     plt.xlabel('State')
     plt.ylabel('Prob')
 
