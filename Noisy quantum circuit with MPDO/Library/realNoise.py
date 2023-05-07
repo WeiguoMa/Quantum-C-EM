@@ -7,13 +7,17 @@ import numpy as np
 import torch as tc
 from numpy.linalg import eig
 from scipy.io import loadmat
+import os
 
 from Library.tools import gates_list, name2matrix
 
 
 def readExpChi(filename: str = None):
     if filename is None:
-        filename = 'data/chi/chi1.mat'
+        if os.path.split(os.getcwd())[1] == 'Noisy quantum circuit with MPDO':
+            filename = os.path.join('data', 'chi', 'chi1.mat')
+        else:
+            filename = os.path.join('..', 'data', 'chi', 'chi1.mat')
     if '.mat' in filename:
         data = loadmat(filename)['exp']
         return data
@@ -146,8 +150,8 @@ def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex128, device: st
 
     return _tensor
 
-def czExp_channel():
-    _chi = readExpChi()
+def czExp_channel(filename: str = None):
+    _chi = readExpChi(filename=filename)
     _czExp_tensor = tc.stack(czNoisyTensor(_chi))
     _czExp_tensor = tc.einsum('ijlmn -> jlmni', _czExp_tensor)
     return _czExp_tensor
