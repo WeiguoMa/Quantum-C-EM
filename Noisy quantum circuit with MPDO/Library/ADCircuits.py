@@ -23,6 +23,7 @@ class TensorCircuit(nn.Module):
 	            chi: int = None, kappa: int = None, tnn_optimize: bool = True,
 	            chip: str = None, device: str or int = 'cpu'):
 		super(TensorCircuit, self).__init__()
+		self.fVR = None
 		self.i = 0
 		self.qnumber = None
 		self.state = None
@@ -480,8 +481,9 @@ class TensorCircuit(nn.Module):
 			self.DM, self.DMNode = _dm.tensor.reshape((2 ** _reshape_size, 2 ** _reshape_size)), self.DMNode
 			return self.DM
 		else:
-			if self.ideal is False:
-				raise ValueError('Noisy circuit cannot be represented by state vector efficiently.')
+			if self.fVR is False:
+				if self.ideal is False:
+					raise ValueError('Noisy circuit cannot be represented by state vector efficiently.')
 			if reduced_index is not None:
 				raise ValueError('State vector cannot efficiently represents the reduced density matrix.')
 
@@ -489,11 +491,14 @@ class TensorCircuit(nn.Module):
 			for _i in range(1, len(self.state)):
 				_vector = tn.contract_between(_vector, self.state[_i], allow_outer_product=True)
 
-			self.DM = _vector.tensor.reshape((2 ** self.qnumber, 1))
+			if self.fVR is False:
+				self.DM = _vector.tensor.reshape((2 ** self.qnumber, 1))
+			else:
+				self.DM = _vector.tensor
 			return self.DM
 
 	def forward(self, _state: list[tn.Node] = None,
-	            state_vector: bool = False, reduced_index: list = None,) -> tc.Tensor:
+	            state_vector: bool = False, reduced_index: list = None, forceVectorRequire: bool = False) -> tc.Tensor:
 		r"""
         Forward propagation of tensornetwork.
 
@@ -502,6 +507,7 @@ class TensorCircuit(nn.Module):
         """
 		self.initState = _state
 		self.qnumber = len(_state)
+		self.fVR = forceVectorRequire
 
 		for _i in range(len(self.layers)):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
