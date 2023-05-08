@@ -103,108 +103,107 @@ class TensorCircuit(nn.Module):
 				raise ValueError(f'Operating qubits must be different, current qubits {_oqs[0]} -- {_oqs[1]}.')
 			if tools.is_nested(_oqs) is True:
 				raise NotImplementedError('Series CNOT gates are not supported yet.')
+			_edges = []
+			if self.realNoise is False:
+				gate = tn.Node(gate.tensor, name=gate.name,
+				               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
+				                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}'])
 			else:
-				_edges = []
-				if self.realNoise is False:
-					gate = tn.Node(gate.tensor, name=gate.name,
-					               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
-					                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}'])
-				else:
-					gate = tn.Node(gate.tensor, name=gate.name,
-					               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
-					                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}', f'I_{_oqs[1]}'])
+				gate = tn.Node(gate.tensor, name=gate.name,
+				               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
+				                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}', f'I_{_oqs[1]}'])
 
-				# Created a new node in memory
-				_contract_qubits = tn.contract_between(_qubits[_oqs[0]], _qubits[_oqs[1]],
-				                                       name=f'q_{_oqs[0]}_{_oqs[1]}',
-				                                       allow_outer_product=True)
-				# ProcessFunction, for details, see the function definition.
-				tools.EdgeName2AxisName([_contract_qubits])
-				for _i, _bit in enumerate(_oqs):
-					_edges.append(tn.connect(_contract_qubits['physics_{}'.format(_bit)], gate[f'inner_{_bit}']))
+			# Created a new node in memory
+			_contract_qubits = tn.contract_between(_qubits[_oqs[0]], _qubits[_oqs[1]],
+			                                       name=f'q_{_oqs[0]}_{_oqs[1]}',
+			                                       allow_outer_product=True)
+			# ProcessFunction, for details, see the function definition.
+			tools.EdgeName2AxisName([_contract_qubits])
+			for _i, _bit in enumerate(_oqs):
+				_edges.append(tn.connect(_contract_qubits['physics_{}'.format(_bit)], gate[f'inner_{_bit}']))
 
-				# contract the connected edge and inherit the name of the pre-qubit
-				gate = tn.contract_between(_contract_qubits, gate, name=gate.name)
+			# contract the connected edge and inherit the name of the pre-qubit
+			gate = tn.contract_between(_contract_qubits, gate, name=gate.name)
 
-				# ProcessFunction, for details, see the function definition.
-				tools.EdgeName2AxisName([gate])
+			# ProcessFunction, for details, see the function definition.
+			tools.EdgeName2AxisName([gate])
 
-				if self.realNoise is True:
-					_dup_item, _dup_idx = tools.find_duplicate(gate.axis_names)
-					if _dup_item:
-						# Number of axis name before the reshape operation(contain duplicates)
-						_length = len(gate.axis_names)
-						# Find the shape of the tensor after the reshape operation
-						_reshape_shape = list(gate.tensor.shape)
-						_reshape_shape[_dup_idx[1]] = _reshape_shape[_dup_idx[0]] * _reshape_shape[_dup_idx[1]]
-						_reshape_shape.pop(_dup_idx[0])
-						# Generate a random string without duplicates, if len = 4, then the string is 'abcd' as Einstein notation.
-						_random_string = tools.generate_random_string_without_duplicate(_length)
-						_random_string_reorder = tools.move_index(_random_string, _dup_idx[0],
-						                                          _dup_idx[1] - 1)  # Like 'ifcvbj' -> 'fcvbij'
-						# Reshape the tensor
-						_reshaped_tensor = tc.einsum(_random_string + ' -> ' + _random_string_reorder,
-						                             gate.tensor).reshape(_reshape_shape)
-						_axis_names = copy.deepcopy(gate.axis_names)
-						_axis_names.pop(_dup_idx[0])
+			if self.realNoise is True:
+				_dup_item, _dup_idx = tools.find_duplicate(gate.axis_names)
+				if _dup_item:
+					# Number of axis name before the reshape operation(contain duplicates)
+					_length = len(gate.axis_names)
+					# Find the shape of the tensor after the reshape operation
+					_reshape_shape = list(gate.tensor.shape)
+					_reshape_shape[_dup_idx[1]] = _reshape_shape[_dup_idx[0]] * _reshape_shape[_dup_idx[1]]
+					_reshape_shape.pop(_dup_idx[0])
+					# Generate a random string without duplicates, if len = 4, then the string is 'abcd' as Einstein notation.
+					_random_string = tools.generate_random_string_without_duplicate(_length)
+					_random_string_reorder = tools.move_index(_random_string, _dup_idx[0],
+					                                          _dup_idx[1] - 1)  # Like 'ifcvbj' -> 'fcvbij'
+					# Reshape the tensor
+					_reshaped_tensor = tc.einsum(_random_string + ' -> ' + _random_string_reorder,
+					                             gate.tensor).reshape(_reshape_shape)
+					_axis_names = copy.deepcopy(gate.axis_names)
+					_axis_names.pop(_dup_idx[0])
 
-						""" Reform the qubit from adding noise channel, which causes edges' error in tensornetwork,
-								easily speaking, reform the tensor. TensorNetwork package is not perfect. """
-						_bond_list, _l_name, _r_name = [], None, None
-						for _name in gate.axis_names:
-							if 'bond' in _name:
-								_bond_list.append(_name)
-								for _string_lst in _bond_list:
-									_string_lst = _name.split('_')
-									if int(_string_lst[-1]) == int(_oqs[0]):
-										_l_name = _name
-									elif int(_string_lst[-2]) == int(_oqs[1]):
-										_r_name = _name
+					""" Reform the qubit from adding noise channel, which causes edges' error in tensornetwork,
+							easily speaking, reform the tensor. TensorNetwork package is not perfect. """
+					_bond_list, _l_name, _r_name = [], None, None
+					for _name in gate.axis_names:
+						if 'bond' in _name:
+							_bond_list.append(_name)
+							for _string_lst in _bond_list:
+								_string_lst = _name.split('_')
+								if int(_string_lst[-1]) == int(_oqs[0]):
+									_l_name = _name
+								elif int(_string_lst[-2]) == int(_oqs[1]):
+									_r_name = _name
 
-						if _l_name is not None:
-							_left_qubit, _reforming_qubit = gate[_l_name].get_nodes()
-							gate[_l_name].disconnect(_l_name, 'middle2left_edge')
-						else:
-							_left_qubit = None
-						if _r_name is not None:
-							_reforming_qubit, _right_qubit = gate[_r_name].get_nodes()
-							gate[_r_name].disconnect('middle2right_edge', _r_name)
-						else:
-							_right_qubit = None
+					if _l_name is not None:
+						_left_qubit, _reforming_qubit = gate[_l_name].get_nodes()
+						gate[_l_name].disconnect(_l_name, 'middle2left_edge')
+					else:
+						_left_qubit = None
+					if _r_name is not None:
+						_reforming_qubit, _right_qubit = gate[_r_name].get_nodes()
+						gate[_r_name].disconnect('middle2right_edge', _r_name)
+					else:
+						_right_qubit = None
 
-						# Previous information of _qubits[_qnum] is extracted, now we remade a new _qubits[_qnum]
-						gate = tn.Node(_reshaped_tensor,
-						                         name=f'q_{_oqs[0]}_{_oqs[1]}',
-						                         axis_names=_axis_names)  # Node's dimension of Edge f'I_{_qnum}' has been promoted.
+					# Previous information of _qubits[_qnum] is extracted, now we remade a new _qubits[_qnum]
+					gate = tn.Node(_reshaped_tensor,
+					                         name=f'q_{_oqs[0]}_{_oqs[1]}',
+					                         axis_names=_axis_names)  # Node's dimension of Edge f'I_{_qnum}' has been promoted.
 
-						if _l_name is not None:
-							tn.connect(_left_qubit[_l_name], gate[_l_name], name=_l_name)
-						else:
-							pass
-						if _r_name is not None:
-							tn.connect(gate[_r_name], _right_qubit[_r_name], name=_r_name)
-						else:
-							pass
-						# ProcessFunction, for details, see the function definition
-						tools.EdgeName2AxisName([gate])
+					if _l_name is not None:
+						tn.connect(_left_qubit[_l_name], gate[_l_name], name=_l_name)
+					else:
+						pass
+					if _r_name is not None:
+						tn.connect(gate[_r_name], _right_qubit[_r_name], name=_r_name)
+					else:
+						pass
+					# ProcessFunction, for details, see the function definition
+					tools.EdgeName2AxisName([gate])
 
-				# Split back to two qubits
-				_left_AxisName, _right_AxisName = _qubits[_oqs[0]].axis_names, _qubits[_oqs[1]].axis_names
-				if 'bond_{}_{}'.format(_oqs[0], _oqs[1]) in _left_AxisName:
-					# remove the bond_name between two qubits, which take appearance in both qubits simultaneously
-					_left_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
-					_right_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
+			# Split back to two qubits
+			_left_AxisName, _right_AxisName = _qubits[_oqs[0]].axis_names, _qubits[_oqs[1]].axis_names
+			if 'bond_{}_{}'.format(_oqs[0], _oqs[1]) in _left_AxisName:
+				# remove the bond_name between two qubits, which take appearance in both qubits simultaneously
+				_left_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
+				_right_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
 
-				_left_edges, _right_edges = [gate[name] for name in _left_AxisName], \
-				                            [gate[name] for name in _right_AxisName]
+			_left_edges, _right_edges = [gate[name] for name in _left_AxisName], \
+			                            [gate[name] for name in _right_AxisName]
 
-				_qubits[_oqs[0]], _qubits[_oqs[1]], _ = tn.split_node(gate,
-				                                                      left_edges=_left_edges,
-				                                                      right_edges=_right_edges,
-				                                                      left_name=f'qubit_{_oqs[0]}',
-				                                                      right_name=f'qubit_{_oqs[1]}',
-				                                                      edge_name=f'bond_{_oqs[0]}_{_oqs[1]}')
-				tools.EdgeName2AxisName([_qubits[_oqs[0]], _qubits[_oqs[1]]])
+			_qubits[_oqs[0]], _qubits[_oqs[1]], _ = tn.split_node(gate,
+			                                                      left_edges=_left_edges,
+			                                                      right_edges=_right_edges,
+			                                                      left_name=f'qubit_{_oqs[0]}',
+			                                                      right_name=f'qubit_{_oqs[1]}',
+			                                                      edge_name=f'bond_{_oqs[0]}_{_oqs[1]}')
+			tools.EdgeName2AxisName([_qubits[_oqs[0]], _qubits[_oqs[1]]])
 		else:
 			gate_list = [tn.Node(gate.tensor, name=gate.name, axis_names=[f'physics_{_idx}', f'inner_{_idx}'])
 			             for _idx in _oqs]
