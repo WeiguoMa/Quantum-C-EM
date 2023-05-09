@@ -9,6 +9,7 @@ import random
 import string
 import warnings
 
+from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import tensornetwork as tn
@@ -261,7 +262,7 @@ def basis_list(N: int) -> list:
         _view_basis.append(_basis)
     return _view_basis
 
-def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None, tolerant: float or None = 5e-4) -> dict:
+def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None, tolerant: Optional[float] = None) -> dict:
     r"""
     Transform density matrix into probability distribution with provided bases.
 

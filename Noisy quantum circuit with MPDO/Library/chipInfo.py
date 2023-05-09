@@ -26,8 +26,8 @@ class Chip_information(object):
 		self.chipName = 'beta4Test'
 		if self.queryTime is None:
 			self.gateTime = 30
-			self.T1 = 2e3
-			self.T2 = 2e2
+			self.T1 = 2e11
+			self.T2 = 2e10
 			self.dpc_errorRate = 11e-4
 			self.status = True
 		return self

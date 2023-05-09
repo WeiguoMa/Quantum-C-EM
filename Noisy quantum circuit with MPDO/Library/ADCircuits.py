@@ -19,7 +19,7 @@ from Library.realNoise import czExp_channel
 from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity
 
 class TensorCircuit(nn.Module):
-	def __init__(self, ideal: bool = True, realNoise: bool = False,
+	def __init__(self, ideal: bool = True, realNoise: bool = False, chiFilename: str = None,
 	            chi: int = None, kappa: int = None, tnn_optimize: bool = True,
 	            chip: str = None, device: str or int = 'cpu'):
 		super(TensorCircuit, self).__init__()
@@ -34,7 +34,7 @@ class TensorCircuit(nn.Module):
 		self.realNoise = realNoise
 		self.realNoiseChannelTensor = None
 		if self.realNoise is True:
-			self.realNoiseChannelTensor = czExp_channel()
+			self.realNoiseChannelTensor = czExp_channel(filename=chiFilename)
 
 		self.device = tools.select_device(device)
 		self.dtype = tc.complex128
@@ -73,7 +73,7 @@ class TensorCircuit(nn.Module):
 		return _gateList_, _oqsList_
 
 	def _add_gate(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
-	              _layer_num: int, _oqs: list):
+	              _layer_num: int, _oqs: list[int]):
 		r"""
 		Add quantum Gate to tensornetwork
 
@@ -109,7 +109,12 @@ class TensorCircuit(nn.Module):
 				               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
 				                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}'])
 			else:
-				gate = tn.Node(gate.tensor, name=gate.name,
+				if gate.tensor.shape[-1] == 1:
+					gate = tn.Node(gate.tensor.squeeze(), name=gate.name,
+					               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
+					                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}'])
+				else:
+					gate = tn.Node(gate.tensor, name=gate.name,
 				               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
 				                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}', f'I_{_oqs[1]}'])
 

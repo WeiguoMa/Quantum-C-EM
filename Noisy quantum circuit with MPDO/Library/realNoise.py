@@ -141,7 +141,7 @@ def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex128, device: st
                                                                         shape=(2, 2, 2, 2))
             _ii += 1
     else:
-        _tensor = tc.tensor(0)
+        _tensor = tc.zeros((2, 2, 2, 2), dtype=dtype, device=device)
         for _name_, _value_ in gate_factor.items():
             # linear equations
             _tensor += tc.reshape(tc.tensor(_value_, dtype=dtype, device=device) * name2matrix(_name_),
