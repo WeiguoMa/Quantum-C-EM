@@ -133,13 +133,14 @@ def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex128, device: st
         gate_factor = _czNoisySPara(chi)
 
     if is_nested_dict(gate_factor) is True:     # Multiple Error generator E_{} exist
-        _ii, _tensor = 0, [tc.zeros((2, 2, 2, 2), dtype=dtype, device=device)] * len(gate_factor)
+        _tensor = []
         for _value in gate_factor.values():
+            _step_tensor = tc.zeros((2, 2, 2, 2), dtype=dtype, device=device)
             for _name_, _value_ in _value.items():
                 # linear equations
-                _tensor[_ii] += tc.reshape(tc.tensor(_value_, dtype=dtype, device=device) * name2matrix(_name_),
+                _step_tensor += tc.reshape(tc.tensor(_value_, dtype=dtype, device=device) * name2matrix(_name_),
                                                                         shape=(2, 2, 2, 2))
-            _ii += 1
+            _tensor.append(_step_tensor)
     else:
         _tensor = tc.zeros((2, 2, 2, 2), dtype=dtype, device=device)
         for _name_, _value_ in gate_factor.items():
