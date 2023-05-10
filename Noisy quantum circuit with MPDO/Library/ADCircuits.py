@@ -9,6 +9,7 @@ import numpy as np
 import tensornetwork as tn
 import torch as tc
 from torch import nn
+from typing import Optional
 
 import Library.tools as tools
 from Library.ADGate import TensorGate
@@ -20,8 +21,8 @@ from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivit
 
 class TensorCircuit(nn.Module):
 	def __init__(self, ideal: bool = True, realNoise: bool = False, chiFilename: str = None,
-	            chi: int = None, kappa: int = None, tnn_optimize: bool = True,
-	            chip: str = None, device: str or int = 'cpu'):
+	            chi: Optional[int] = None, kappa: Optional[int] = None, tnn_optimize: bool = True,
+	            chip: Optional[str] = None, device: str or int = 'cpu'):
 		super(TensorCircuit, self).__init__()
 		self.fVR = None
 		self.i = 0
@@ -52,20 +53,21 @@ class TensorCircuit(nn.Module):
 	def _transpile_gate(self, _gate_: AbstractGate, _oqs_: list):
 		_gateName_ = _gate_.name.lower()
 		if _gateName_ == 'cnot' or _gateName_ == 'cx':
-			_gateList_ = [AbstractGate().ry(-np.pi / 2),
+			_gateList_ = [AbstractGate(ideal=True).ry(-np.pi / 2),
 			              AbstractGate().czEXP(EXPTensor=self.realNoiseChannelTensor),
-			                                             AbstractGate().ry(np.pi / 2)]
+			                                             AbstractGate(ideal=True).ry(np.pi / 2)]
 			_oqsList_ = [[_oqs_[-1]], _oqs_, [_oqs_[-1]]]
 		elif _gateName_ == 'rzz':
-			_gateList_ = [AbstractGate().cnot(), AbstractGate().rz(_gate_.para), AbstractGate().cnot()]
+			_gateList_ = [AbstractGate().cnot(), AbstractGate(ideal=True).rz(_gate_.para), AbstractGate().cnot()]
 			_oqsList_ = [_oqs_, [_oqs_[-1]], _oqs_]
 		elif _gateName_ == 'rxx':
-			_gateList_ = [AbstractGate().h(), AbstractGate().cnot(), AbstractGate().rz(_gate_.para),
-			              AbstractGate().cnot(), AbstractGate().h()]
+			_gateList_ = [AbstractGate(ideal=True).h(), AbstractGate().cnot(), AbstractGate(ideal=True).rz(_gate_.para),
+			              AbstractGate().cnot(), AbstractGate(ideal=True).h()]
 			_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
 		elif _gateName_ == 'ryy':
-			_gateList_ = [AbstractGate().rx(np.pi / 2), AbstractGate().cnot(), AbstractGate().rz(_gate_.para),
-			              AbstractGate().cnot(), AbstractGate().rx(-np.pi / 2)]
+			_gateList_ = [AbstractGate(ideal=True).rx(np.pi / 2), AbstractGate().cnot(),
+			              AbstractGate(ideal=True).rz(_gate_.para), AbstractGate().cnot(),
+			              AbstractGate(ideal=True).rx(-np.pi / 2)]
 			_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
 		else:
 			_gateList_, _oqsList_ = [_gate_], [_oqs_]
@@ -198,6 +200,19 @@ class TensorCircuit(nn.Module):
 				# remove the bond_name between two qubits, which take appearance in both qubits simultaneously
 				_left_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
 				_right_AxisName.remove('bond_{}_{}'.format(_oqs[0], _oqs[1]))
+			elif 'bond_{}_{}'.format(_oqs[1], _oqs[0]) in _left_AxisName:
+				# remove the bond_name between two qubits, which take appearance in both qubits simultaneously
+				_left_AxisName.remove('bond_{}_{}'.format(_oqs[1], _oqs[0]))
+				_right_AxisName.remove('bond_{}_{}'.format(_oqs[1], _oqs[0]))
+
+			# Cases that the EXPNoise is added as the first layer
+			if self.realNoise is True:
+				if f'I_{_oqs[0]}' in gate.axis_names and f'I_{_oqs[0]}' not in _left_AxisName \
+						and f'I_{_oqs[0]}' not in _right_AxisName:
+					_right_AxisName.append(f'I_{_oqs[1]}')
+				elif f'I_{_oqs[1]}' in gate.axis_names and f'I_{_oqs[1]}' not in _left_AxisName \
+						and f'I_{_oqs[1]}' not in _right_AxisName:
+					_right_AxisName.append(f'I_{_oqs[1]}')
 
 			_left_edges, _right_edges = [gate[name] for name in _left_AxisName], \
 			                            [gate[name] for name in _right_AxisName]
@@ -209,6 +224,32 @@ class TensorCircuit(nn.Module):
 			                                                      right_name=f'qubit_{_oqs[1]}',
 			                                                      edge_name=f'bond_{_oqs[0]}_{_oqs[1]}')
 			tools.EdgeName2AxisName([_qubits[_oqs[0]], _qubits[_oqs[1]]])
+
+			if self.realNoise is True and f'I_{_oqs[1]}' in _qubits[_oqs[1]].axis_names:
+				# Shape-relating
+				_shape = _qubits[_oqs[1]].tensor.shape
+				_left_edge_shape = [_shape[_ii_] for _ii_ in range(len(_shape) - 1)]
+				_left_dim = int(np.prod(_left_edge_shape))
+				# SVD to truncate the inner dimension
+				_u, _s, _ = tc.linalg.svd(tc.reshape(_qubits[_oqs[1]].tensor, (_left_dim, _shape[-1])),
+				                          full_matrices=False)
+				_s = _s.to(dtype=tc.complex128)
+
+				# Truncate the inner dimension
+				if self.kappa is None:
+					_kappa = _s.nelement()
+				else:
+					_kappa = self.kappa
+
+				_s = _s[: _kappa]
+				_u = _u[:, : _kappa]
+
+				if len(_s.shape) == 1:
+					_s = tc.diag(_s)
+
+				# Back to the former shape
+				_left_edge_shape.append(_s.shape[-1])
+				_qubits[_oqs[1]].tensor = tc.reshape(tc.matmul(_u, _s), _left_edge_shape)
 		else:
 			gate_list = [tn.Node(gate.tensor, name=gate.name, axis_names=[f'physics_{_idx}', f'inner_{_idx}'])
 			             for _idx in _oqs]
@@ -220,7 +261,7 @@ class TensorCircuit(nn.Module):
 				tools.EdgeName2AxisName([_qubits[_bit]])
 
 	def _add_noise(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
-	                        oqs: list[int] or int,
+	                        oqs: list[int] or int, reverse: Optional[bool],
 	                        noiseInfo: NoiseChannel,
 	                        noise_type: str):
 		r"""
@@ -229,6 +270,7 @@ class TensorCircuit(nn.Module):
 		Args:
 			_qubits: The qubits to be applied the noise channel;
 			oqs: The qubits to be applied the noise channel;
+			reverse: Whether the control-target positions are reversed;
 			noiseInfo: The information of the noise channel;
 			noise_type: The type of the noise channel.
 
@@ -281,7 +323,6 @@ class TensorCircuit(nn.Module):
 			_qubits[_qnum] = tn.contract_between(_qubits[_qnum], _noise_nodeList[_ii], name=f'qubit_{_qnum}')
 			# ProcessFunction, for details, see the function definition.
 			tools.EdgeName2AxisName([_qubits[_qnum]])  # Tensor append a new rank call 'I_{}'.format(_qnum) here.
-
 			_dup_item, _dup_idx = tools.find_duplicate(_qubits[_qnum].axis_names)
 			if _dup_item:
 				# Number of axis name before the reshape operation(contain duplicates)
@@ -308,10 +349,16 @@ class TensorCircuit(nn.Module):
 						_bond_list.append(_name)
 						for _string_lst in _bond_list:
 							_string_lst = _name.split('_')
-							if int(_string_lst[-1]) == int(_qnum):
-								_l_name = _name
-							elif int(_string_lst[-2]) == int(_qnum):
-								_r_name = _name
+							if reverse is False or reverse is None:
+								if int(_string_lst[-1]) == int(_qnum):
+									_l_name = _name
+								elif int(_string_lst[-2]) == int(_qnum):
+									_r_name = _name
+							elif reverse is True:
+								if int(_string_lst[-1]) == int(_qnum):
+									_r_name = _name
+								elif int(_string_lst[-2]) == int(_qnum):
+									_l_name = _name
 
 				if _l_name is not None:
 					_left_qubit, _reforming_qubit = _qubits[_qnum][_l_name].get_nodes()
@@ -350,9 +397,11 @@ class TensorCircuit(nn.Module):
 
 			# Truncate the inner dimension
 			if self.kappa is None:
-				self.kappa = _s.nelement()
-			_s = _s[: self.kappa]
-			_u = _u[:, : self.kappa]
+				_kappa = _s.nelement()
+			else:
+				_kappa = self.kappa
+			_s = _s[: _kappa]
+			_u = _u[:, : _kappa]
 
 			if len(_s.shape) == 1:
 				_s = tc.diag(_s)
@@ -518,16 +567,24 @@ class TensorCircuit(nn.Module):
 			if self.ideal is False:
 				Noise = NoiseChannel(chip=self.chip)
 				_oqs = self._oqs_list[_i]
+				_reverse = False
 				if self.layers[_i].single is False:
 					if self.realNoise is False:
-						_oqs = self._oqs_list[_i][-1]   # The second qubit is the target qubit
+						if self._oqs_list[_i][0] > self._oqs_list[_i][-1]:
+							_reverse = True
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise,
+						                noise_type='depolarization')
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise,
+						                noise_type='amplitude_phase_damping_error')
 					else:
-						_oqs = []   # While realNoise is true, the United noise channel for two qubits will not be added.
-					self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='depolarization')
-					self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='amplitude_phase_damping_error')
-				else:
-					self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='depolarization')
-					self._add_noise(_state, oqs=_oqs, noiseInfo=Noise, noise_type='amplitude_phase_damping_error')
+						pass
+				else:       # single Qubit gate
+					if self.layers[_i].ideal is True:
+						pass
+					else:
+						_reverse = None
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise, noise_type='depolarization')
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise, noise_type='amplitude_phase_damping_error')
 			if self.tnn_optimize is True:
 				check = checkConnectivity(_state)
 				if check is True:

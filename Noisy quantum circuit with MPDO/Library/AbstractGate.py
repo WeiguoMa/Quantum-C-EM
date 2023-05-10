@@ -5,6 +5,7 @@ Contact: weiguo.m@iphy.ac.cn
 """
 import torch as tc
 from torch import nn
+from typing import Optional
 
 from Library.ADGate import TensorGate
 from Library.ADNGate import NoisyTensorGate
@@ -12,13 +13,16 @@ from Library.tools import select_device
 
 
 class AbstractGate(nn.Module):
-	def __init__(self, requires_grad: bool = True, device: str or int = 'cpu', dtype=tc.complex128):
+	def __init__(self, requires_grad: bool = True, ideal: Optional[bool] = None,
+	             device: str or int = 'cpu', dtype=tc.complex128):
 		super(AbstractGate, self).__init__()
 		self.requires_grad = requires_grad
 		self.device = select_device(device)
 		self.dtype = dtype
 		self.name = None
 		self.single = None
+
+		self.ideal = ideal
 
 		self.para = None
 		self.gate = None
