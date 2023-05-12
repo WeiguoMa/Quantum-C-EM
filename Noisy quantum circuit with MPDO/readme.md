@@ -150,6 +150,7 @@ qubits, it works directly without any permutation.
 And the entanglement are naturally to be spread between qubits with following operations.
 
 # Inplementation of Quantum Noise
+## United Theoretical Noise Model
 Quantum noise is a sophisticated topic in quantum physics, in quantum computation, it can
 be roughly divided into several types/channels, like amplitude damping, phase damping, which
 is shown in picture below,
@@ -164,8 +165,10 @@ like QCQI, Nielsen, etc. I implemented quantum noise easily with the strategy li
 is only applied to the **target qubit**, besides, **SPAM** is not implemented, because 
 of a low probability.
 
-In future work, I'll provide a **TRUE** quantum noise simulation with the QPT on **REAL** quantum
-computer in double-qubit gate, like CZ-gate. A real quantum noise takes places in actual physical
+## Real Noise (based on Experimental Data - $\chi$ Matrix)
+
+A **TRUE** quantum noise simulation function with the QPT-Chi matrix on **REAL** quantum
+computer CZ-gate is provided. A real quantum noise takes places in actual physical
 control of the superconducting qubits, two examples are shown in picture below,
 
 <p align="center">
@@ -209,16 +212,34 @@ tn.set_default_backend("pytorch")
 ## Basic Information of Quantum Circuit
 ```python
 qnumber = 4
-ideal_circuit = False # or True
+ideal_circuit = False   # or True
+realNoise = True	# or False
+chiFilename = './data/chi/chi1.mat'
+chi, kappa = None, None
+
 """
-While ideal_circuit is False, simulator is working with a noisy quantum circuit.
+While ideal_circuit is False, simulator is working with a noisy quantum circuit with United Noise Model;
+      realNoise is True, double-qubit gate is replaced by a real quantum gate with QPT-Chi matrix decomposition;
+      
+      chiFilename is the path of QPT-Chi matrix, which is used for real quantum noise simulation;
+        I provided two chi matrix in ./data/chi, 'chi1.mat' is for noise qubit,
+                                                 'ideal_cz.mat' is ideal cz-gate chi matrix;
+      
+      chi is used for truncating the dimension between qubits in TNN_optimization process, accelerating the contraction;
+      
+      kappa is used for truncating the inner dimension between qubit-conj_qubit in contracting MPDO->DensityMatrix,
+        let it be know that the KEY point in MPDO method is its representation of noise, while kappa=1, noise information
+        is aborted, which means the so-called noise-simulation is not working exactly.
+        
+An ideal=True circuit cannot work with realNoise=True,
 """
 ```
 
 ## Establish a Quantum Circuit
 ```python
-# Instantiation
-circuit = TensorCircuit(ideal=ideal_circuit)
+# Establish a quantum circuit
+circuit = TensorCircuit(ideal=ideal_circuit, realNoise=realNoise,
+                        chiFilename=chiFilename, chi=chi, kappa=kappa)
 """
 Example:
     q[0] ----[H]----[CONTROL     ---------------------[X]----
@@ -271,3 +292,6 @@ state = circuit(state, state_vector=False, reduced_index=[])
 # Problems may be encountered
 **VQA** is not supported in this version, bugs still exist in the implementation of forward()
 and updating the parameters.
+
+**RealNoise** function is still sensitive, which causes a little bit high noise compare to
+QUTIP-fullMatrix simulation.
