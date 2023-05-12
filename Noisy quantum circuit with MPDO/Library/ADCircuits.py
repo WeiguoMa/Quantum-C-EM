@@ -50,7 +50,7 @@ class TensorCircuit(nn.Module):
 		self.kappa = kappa
 		self.tnn_optimize = tnn_optimize
 
-	def _transpile_gate(self, _gate_: AbstractGate, _oqs_: list):
+	def _transpile_gate(self, _gate_: AbstractGate, _oqs_: list[int]):
 		_gateName_ = _gate_.name.lower()
 		if _gateName_ == 'cnot' or _gateName_ == 'cx':
 			_gateList_ = [AbstractGate(ideal=True).ry(-np.pi / 2),
@@ -444,7 +444,7 @@ class TensorCircuit(nn.Module):
 			self._oqs_list.append(_transpile_oqsList[_num])
 		self.i += 1
 
-	def _calculate_DM(self, state_vector: bool = False, reduced_index: list = None) -> tc.Tensor:
+	def _calculate_DM(self, state_vector: bool = False, reduced_index: Optional[list[list[int] or int]] = None) -> tc.Tensor:
 		r"""
 		Calculate the density matrix of the state.
 
