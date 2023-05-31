@@ -11,6 +11,9 @@ import tensornetwork as tn
 from Library.tools import EdgeName2AxisName, generate_random_string_without_duplicate
 
 
+tn.set_default_backend("pytorch")
+
+
 class SuperOperator(object):
 	def __init__(self, operator: tc.Tensor or tn.AbstractNode = None, noisy: bool = True):
 		self.originalINPUT = operator
@@ -24,34 +27,31 @@ class SuperOperator(object):
 		if not isinstance(operator, tc.Tensor) and not isinstance(operator, tn.AbstractNode):
 			raise TypeError("operator must be a tensor or a node")
 		if isinstance(operator, tc.Tensor):
-			if self.shape != len(self.axisNames):
-				raise ValueError('Shape not match with axisNames, check the noisy status and its corresponds tensor shape.')
+			if len(self.shape) != len(self.axisNames):
+				raise ValueError(f'Shape {self.shape} not match with axisNames {self.axisNames},'
+				                 f' check the noisy status and its corresponds tensor shape.')
 			self.operator = tn.Node(operator, name='realNoise', axis_names=self.axisNames)
 		if isinstance(operator, tn.Node):
 			if operator.axis_names != self.axisNames:
 				raise ValueError("operator axis names must be uniformed as {}".format(self.axisNames))
 			self.operator = copy.deepcopy(operator)
 
-		self.superOperatorMPO = None
 		self.superOperator = None
+		self.superOperatorMPO = None
+
+		self.uMPO()
 
 	def _getAxisNames(self):
-		_axisNames = []
-		for _i in range(len(self.shape) - 1):
-			if _i < len(self.shape) // 2:
-				_axisNames.append('physics_{}'.format(_i))
-			elif _i < len(self.shape) - 1:
-				_axisNames.append('inner_{}'.format(_i))
-			else:
-				if self.noisy is True:
-					_axisNames.append('I')
+		_axisNames = [f'physics_{_i}' for _i in range((len(self.shape) - 1) // 2)] + \
+		             [f'inner_{_i}' for _i in range((len(self.shape) - 1) // 2)]
+		if self.noisy is True:
+			_axisNames.append('I')
 		return _axisNames
 
 	@staticmethod
 	def _reOrderString(_string, _shape):
 		_len = len(_string)
 		_divider4 = int(_len / 4)
-		print(_divider4)
 		_pos1 = list(reversed([_element for _element in _string[-_divider4:]]))
 		_pos1Shape = prod(_shape[-_divider4:])
 		_pos2 = [_element for _element in _string[: _divider4]]
@@ -90,12 +90,12 @@ class SuperOperator(object):
 		for _i in range(len(u.shape) // 2):
 			_leftEdges = [u[f'physics_{_i}'], u[f'inner_{_i}']]
 			if _i > 0:
-				_leftEdges.append(u[f'bond{_i}'])
+				_leftEdges.append(_right[f'bond_{_i-1}_{_i}'])
 			_rightEdges = [u[f'physics_{_ii}'] for _ii in range(_i + 1, len(u.shape) // 2)] +\
 			              [u[f'inner_{_ii}'] for _ii in range(_i + 1, len(u.shape) // 2)]
 			if _rightEdges:
 				_left, _right, _ = tn.split_node(u, left_edges=_leftEdges, right_edges=_rightEdges,
-				                            left_name=f'TTL_{_i}', right_name=f'TTR_{_i}', edge_name=f'bond_{_i}{_i+1}')
+				                            left_name=f'U_{_i}', right_name=f'U_{_i+1}', edge_name=f'bond_{_i}_{_i+1}')
 				TTSeries.append(_left)
 			else:
 				TTSeries.append(_right)
