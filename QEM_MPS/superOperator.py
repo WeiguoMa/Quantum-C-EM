@@ -12,11 +12,14 @@ from Library.tools import EdgeName2AxisName, generate_random_string_without_dupl
 
 
 class SuperOperator(object):
-	def __init__(self, operator: tc.Tensor or tn.AbstractNode, noisy: bool = True):
+	def __init__(self, operator: tc.Tensor or tn.AbstractNode = None, noisy: bool = True):
 		self.originalINPUT = operator
 		self.shape = operator.shape
 		self.noisy = noisy
 		self.axisNames = self._getAxisNames()
+
+		if operator is None:
+			raise NotImplementedError
 
 		if not isinstance(operator, tc.Tensor) and not isinstance(operator, tn.AbstractNode):
 			raise TypeError("operator must be a tensor or a node")
@@ -61,7 +64,7 @@ class SuperOperator(object):
 		_newString = ''.join(_pos1 + _pos2 + _pos3 + _pos4)
 		return _newString, [_pos1Shape, _pos2Shape, _pos3Shape, _pos4Shape]
 
-	def getSuperOperator(self):
+	def getSuperOperator(self) -> tn.AbstractNode:
 		_operatorDagger = tn.Node(self.operator.tensor.conj(), name='realNoiseDagger', axis_names=self.axisNames)
 		tn.connect(self.operator['I'], _operatorDagger['I'])
 		_superOperatorNode = tn.contract_between(self.operator, _operatorDagger, allow_outer_product=True)
@@ -79,7 +82,7 @@ class SuperOperator(object):
 		self.superOperator = _superOperatorNode
 		return _superOperatorNode
 
-	def uMPO(self):
+	def uMPO(self) -> list[tn.AbstractNode]:
 		# TT-decomposition to superOperatorNode
 		u = self.getSuperOperator()
 		TTSeries = []
@@ -92,7 +95,7 @@ class SuperOperator(object):
 			              [u[f'inner_{_ii}'] for _ii in range(_i + 1, len(u.shape) // 2)]
 			if _rightEdges:
 				_left, _right, _ = tn.split_node(u, left_edges=_leftEdges, right_edges=_rightEdges,
-				                            left_name=f'TTL_{_i}', right_name=f'TTR_{_i}', edge_name='bond')
+				                            left_name=f'TTL_{_i}', right_name=f'TTR_{_i}', edge_name=f'bond_{_i}{_i+1}')
 				TTSeries.append(_left)
 			else:
 				TTSeries.append(_right)
