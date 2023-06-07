@@ -112,7 +112,7 @@ class SuperOperator(object):
 					_leftNodeName, _rightNodeName = f'DU_{_countA}', f'U_{_countB_}'
 					_edgeName = 'Ebond'
 				else:
-					_leftNodeName, _rightNodeName = f'DU_{_countB_}', f'U_{_countB_ + 1}'
+					_leftNodeName, _rightNodeName = f'U_{_countB_}', f'U_{_countB_ + 1}'
 					_edgeName = f'bond_{_countB_}_{_countB_ + 1}'
 					_countB_ += 1
 
@@ -124,12 +124,3 @@ class SuperOperator(object):
 				TTSeries.append(_rightNode)
 		self.superOperatorMPO = TTSeries
 		return TTSeries
-
-
-if __name__ == '__main__':
-	from Library.realNoise import czExp_channel
-
-	realNoiseTensor = czExp_channel(
-		'/Users/weiguo_ma/Python_Program/Quantum_error_mitigation/Noisy quantum circuit with MPDO/data/chi/chi1.mat')
-
-	superOperator = SuperOperator(realNoiseTensor).superOperatorMPO
