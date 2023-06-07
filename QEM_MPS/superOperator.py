@@ -8,6 +8,7 @@ import copy
 import torch as tc
 from numpy import prod
 import tensornetwork as tn
+from Library.realNoise import czExp_channel
 from Library.tools import EdgeName2AxisName, generate_random_string_without_duplicate
 
 
@@ -18,11 +19,13 @@ class SuperOperator(object):
 	def __init__(self, operator: tc.Tensor or tn.AbstractNode = None, noisy: bool = True):
 		self.originalINPUT = operator
 		self.shape = operator.shape
+		self.qubitNum = int((len(self.shape) - 1) / 2)
 		self.noisy = noisy
 		self.axisNames = self._getAxisNames()
 
 		if operator is None:
-			raise NotImplementedError
+			operator = czExp_channel('/Users/weiguo_ma/Python_Program/Quantum_error_mitigation'
+			                         '/Noisy quantum circuit with MPDO/data/chi/chi1.mat')
 
 		if not isinstance(operator, tc.Tensor) and not isinstance(operator, tn.AbstractNode):
 			raise TypeError("operator must be a tensor or a node")
@@ -42,62 +45,91 @@ class SuperOperator(object):
 		self.uMPO()
 
 	def _getAxisNames(self):
-		_axisNames = [f'physics_{_i}' for _i in range((len(self.shape) - 1) // 2)] + \
-		             [f'inner_{_i}' for _i in range((len(self.shape) - 1) // 2)]
+		_axisNames = [f'physics_{_i}' for _i in range(self.qubitNum)] + \
+		             [f'inner_{_i}' for _i in range(self.qubitNum)]
 		if self.noisy is True:
 			_axisNames.append('I')
 		return _axisNames
 
-	@staticmethod
-	def _reOrderString(_string, _shape):
-		_len = len(_string)
-		_divider4 = int(_len / 4)
-		_pos1 = list(reversed([_element for _element in _string[-_divider4:]]))
-		_pos1Shape = prod(_shape[-_divider4:])
-		_pos2 = [_element for _element in _string[: _divider4]]
-		_pos2Shape = prod(_shape[: _divider4])
-		_pos3 = list(reversed([_element for _element in _string[- 2 * _divider4: -_divider4]]))
-		_pos3Shape = prod(_shape[- 2 * _divider4: -_divider4])
-		_pos4 = [_element for _element in _string[_divider4: 2 * _divider4]]
-		_pos4Shape = prod(_shape[_divider4: 2 * _divider4])
-
-		_newString = ''.join(_pos1 + _pos2 + _pos3 + _pos4)
-		return _newString, [_pos1Shape, _pos2Shape, _pos3Shape, _pos4Shape]
+	def _getTTAxisNames(self):
+		_TTAxisNames = []
+		for _i in reversed(range(self.qubitNum)):
+			_TTAxisNames += [f'Dinner_{_i}', f'Dphysics_{_i}']
+		for _i in range(self.qubitNum):
+			_TTAxisNames += [f'physics_{_i}', f'inner_{_i}']
+		return _TTAxisNames
 
 	def getSuperOperator(self) -> tn.AbstractNode:
-		_operatorDagger = tn.Node(self.operator.tensor.conj(), name='realNoiseDagger', axis_names=self.axisNames)
+		_daggerAxisNames = ['D' + _name for _name in self.axisNames if _name != 'I'] + ['I']
+		_operatorDagger = tn.Node(self.operator.tensor.conj(), name='realNoiseDagger', axis_names=_daggerAxisNames)
 		tn.connect(self.operator['I'], _operatorDagger['I'])
-		_superOperatorNode = tn.contract_between(self.operator, _operatorDagger, allow_outer_product=True)
+		_superOperatorNode = tn.contract_between(self.operator, _operatorDagger,
+		                                         name='superOperatorU', allow_outer_product=True)
 		# Process Function
 		EdgeName2AxisName(_superOperatorNode)
 
-		_len = len(_superOperatorNode.axis_names)
-		_randomString = generate_random_string_without_duplicate(_len)
-		_reorderString, _reorderShape = self._reOrderString(_randomString, _superOperatorNode.tensor.shape)
-		_superOperatorTensor \
-			= tc.einsum(f'{_randomString} -> {_reorderString}', _superOperatorNode.tensor)\
-			.reshape(_reorderShape)
-		# Reconstruct superOperatorNode U
-		_superOperatorNode = tn.Node(_superOperatorTensor, name='superOperatorU', axis_names=self.axisNames[:-1])
 		self.superOperator = _superOperatorNode
 		return _superOperatorNode
 
 	def uMPO(self) -> list[tn.AbstractNode]:
 		# TT-decomposition to superOperatorNode
 		u = self.getSuperOperator()
+		_TTAxisNames = self._getTTAxisNames()
+
 		TTSeries = []
-		_left, _right = None, None
-		for _i in range(len(u.shape) // 2):
-			_leftEdges = [u[f'physics_{_i}'], u[f'inner_{_i}']]
-			if _i > 0:
-				_leftEdges.append(_right[f'bond_{_i-1}_{_i}'])
-			_rightEdges = [u[f'physics_{_ii}'] for _ii in range(_i + 1, len(u.shape) // 2)] +\
-			              [u[f'inner_{_ii}'] for _ii in range(_i + 1, len(u.shape) // 2)]
-			if _rightEdges:
-				_left, _right, _ = tn.split_node(u, left_edges=_leftEdges, right_edges=_rightEdges,
-				                            left_name=f'U_{_i}', right_name=f'U_{_i+1}', edge_name=f'bond_{_i}_{_i+1}')
-				TTSeries.append(_left)
+		_leftNode, _rightNode = None, None
+
+		_countA, _countB = self.qubitNum - 1, 0
+		_countA_, _countB_ = self.qubitNum - 1, 0
+
+		for _i in range(self.qubitNum * 2):
+			_leftNames = _TTAxisNames[0:2]
+			for _item in _leftNames:
+				_TTAxisNames.remove(_item)
+			_rightNames = _TTAxisNames
+			if _rightNames:
+				if 0 < _i <= self.qubitNum - 1:
+					_leftNames.append(f'Dbond_{_countA - 1}_{_countA}')
+					_countA -= 1
+				elif _i == self.qubitNum:
+					_leftNames.append('Ebond')
+				elif _i > self.qubitNum:
+					_leftNames.append(f'bond_{_countB}_{_countB + 1}')
+					_countB += 1
+				else:
+					pass
+
+				if _i > 0:
+					u = _rightNode
+
+				_leftEdges, _rightEdges = [u[_edgeName] for _edgeName in _leftNames], [u[_edgeName] for _edgeName in _rightNames]
+
+				if _i < self.qubitNum - 1:
+					_leftNodeName, _rightNodeName = f'DU_{_countA_}', f'DU_{_countA_ - 1}'
+					_edgeName = f'Dbond_{_countA_ - 1}_{_countA_}'
+					_countA_ -= 1
+				elif _i == self.qubitNum - 1:
+					_leftNodeName, _rightNodeName = f'DU_{_countA}', f'U_{_countB_}'
+					_edgeName = 'Ebond'
+				else:
+					_leftNodeName, _rightNodeName = f'DU_{_countB_}', f'U_{_countB_ + 1}'
+					_edgeName = f'bond_{_countB_}_{_countB_ + 1}'
+					_countB_ += 1
+
+				_leftNode, _rightNode, _ = tn.split_node(node=u, left_edges=_leftEdges, right_edges=_rightEdges,
+				                                         left_name=_leftNodeName, right_name=_rightNodeName, edge_name=_edgeName)
+
+				TTSeries.append(_leftNode)
 			else:
-				TTSeries.append(_right)
+				TTSeries.append(_rightNode)
 		self.superOperatorMPO = TTSeries
 		return TTSeries
+
+
+if __name__ == '__main__':
+	from Library.realNoise import czExp_channel
+
+	realNoiseTensor = czExp_channel(
+		'/Users/weiguo_ma/Python_Program/Quantum_error_mitigation/Noisy quantum circuit with MPDO/data/chi/chi1.mat')
+
+	superOperator = SuperOperator(realNoiseTensor).superOperatorMPO
