@@ -49,7 +49,7 @@ class Maps(object):
 			_node.tensor = _node.tensor.conj()
 			_node.name = 'Dagger' + _node.name
 			for _i in range(len(_node.axis_names)):
-				if 'bond_' in _node[_i].name and 'Dagger' not in _node[_i].name:
+				if 'bond' in _node[_i].name and 'Dagger' not in _node[_i].name:
 					_node[_i].name = 'Dagger' + _node[_i].name
 		EdgeName2AxisName(MPO)
 		return MPO
@@ -84,25 +84,26 @@ class Maps(object):
 		_uMPO, _uPMPO = copy.deepcopy(self.uMPO_Ori), copy.deepcopy(self.uPMPO_Ori)
 		_uDMPO, _uPDMPO = copy.deepcopy(self.uDMPO_Ori), copy.deepcopy(self.uPDMPO_Ori)
 
-		for _num in reversed(range(self.qubitNum)):
+		for _num in range(self.qubitNum):
 			# Connect u -> u^\dagger -- D
-			tn.connect(_uMPO[self.qubitNum-1-_num][f'Dinner_{_num}'], _uDMPO[self.qubitNum-1-_num][f'Dphysics_{_num}'], name=f'Du_uD_{_num}')
+			tn.connect(_uMPO[_num][f'Dinner_{_num}'], _uDMPO[_num][f'Dinner_{_num}'], name=f'Du_uD_{_num}')
 			# Connect u' -> u -- D
-			tn.connect(_uPMPO[self.qubitNum-1-_num][f'Dinner_{_num}'], _uMPO[self.qubitNum-1-_num][f'Dphysics_{_num}'], name=f'DuP_u_{_num}')
+			tn.connect(_uPMPO[_num][f'Dinner_{_num}'], _uMPO[_num][f'Dphysics_{_num}'], name=f'DuP_u_{_num}')
 			# Connect u^\dagger -> u'^\dagger -- D
-			tn.connect(_uDMPO[self.qubitNum-1-_num][f'Dinner_{_num}'], _uPDMPO[self.qubitNum-1-_num][f'Dphysics_{_num}'], name=f'DuD_uPD_{_num}')
+			tn.connect(_uDMPO[_num][f'Dphysics_{_num}'], _uPDMPO[_num][f'Dinner_{_num}'], name=f'DuD_uPD_{_num}')
 			# Connect u' -> u'^\dagger -- D // TRACE Edge
-			tn.connect(_uPMPO[self.qubitNum-1-_num][f'Dphysics_{_num}'], _uPDMPO[self.qubitNum-1-_num][f'Dinner_{_num}'], name=f'DuP_uPD_tr_{_num}')
+			tn.connect(_uPMPO[_num][f'Dphysics_{_num}'], _uPDMPO[_num][f'Dphysics_{_num}'], name=f'DuP_uPD_tr_{_num}')
 
 		for _num in range(self.qubitNum):
+			_num_ = self.qubitNum + _num
 			# Connect u -> u^\dagger
-			tn.connect(_uMPO[self.qubitNum+_num][f'inner_{_num}'], _uDMPO[self.qubitNum+_num][f'physics_{_num}'], name=f'u_uD_{_num}')
+			tn.connect(_uMPO[_num_][f'inner_{_num}'], _uDMPO[_num_][f'inner_{_num}'], name=f'u_uD_{_num}')
 			# Connect u' -> u
-			tn.connect(_uPMPO[self.qubitNum+_num][f'inner_{_num}'], _uMPO[self.qubitNum+_num][f'physics_{_num}'], name=f'uP_u_{_num}')
+			tn.connect(_uPMPO[_num_][f'inner_{_num}'], _uMPO[_num_][f'physics_{_num}'], name=f'uP_u_{_num}')
 			# Connect u^\dagger -> u'^\dagger
-			tn.connect(_uDMPO[self.qubitNum+_num][f'inner_{_num}'], _uPDMPO[self.qubitNum+_num][f'physics_{_num}'], name=f'uD_uPD_{_num}')
+			tn.connect(_uDMPO[_num_][f'physics_{_num}'], _uPDMPO[_num_][f'inner_{_num}'], name=f'uD_uPD_{_num}')
 			# Connect u' -> u'^\dagger // TRACE Edge
-			tn.connect(_uPMPO[self.qubitNum+_num][f'physics_{_num}'], _uPDMPO[self.qubitNum+_num][f'inner_{_num}'], name=f'uP_uPD_tr_{_num}')
+			tn.connect(_uPMPO[_num_][f'physics_{_num}'], _uPDMPO[_num_][f'physics_{_num}'], name=f'uP_uPD_tr_{_num}')
 
 		for _list in [_uMPO, _uPMPO, _uDMPO, _uPDMPO]:
 			EdgeName2AxisName(_list)
@@ -112,17 +113,18 @@ class Maps(object):
 	def NMAP(self):
 		uDMPO, uPDMPO = copy.deepcopy(self.uDMPO_Ori), copy.deepcopy(self.uPDMPO_Ori)
 
-		for _num in reversed(range(self.qubitNum)):
+		for _num in range(self.qubitNum):
 			# Connect u^\dagger -> u'^\dagger -- D
-			tn.connect(uDMPO[self.qubitNum-1-_num][f'Dinner_{_num}'], uPDMPO[self.qubitNum-1-_num][f'Dphysics_{_num}'], name=f'DuD_uPD_{_num}')
+			tn.connect(uDMPO[_num][f'Dphysics_{_num}'], uPDMPO[_num][f'Dinner_{_num}'], name=f'DuD_uPD_{_num}')
 			# Connect u' -> u'^\dagger -- D // TRACE Edge
-			tn.connect(uPDMPO[self.qubitNum-1-_num][f'Dinner_{_num}'], uDMPO[self.qubitNum-1-_num][f'Dphysics_{_num}'], name=f'DuD_uPD_tr_{_num}')
+			tn.connect(uDMPO[_num][f'Dinner_{_num}'], uPDMPO[_num][f'Dphysics_{_num}'], name=f'DuD_uPD_tr_{_num}')
 
 		for _num in range(self.qubitNum):
+			_num_ = self.qubitNum + _num
 			# Connect u^\dagger -> u'^\dagger
-			tn.connect(uDMPO[self.qubitNum+_num][f'inner_{_num}'], uPDMPO[self.qubitNum+_num][f'physics_{_num}'], name=f'uD_uPD_{_num}')
+			tn.connect(uDMPO[_num_][f'physics_{_num}'], uPDMPO[_num_][f'inner_{_num}'], name=f'uD_uPD_{_num}')
 			# Connect u' -> u'^\dagger // TRACE Edge
-			tn.connect(uPDMPO[self.qubitNum+_num][f'inner_{_num}'], uDMPO[self.qubitNum+_num][f'physics_{_num}'], name=f'uD_uPD_tr_{_num}')
+			tn.connect(uDMPO[_num_][f'inner_{_num}'], uPDMPO[_num_][f'physics_{_num}'], name=f'uD_uPD_tr_{_num}')
 
 		for _list in [uDMPO, uPDMPO]:
 			EdgeName2AxisName(_list)
@@ -137,7 +139,35 @@ class Maps(object):
 		EdgeName2AxisName([self.MMap['uPMPO'][BNum], self.MMap['uPDMPO'][BNum]])    # Hard-reset for fixing prob in _re
 
 	def updateNMap(self, bTensor: tc.Tensor, BNum: int, fixedNameOrder: list[str]):
-		# print('NMap uPDMPO Shape:', self.NMap['uPDMPO'][BNum].axis_names)
 		self.NMap['uPDMPO'][BNum].tensor = self._reorderTensor(bTensor.conj(), self.NMap['uPDMPO'][BNum].axis_names,
 		                                                       fixedNameOrder)
 		EdgeName2AxisName([self.NMap['uPDMPO'][BNum]])  # Hard-reset for fixing prob in _reorderTensor
+
+
+if __name__ == '__main__':
+	from Library.realNoise import czExp_channel
+
+	realNoiseTensor = czExp_channel(
+		'/Users/weiguo_ma/Python_Program/Quantum_error_mitigation/Noisy quantum circuit with MPDO/data/chi/chi1.mat')
+
+	from Library.NoiseChannel import NoiseChannel
+	from Library.AbstractGate import AbstractGate
+
+	noise = NoiseChannel()
+	dpcNoiseTensor = noise.dpCTensor
+	apdeNoiseTensor = noise.apdeCTensor
+
+	abX = AbstractGate().y().gate.tensor
+	XTensor = tc.einsum('ijk, jl -> ilk', dpcNoiseTensor, abX)
+
+	uMPO = SuperOperator(abX, noisy=False).superOperatorMPO
+	uPMPO = UPMPO(uMPO=uMPO).uPMPO
+
+	maps = Maps(superOperatorMPO=uMPO, uPMPO=uPMPO)
+
+	# maps = Maps(superOperatorMPO=uMPO, uPMPO=uPMPO)
+	# mMap = maps.MMap
+	# nMap = maps.NMap
+	#
+	# print(mMap['uMPO'][0].edges)
+	# print(mMap['uMPO'][0].axis_names)

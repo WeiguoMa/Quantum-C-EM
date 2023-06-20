@@ -19,8 +19,11 @@ class SuperOperator(object):
 	def __init__(self, operator: tc.Tensor or tn.AbstractNode = None, noisy: bool = True):
 		self.originalINPUT = operator
 		self.shape = operator.shape
-		self.qubitNum = int((len(self.shape) - 1) / 2)
 		self.noisy = noisy
+		if noisy is True:
+			self.qubitNum = int((len(self.shape) - 1) / 2)
+		else:
+			self.qubitNum = int(len(self.shape) / 2)
 		self.axisNames = self._getAxisNames()
 
 		if operator is None:
@@ -53,16 +56,21 @@ class SuperOperator(object):
 
 	def _getTTAxisNames(self):
 		_TTAxisNames = []
-		for _i in reversed(range(self.qubitNum)):
-			_TTAxisNames += [f'Dinner_{_i}', f'Dphysics_{_i}']
+		for _i in range(self.qubitNum):
+			_TTAxisNames += [f'Dphysics_{_i}', f'Dinner_{_i}']
 		for _i in range(self.qubitNum):
 			_TTAxisNames += [f'physics_{_i}', f'inner_{_i}']
 		return _TTAxisNames
 
 	def getSuperOperator(self) -> tn.AbstractNode:
-		_daggerAxisNames = ['D' + _name for _name in self.axisNames if _name != 'I'] + ['I']
+		_daggerAxisNames = ['D' + _name for _name in self.axisNames if _name != 'I']
+		if self.noisy is True:
+			_daggerAxisNames += ['I']
+
 		_operatorDagger = tn.Node(self.operator.tensor.conj(), name='realNoiseDagger', axis_names=_daggerAxisNames)
-		tn.connect(self.operator['I'], _operatorDagger['I'])
+		if self.noisy is True:
+			tn.connect(self.operator['I'], _operatorDagger['I'])
+
 		_superOperatorNode = tn.contract_between(self.operator, _operatorDagger,
 		                                         name='superOperatorU', allow_outer_product=True)
 		# Process Function
@@ -79,8 +87,8 @@ class SuperOperator(object):
 		TTSeries = []
 		_leftNode, _rightNode = None, None
 
-		_countA, _countB = self.qubitNum - 1, 0
-		_countA_, _countB_ = self.qubitNum - 1, 0
+		_count = 0
+		_count_ = 0
 
 		for _i in range(self.qubitNum * 2):
 			_leftNames = _TTAxisNames[0:2]
@@ -89,13 +97,12 @@ class SuperOperator(object):
 			_rightNames = _TTAxisNames
 			if _rightNames:
 				if 0 < _i <= self.qubitNum - 1:
-					_leftNames.append(f'Dbond_{_countA - 1}_{_countA}')
-					_countA -= 1
+					_leftNames.append(f'Dbond_{_i - 1}_{_i}')
 				elif _i == self.qubitNum:
 					_leftNames.append('Ebond')
 				elif _i > self.qubitNum:
-					_leftNames.append(f'bond_{_countB}_{_countB + 1}')
-					_countB += 1
+					_leftNames.append(f'bond_{_count}_{_count + 1}')
+					_count += 1
 				else:
 					pass
 
@@ -105,16 +112,15 @@ class SuperOperator(object):
 				_leftEdges, _rightEdges = [u[_edgeName] for _edgeName in _leftNames], [u[_edgeName] for _edgeName in _rightNames]
 
 				if _i < self.qubitNum - 1:
-					_leftNodeName, _rightNodeName = f'DU_{_countA_}', f'DU_{_countA_ - 1}'
-					_edgeName = f'Dbond_{_countA_ - 1}_{_countA_}'
-					_countA_ -= 1
+					_leftNodeName, _rightNodeName = f'DU_{_i}', f'DU_{_i + 1}'
+					_edgeName = f'Dbond_{_i}_{_i + 1}'
 				elif _i == self.qubitNum - 1:
-					_leftNodeName, _rightNodeName = f'DU_{_countA}', f'U_{_countB_}'
+					_leftNodeName, _rightNodeName = f'DU_{_i}', f'U_{_count_}'
 					_edgeName = 'Ebond'
 				else:
-					_leftNodeName, _rightNodeName = f'U_{_countB_}', f'U_{_countB_ + 1}'
-					_edgeName = f'bond_{_countB_}_{_countB_ + 1}'
-					_countB_ += 1
+					_leftNodeName, _rightNodeName = f'U_{_count_}', f'U_{_count_ + 1}'
+					_edgeName = f'bond_{_count_}_{_count_ + 1}'
+					_count_ += 1
 
 				_leftNode, _rightNode, _ = tn.split_node(node=u, left_edges=_leftEdges, right_edges=_rightEdges,
 				                                         left_name=_leftNodeName, right_name=_rightNodeName, edge_name=_edgeName)

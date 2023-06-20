@@ -29,7 +29,7 @@ class UpdateNODES(object):
 		self.qubitNum = int(len(self.uMPO) / 2)
 		self.maps = Maps(superOperatorMPO=uMPO, uPMPO=uPMPO)
 
-		self.MInverseMatrix = None
+		self.MMatrix = None
 		self.NMatrix = None
 		self.orderMoveN = None
 		self.NNodeShape = None
@@ -73,24 +73,38 @@ class UpdateNODES(object):
 		#
 		MNode = tn.contractors.auto(contractorM, ignore_edge_order=True)
 		EdgeName2AxisName(MNode)
-		print(MNode.axis_names)
 		#
-		if BNum == 0:     # HARD-CODE Designed
-			nameOrder = [f'DuD_uPD_{BNum}', f'DaggerDbond_{BNum}_{BNum+1}', f'DuP_u_{BNum}', f'Dbond_{BNum}_{BNum+1}']
-		elif BNum == self.uMPO.__len__ - 1:
-			nameOrder = [f'uD_uPD_{BNum}', f'Daggerbond_{BNum-1}_{BNum}', f'uP_u_{BNum}', f'bond_{BNum-1}_{BNum}']
-		else:
-			if BNum < self.qubitNum:
-				nameOrder = [f'DaggerDbond_{BNum-1}_{BNum}', f'DuD_uPD_{BNum}', f'DaggerDbond_{BNum}_{BNum+1}',
-				             f'Dbond_{BNum-1}_{BNum}', f'DuP_u_{BNum}', f'Dbond_{BNum}_{BNum+1}']
+		if self.qubitNum == 1:
+			assert BNum < 2, 'BNum should be 0 or 1'
+			if BNum == 0:
+				nameOrder = ['DuD_uPD_0', 'DaggerEbond'] + ['DuP_u_0', 'Ebond']
 			else:
-				nameOrder = [f'Daggerbond_{BNum - 1}_{BNum}', f'uD_uPD_{BNum}', f'Daggerbond_{BNum}_{BNum + 1}',
-				             f'bond_{BNum - 1}_{BNum}', f'uP_u_{BNum}', f'bond_{BNum}_{BNum + 1}']
+				nameOrder = ['DaggerEbond', 'uD_uPD_0'] + ['Ebond', 'uP_u_0']
+		else:
+			if BNum == 0:   # MPO EDGE-effect
+				nameOrder = ['DuD_uPD_0', 'DaggerDbond_0_1'] + ['DuP_u_0', 'Dbond_0_1']
+			elif 0 < BNum < self.qubitNum - 1:
+				nameOrder = [f'DaggerDbond_{BNum - 1}_{BNum}', f'DuD_uPD_{BNum}', f'DaggerDbond_{BNum}_{BNum + 1}'] +\
+				            [f'Dbond_{BNum - 1}_{BNum}', f'DuP_u_{BNum}', f'Dbond_{BNum}_{BNum + 1}']
+			elif BNum == self.qubitNum - 1:
+				nameOrder = [f'DaggerDbond_{BNum - 1}_{BNum}', f'DuD_uPD_{BNum}', 'DaggerEbond'] +\
+				            [f'Dbond_{BNum - 1}_{BNum}', f'DuP_u_{BNum}', 'Ebond']
+			elif BNum == self.qubitNum:
+				_BNum = BNum - self.qubitNum
+				nameOrder = ['DaggerEbond', f'uD_uPD_{_BNum}', f'Daggerbond_{_BNum}_{_BNum + 1}'] +\
+				            ['Ebond', f'uP_u_{_BNum}', f'bond_{_BNum}_{_BNum + 1}']
+			elif 2 * self.qubitNum - 1 > BNum > self.qubitNum:
+				_BNum = BNum - self.qubitNum
+				nameOrder = [f'Daggerbond_{_BNum - 1}_{_BNum}', f'uD_uPD_{_BNum}', f'Daggerbond_{_BNum}_{_BNum + 1}'] + \
+				            [f'bond_{_BNum - 1}_{_BNum}', f'uP_u_{_BNum}', f'bond_{_BNum}_{_BNum + 1}']
+			else:
+				nameOrder = [f'Daggerbond_{self.qubitNum - 2}_{self.qubitNum - 1}', f'uD_uPD_{self.qubitNum - 1}'] + \
+				            [f'bond_{self.qubitNum - 2}_{self.qubitNum - 1}', f'uP_u_{self.qubitNum - 1}']
+		#
 		_MMatrix = self._reshapeTensor2Matrix(_Node=MNode, _nameOrder=nameOrder, _method='M')
-		_MInverseMatrix = tc.linalg.inv(_MMatrix)
 
-		self.MInverseMatrix = _MInverseMatrix
-		return _MInverseMatrix
+		self.MMatrix = _MMatrix
+		return _MMatrix
 
 	def contractNMap(self, BNum: int):
 		""" Contract the NMap """
@@ -103,12 +117,32 @@ class UpdateNODES(object):
 		NNode = tn.contractors.auto(contractorN, ignore_edge_order=True)
 		EdgeName2AxisName(NNode)
 		#
-		if BNum == 0:     # HARD-CODE Designed
-			self.nameOrderN = [f'uD_uPD_{BNum}', f'Daggerbond_{BNum}_{BNum+1}', f'uD_uPD_tr_{BNum}']
-		elif BNum == len(self.uMPO) - 1:
-			self.nameOrderN = [f'uD_uPD_{BNum}', f'Daggerbond_{BNum-1}_{BNum}', f'uD_uPD_tr_{BNum}']
+		if self.qubitNum == 1:
+			assert BNum < 2, 'BNum should be 0 or 1'
+			if BNum == 0:
+				self.nameOrderN = ['DuD_uPD_0', 'DaggerEbond'] + ['DuD_uPD_tr_0']
+			else:
+				self.nameOrderN = ['DaggerEbond', 'uD_uPD_0'] + ['uD_uPD_tr_0']
 		else:
-			self.nameOrderN = [f'Daggerbond_{BNum-1}_{BNum}', f'uD_uPD_{BNum}', f'Daggerbond_{BNum}_{BNum+1}', f'uD_uPD_tr_{BNum}']
+			if BNum == 0:
+				self.nameOrderN = ['DuD_uPD_0', 'DaggerDbond_0_1'] + ['DuD_uPD_tr_0']
+			elif 0 < BNum < self.qubitNum - 1:
+				self.nameOrderN = [f'DaggerDbond_{BNum - 1}_{BNum}', f'DuD_uPD_{BNum}', f'DaggerDbond_{BNum}_{BNum + 1}'] + \
+									                  [f'DuD_uPD_tr_{BNum}']
+			elif BNum == self.qubitNum - 1:
+				self.nameOrderN = [f'DaggerDbond_{BNum - 1}_{BNum}', f'DuD_uPD_{BNum}', 'DaggerEbond'] + \
+									                  [f'DuD_uPD_tr_{BNum}']
+			elif BNum == self.qubitNum:
+				_BNum = BNum - self.qubitNum
+				self.nameOrderN = ['DaggerEbond', f'uD_uPD_{_BNum}', f'Daggerbond_{_BNum}_{_BNum + 1}'] + \
+									                  [f'uD_uPD_tr_{_BNum}']
+			elif 2 * self.qubitNum - 1 > BNum > self.qubitNum:
+				_BNum = BNum - self.qubitNum
+				self.nameOrderN = [f'Daggerbond_{_BNum - 1}_{_BNum}', f'uD_uPD_{_BNum}', f'Daggerbond_{_BNum}_{_BNum + 1}'] + \
+									                  [f'uD_uPD_tr_{_BNum}']
+			else:
+				self.nameOrderN = [f'Daggerbond_{self.qubitNum - 2}_{self.qubitNum - 1}', f'uD_uPD_{self.qubitNum - 1}'] + \
+									                  [f'uD_uPD_tr_{self.qubitNum - 1}']
 
 		_NMatrix = self._reshapeTensor2Matrix(_Node=NNode, _nameOrder=self.nameOrderN, _method='N')
 
@@ -118,7 +152,7 @@ class UpdateNODES(object):
 	def calculateTensorB(self, BNum: int):
 		""" Calculate BMap """
 		self.contractMMap(BNum=BNum), self.contractNMap(BNum=BNum)
-		_bTensor = tc.matmul(self.MInverseMatrix, self.NMatrix).reshape(self.NNodeShape)
+		_bTensor = tc.linalg.solve(self.MMatrix, self.NMatrix).reshape(self.NNodeShape)
 		self.bTensor = _bTensor
 		return _bTensor
 
@@ -145,37 +179,34 @@ if __name__ == '__main__':
 	abX = AbstractGate().x().gate.tensor
 	XTensor = tc.einsum('ijk, jl -> ilk', dpcNoiseTensor, abX)
 
-	uMPO = SuperOperator(realNoiseTensor).superOperatorMPO
+	uMPO = SuperOperator(realNoiseTensor, noisy=True).superOperatorMPO
 	uPMPO = UPMPO(uMPO=uMPO).uPMPO
 
 	update = UpdateNODES(uMPO=uMPO, uPMPO=uPMPO, epoch=1)
 
 	mMap = update.maps.MMap
 
-	# # Check uP.mm(u) = I
-	# IMap = copy.deepcopy(mMap)
-	# del IMap['uPDMPO'], IMap['uDMPO']
-	#
-	# # Free left/right bond
-	# for num in range(len(IMap['uMPO'])):
-	# 	for name in IMap['uMPO'][num].axis_names:
-	# 		if 'D' in name and 'tr' not in name:
-	# 			IMap['uMPO'][num][name].disconnect(name, name)
-	# 	for name in IMap['uPMPO'][num].axis_names:
-	# 		if 'tr' in name:
-	# 			IMap['uPMPO'][num][name].disconnect(name, name)
-	#
-	# contractorI = []
-	# for item in IMap['uMPO']:
-	# 	contractorI.append(item)
-	# for item in IMap['uPMPO']:
-	# 	contractorI.append(item)
-	#
-	# # Contract
-	# INode = tn.contractors.auto(contractorI, ignore_edge_order=True)
-	# EdgeName2AxisName(INode)
-	# # print(INode.tensor.reshape(16, 16))
-	# # print(tc.diag(INode.tensor.reshape(16, 16)))
+	# Check uP.mm(u) = I
+	IMap = copy.deepcopy(mMap)
+	del IMap['uPDMPO'], IMap['uDMPO']
 
+	# Free left/right bond
+	for num in range(len(IMap['uMPO'])):
+		for name in IMap['uMPO'][num].axis_names:
+			if 'uD' in name:
+				IMap['uMPO'][num][name].disconnect(name, name)
+		for name in IMap['uPMPO'][num].axis_names:
+			if 'tr' in name:
+				IMap['uPMPO'][num][name].disconnect(name, name)
 
+	contractorI = []
+	for item in IMap['uMPO']:
+		contractorI.append(item)
+	for item in IMap['uPMPO']:
+		contractorI.append(item)
 
+	# Contract
+	INode = tn.contractors.auto(contractorI, ignore_edge_order=True)
+	EdgeName2AxisName(INode)
+	print(INode.tensor.reshape(16, 16))
+	print(tc.diag(INode.tensor.reshape(16, 16)))
