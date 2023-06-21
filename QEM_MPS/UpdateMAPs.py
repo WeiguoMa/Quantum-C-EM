@@ -200,13 +200,17 @@ if __name__ == '__main__':
 				IMap['uPMPO'][num][name].disconnect(name, name)
 
 	contractorI = []
-	for item in IMap['uMPO']:
-		contractorI.append(item)
 	for item in IMap['uPMPO']:
+		contractorI.append(item)
+	for item in IMap['uMPO']:
 		contractorI.append(item)
 
 	# Contract
-	INode = tn.contractors.auto(contractorI, ignore_edge_order=True)
+	INode = tn.contractors.auto(contractorI, output_edge_order=[contractorI[0]['DuP_uPD_tr_0'], contractorI[1]['DuP_uPD_tr_1'],
+	                                                            contractorI[2]['uP_uPD_tr_0'], contractorI[3]['uP_uPD_tr_1'],
+	                                                            contractorI[4]['Du_uD_0'], contractorI[5]['Du_uD_1'],
+	                                                            contractorI[6]['u_uD_0'], contractorI[7]['u_uD_1']])
 	EdgeName2AxisName(INode)
+	# print(INode.axis_names)
 	print(INode.tensor.reshape(16, 16))
 	print(tc.diag(INode.tensor.reshape(16, 16)))
