@@ -5,7 +5,7 @@ Contact: weiguo.m@iphy.ac.cn
 """
 import copy
 
-from Maps import Maps, UPMPO
+from Maps import Maps
 from superOperator import SuperOperator
 from Library.tools import EdgeName2AxisName, generate_random_string_without_duplicate
 
@@ -31,6 +31,8 @@ class UpdateNODES(object):
 		self.bTensor = None
 
 		self.updateProcess(epoch=epoch)
+
+		self.uPMPO = self.getUPMPO()
 
 	@staticmethod
 	def findElementsInListWithOrder(inList, orders: list[str]):
@@ -156,6 +158,30 @@ class UpdateNODES(object):
 				self.maps.updateMMap(bTensor=_bTensor, BNum=BNum, fixedNameOrder=self.nameOrderN)
 				self.maps.updateNMap(bTensor=_bTensor, BNum=BNum, fixedNameOrder=self.nameOrderN)
 
+	def getUPMPO(self):
+		""" Get the uPDMPO """
+		uPMPO = copy.deepcopy(self.maps.MMap['uPMPO'])
+		for _num in range(2 * self.qubitNum):
+			if _num < self.qubitNum:
+				for _name in uPMPO[_num].axis_names:
+					if 'tr' in _name:
+						uPMPO[_num][_name].disconnect(f'Dphysics_{_num}', f'Dphysics_{_num}')
+					elif 'uP_u_' in _name:
+						uPMPO[_num][_name].disconnect(f'Dinner_{_num}', f'Dinner_{_num}')
+					else:
+						pass
+			else:
+				_num_ = _num - self.qubitNum
+				for _name in uPMPO[_num].axis_names:
+					if 'tr' in _name:
+						uPMPO[_num][_name].disconnect(f'physics_{_num_}', f'physics_{_num_}')
+					elif 'uP_u_' in _name:
+						uPMPO[_num][_name].disconnect(f'inner_{_num_}', f'inner_{_num_}')
+					else:
+						pass
+		EdgeName2AxisName(uPMPO)
+		return uPMPO
+
 
 if __name__ == '__main__':
 	from Library.realNoise import czExp_channel
@@ -207,5 +233,4 @@ if __name__ == '__main__':
 	                                                            contractorI[4]['Du_uD_0'], contractorI[5]['Du_uD_1'],
 	                                                            contractorI[6]['u_uD_0'], contractorI[7]['u_uD_1']])
 	EdgeName2AxisName(INode)
-	# print(INode.tensor.reshape(16, 16))
 	print(tc.diag(INode.tensor.reshape(16, 16)))
