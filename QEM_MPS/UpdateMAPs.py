@@ -18,16 +18,9 @@ tn.set_default_backend("pytorch")
 
 
 class UpdateNODES(object):
-	def __init__(self, uMPO: SuperOperator = None, uPMPO: UPMPO = None, epoch: int = 1):
-		if uMPO is None:
-			uMPO = SuperOperator().superOperatorMPO
-		if uPMPO is None:
-			uPMPO = UPMPO(uMPO=uMPO).uPMPO
-
-		self.uMPO = uMPO
-		self.uPMPO = uPMPO
-		self.qubitNum = int(len(self.uMPO) / 2)
-		self.maps = Maps(superOperatorMPO=uMPO, uPMPO=uPMPO)
+	def __init__(self, maps: Maps = None, epoch: int = 1):
+		self.maps = maps
+		self.qubitNum = self.maps.qubitNum
 
 		self.MMatrix = None
 		self.NMatrix = None
@@ -158,7 +151,7 @@ class UpdateNODES(object):
 
 	def updateProcess(self, epoch: int):
 		for _epoch in range(epoch):
-			for BNum in range(len(self.uMPO)):
+			for BNum in range(2 * self.qubitNum):
 				_bTensor = self.calculateTensorB(BNum=BNum)
 				self.maps.updateMMap(bTensor=_bTensor, BNum=BNum, fixedNameOrder=self.nameOrderN)
 				self.maps.updateNMap(bTensor=_bTensor, BNum=BNum, fixedNameOrder=self.nameOrderN)
@@ -179,10 +172,13 @@ if __name__ == '__main__':
 	abX = AbstractGate().x().gate.tensor
 	XTensor = tc.einsum('ijk, jl -> ilk', dpcNoiseTensor, abX)
 
-	uMPO = SuperOperator(realNoiseTensor, noisy=True).superOperatorMPO
-	uPMPO = UPMPO(uMPO=uMPO).uPMPO
+	# --------------------------------------------------------------------------
 
-	update = UpdateNODES(uMPO=uMPO, uPMPO=uPMPO, epoch=1)
+	uMPO = SuperOperator(realNoiseTensor).superOperatorMPO
+
+	maps = Maps(superOperatorMPO=uMPO)
+
+	update = UpdateNODES(maps=maps, epoch=2)
 
 	mMap = update.maps.MMap
 
@@ -211,6 +207,5 @@ if __name__ == '__main__':
 	                                                            contractorI[4]['Du_uD_0'], contractorI[5]['Du_uD_1'],
 	                                                            contractorI[6]['u_uD_0'], contractorI[7]['u_uD_1']])
 	EdgeName2AxisName(INode)
-	# print(INode.axis_names)
-	print(INode.tensor.reshape(16, 16))
+	# print(INode.tensor.reshape(16, 16))
 	print(tc.diag(INode.tensor.reshape(16, 16)))

@@ -28,9 +28,9 @@ class UPMPO(object):
 
 
 class Maps(object):
-	def __init__(self, superOperatorMPO: list[tn.AbstractNode], uPMPO: list[tn.AbstractNode]):
+	def __init__(self, superOperatorMPO: list[tn.AbstractNode]):
 		self.uMPO_Ori = superOperatorMPO
-		self.uPMPO_Ori = uPMPO
+		self.uPMPO_Ori = UPMPO(uMPO=superOperatorMPO).uPMPO
 		self.qubitNum = int(len(self.uMPO_Ori) / 2)
 
 		self.uDMPO_Ori = self._getConjugate(self.uMPO_Ori)
@@ -161,9 +161,8 @@ if __name__ == '__main__':
 	XTensor = tc.einsum('ijk, jl -> ilk', dpcNoiseTensor, abX)
 
 	uMPO = SuperOperator(abX, noisy=False).superOperatorMPO
-	uPMPO = UPMPO(uMPO=uMPO).uPMPO
 
-	maps = Maps(superOperatorMPO=uMPO, uPMPO=uPMPO)
+	maps = Maps(superOperatorMPO=uMPO)
 
 	# maps = Maps(superOperatorMPO=uMPO, uPMPO=uPMPO)
 	# mMap = maps.MMap
