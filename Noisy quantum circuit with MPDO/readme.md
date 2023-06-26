@@ -1,4 +1,4 @@
-# Quantum circuit simulator with Matrix Product Density Operator (MPDO)
+# Noisy Quantum circuit simulator with Matrix Product Density Operator (MPDO)
 
 ###### I have to emphasize that this project is not intended for High Performance Computing
 
@@ -100,7 +100,7 @@ Adding quantum gates to qubits is the basic operation in quantum computing, and 
 to be show in tensornetwork form like picture below.
 
 <p align="center">
-<img src="./fig_md/gate_add_strategy.svg" width="500" />
+<img src="./fig_md/gate_add_strategy.svg" width="800" />
 </p>
 
 Quantum entanglement between qubits is the key to quantum computing, it's introduced by many-
@@ -175,6 +175,8 @@ control of the superconducting qubits, two examples are shown in picture below,
 <img src="./fig_md/TrueError.svg" width="1600" />
 </p>
 
+
+## Experimentation System
 You might be curious of the pulse-controlled quantum computing system, a sketch is shown below,
 
 <p align="center">
