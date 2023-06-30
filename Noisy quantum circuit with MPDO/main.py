@@ -30,7 +30,6 @@ circuit.add_gate(AbstractGate().h(), [0])
 circuit.add_gate(AbstractGate().cnot(), [0, 1])
 circuit.add_gate(AbstractGate().cnot(), [1, 2])
 circuit.add_gate(AbstractGate().cnot(), [2, 3])
-circuit.add_gate(AbstractGate().cnot(), [3, 4])
 
 print(circuit)
 

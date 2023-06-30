@@ -244,23 +244,13 @@ circuit = TensorCircuit(ideal=ideal_circuit, realNoise=realNoise,
                         chiFilename=chiFilename, chi=chi, kappa=kappa)
 """
 Example:
-    q[0] ----[H]----[CONTROL     ---------------------[X]----
-    q[1] ----[X]----         NOT]----[CONTROL     ----[H]----
-    q[2] ----[H]----[CONTROL     ----         NOT]----[X]----
-    q[3] -----------         NOT]---------------------[X]----
+    GHZ State Prepare
 """
 
-# layer1
-circuit.add_gate(AbstractGate().h(), [0, 2])
-circuit.add_gate(AbstractGate().x(), [1])
-# layer2
+circuit.add_gate(AbstractGate().h(), [0])
 circuit.add_gate(AbstractGate().cnot(), [0, 1])
-circuit.add_gate(AbstractGate().cnot(), [2, 3])
-# layer3
 circuit.add_gate(AbstractGate().cnot(), [1, 2])
-# layer4
-circuit.add_gate(AbstractGate().x(), [0, 2, 3])
-circuit.add_gate(AbstractGate().h(), [1])
+circuit.add_gate(AbstractGate().cnot(), [2, 3])
 
 ```
 ## An Initial Quantum State
