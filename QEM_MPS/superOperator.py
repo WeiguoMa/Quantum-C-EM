@@ -6,7 +6,6 @@ Contact: weiguo.m@iphy.ac.cn
 import copy
 
 import torch as tc
-from numpy import prod
 import tensornetwork as tn
 from Library.realNoise import czExp_channel
 from Library.tools import EdgeName2AxisName, generate_random_string_without_duplicate

@@ -168,6 +168,8 @@ class UpdateNODES(object):
 						uPMPO[_num][_name].disconnect(f'Dphysics_{_num}', f'Dphysics_{_num}')
 					elif 'uP_u_' in _name:
 						uPMPO[_num][_name].disconnect(f'Dinner_{_num}', f'Dinner_{_num}')
+					elif 'bond' in _name and 'P' not in _name:
+						uPMPO[_num][_name].name = 'P' + _name
 					else:
 						pass
 			else:
@@ -177,60 +179,62 @@ class UpdateNODES(object):
 						uPMPO[_num][_name].disconnect(f'physics_{_num_}', f'physics_{_num_}')
 					elif 'uP_u_' in _name:
 						uPMPO[_num][_name].disconnect(f'inner_{_num_}', f'inner_{_num_}')
+					elif 'bond' in _name and 'P' not in _name:
+						uPMPO[_num][_name].name = 'P' + _name
 					else:
 						pass
 		EdgeName2AxisName(uPMPO)
 		return uPMPO
 
 
-if __name__ == '__main__':
-	from Library.realNoise import czExp_channel
-	realNoiseTensor = czExp_channel(
-		'/Users/weiguo_ma/Python_Program/Quantum_error_mitigation/Noisy quantum circuit with MPDO/data/chi/chi1.mat')
-
-	from Library.NoiseChannel import NoiseChannel
-	from Library.AbstractGate import AbstractGate
-
-	noise = NoiseChannel()
-	dpcNoiseTensor = noise.dpCTensor
-	apdeNoiseTensor = noise.apdeCTensor
-
-	abX = AbstractGate().x().gate.tensor
-	XTensor = tc.einsum('ijk, jl -> ilk', dpcNoiseTensor, abX)
-
-	# --------------------------------------------------------------------------
-
-	uMPO = SuperOperator(realNoiseTensor).superOperatorMPO
-
-	maps = Maps(superOperatorMPO=uMPO)
-
-	update = UpdateNODES(maps=maps, epoch=2)
-
-	mMap = update.maps.MMap
-
-	# Check uP.mm(u) = I
-	IMap = copy.deepcopy(mMap)
-	del IMap['uPDMPO'], IMap['uDMPO']
-
-	# Free left/right bond
-	for num in range(len(IMap['uMPO'])):
-		for name in IMap['uMPO'][num].axis_names:
-			if 'uD' in name:
-				IMap['uMPO'][num][name].disconnect(name, name)
-		for name in IMap['uPMPO'][num].axis_names:
-			if 'tr' in name:
-				IMap['uPMPO'][num][name].disconnect(name, name)
-
-	contractorI = []
-	for item in IMap['uPMPO']:
-		contractorI.append(item)
-	for item in IMap['uMPO']:
-		contractorI.append(item)
-
-	# Contract
-	INode = tn.contractors.auto(contractorI, output_edge_order=[contractorI[0]['DuP_uPD_tr_0'], contractorI[1]['DuP_uPD_tr_1'],
-	                                                            contractorI[2]['uP_uPD_tr_0'], contractorI[3]['uP_uPD_tr_1'],
-	                                                            contractorI[4]['Du_uD_0'], contractorI[5]['Du_uD_1'],
-	                                                            contractorI[6]['u_uD_0'], contractorI[7]['u_uD_1']])
-	EdgeName2AxisName(INode)
-	print(tc.diag(INode.tensor.reshape(16, 16)))
+# if __name__ == '__main__':
+# 	from Library.realNoise import czExp_channel
+# 	realNoiseTensor = czExp_channel(
+# 		'/Users/weiguo_ma/Python_Program/Quantum_error_mitigation/Noisy quantum circuit with MPDO/data/chi/chi1.mat')
+#
+# 	from Library.NoiseChannel import NoiseChannel
+# 	from Library.AbstractGate import AbstractGate
+#
+# 	noise = NoiseChannel()
+# 	dpcNoiseTensor = noise.dpCTensor
+# 	apdeNoiseTensor = noise.apdeCTensor
+#
+# 	abX = AbstractGate().x().gate.tensor
+# 	XTensor = tc.einsum('ijk, jl -> ilk', dpcNoiseTensor, abX)
+#
+# 	# --------------------------------------------------------------------------
+#
+# 	uMPO = SuperOperator(realNoiseTensor).superOperatorMPO
+#
+# 	maps = Maps(superOperatorMPO=uMPO)
+#
+# 	update = UpdateNODES(maps=maps, epoch=2)
+#
+# 	mMap = update.maps.MMap
+#
+# 	# Check uP.mm(u) = I
+# 	IMap = copy.deepcopy(mMap)
+# 	del IMap['uPDMPO'], IMap['uDMPO']
+#
+# 	# Free left/right bond
+# 	for num in range(len(IMap['uMPO'])):
+# 		for name in IMap['uMPO'][num].axis_names:
+# 			if 'uD' in name:
+# 				IMap['uMPO'][num][name].disconnect(name, name)
+# 		for name in IMap['uPMPO'][num].axis_names:
+# 			if 'tr' in name:
+# 				IMap['uPMPO'][num][name].disconnect(name, name)
+#
+# 	contractorI = []
+# 	for item in IMap['uPMPO']:
+# 		contractorI.append(item)
+# 	for item in IMap['uMPO']:
+# 		contractorI.append(item)
+#
+# 	# Contract
+# 	INode = tn.contractors.auto(contractorI, output_edge_order=[contractorI[0]['DuP_uPD_tr_0'], contractorI[1]['DuP_uPD_tr_1'],
+# 	                                                            contractorI[2]['uP_uPD_tr_0'], contractorI[3]['uP_uPD_tr_1'],
+# 	                                                            contractorI[4]['Du_uD_0'], contractorI[5]['Du_uD_1'],
+# 	                                                            contractorI[6]['u_uD_0'], contractorI[7]['u_uD_1']])
+# 	EdgeName2AxisName(INode)
+# 	print(tc.diag(INode.tensor.reshape(16, 16)))
