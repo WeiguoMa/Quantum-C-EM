@@ -3,42 +3,56 @@
 ###### I have to emphasize that this project is not intended for High Performance Computing
 
 ## Computer Implementation
+
 Main Packages Required:
+
 - TensorNetwork -- Latest Version
 - Pytorch -- Version 2.0 or Version 1.10
 
 ### TensorNetwork Package
 
-Project is based on TensorNetwork, a mathematical technique that could do truncation to speed
-up the calculation with limited error, which is introduced by SVD.
+The project centers around TensorNetwork, a mathematical methodology capable of performing truncation to
+expedite calculations while maintaining a constrained level of error, a phenomenon introduced through Singular
+Value Decomposition (SVD).
 
-Package I used is TensorNetwork, which is a python package for tensornetwork calculations
-from [google](https://github.com/google/TensorNetwork). This package gets multiple backends
-like Jax, Pytorch, Tensorflow, Numpy, etc. However, and is in alpha version, and 
-stopped updating since 2021. I adopt backend as pytorch with setting 
-    ```
-    tensornetwork.set_default_backend("pytorch")
-    ```
+The chosen software tool employed for TensorNetwork calculations is the Python package named "TensorNetwork,"
+accessible at [https://github.com/google/TensorNetwork](https://github.com/google/TensorNetwork). This package
+boasts multiple backends, including Jax, Pytorch, Tensorflow, Numpy, and others. It is essential to note that,
+as of the last update in 2021, the package is in an alpha version and no longer receives regular updates.
+Within the context of this project, the PyTorch backend was adopted and configured accordingly.
 
-Problems may raise when using this package, codes fixes are involved by myself. I use this package
-because of its simplicity and easy to read (actually this is the first package I know from NEW
-Bing, and I just don't want to learn others, I am not good at coding). Problems like,
+```
+tensornetwork.set_default_backend("pytorch")
+```
 
-1. Axis_names and edge_names are not consistent, which may cause bugs like in SVD (Interestingly
-, edges name won't change after operation like CONTRACT, so I wrote function tools.EdgeName2AxisName
-to keep axis_names is right);
-2. Some backends are out of date, like torch.svd and torch.qr are substituted by 
-torch.linalg.svd and torch.linalg.qr, and may causes bug while .linalg.svd return vh, which
-is the transpose and conjugate of v, but .svd return v directly;
+Potential issues may arise when utilizing this package, necessitating self-implemented code fixes. The primary
+reason for selecting this particular package is its simplicity and ease of comprehension, especially
+considering that it was the first package I encountered through NEW Bing. Due to my limited coding
+proficiency, I opted not to explore alternative packages at this time. The problems encountered include, but
+are not limited to:
+
+1. Axis_names and edge_names are not consistent, which may cause bugs like in
+   SVD (Interestingly
+   , edges name won't change after operation like CONTRACT, so I wrote function
+   tools.EdgeName2AxisName
+   to keep axis_names is right);
+2. Some of the backends' settings are out of date, like torch.svd and torch.qr are substituted by
+   torch.linalg.svd and torch.linalg.qr, and may causes bug while .linalg.svd
+   return vh, which
+   is the transpose and conjugate of v, but .svd return v directly;
 3. ...
 
 Certainly, there are packages under maintenance,
-- [TeNpy](https://github.com/tenpy/tenpy): A package developed by physicist, it provides
-many useful algorithm like DMRG/TEBD, but it is not easy to use(for me);
-- [ITensor](https://itensor.org/): If you're familiar with C++ or Julia, ITensor is a good
-choice to accomplish the target.
-- You might just create a package with different backend, use backend.einsum() to make 
-calculation.
+
+- [TeNpy](https://github.com/tenpy/tenpy): A package developed by physicist, it
+  provides
+  many useful algorithm like DMRG/TEBD, but it is not easy to use(for me);
+- [ITensor](https://itensor.org/): If you're familiar with C++ or Julia, ITensor
+  is a good
+  choice to accomplish the target.
+- You might just create a package with different backend, use backend.einsum()
+  to make
+  calculation.
 
 <span style="color:red">
 For all, author(me) is not familiar with both C++ and TensorNetwork coding, so I choose
@@ -49,22 +63,26 @@ be known that ** ITensor does not support its CPP package **.
 
 
 **Attention:**
-1. While you're trying to use spilt_node(svd or qr), be careful about the axis_names, which
-is involved in the calculation of the SVD/QR with left_edges and right_edges, I wrote some
-strategy to make sure it is right, but might be ugly, and some of them are abolished.
-2. I set **Nodes** as qubits, which can be easily operated and more intuitive to understand.
-However, in some theory, people believe that **Edges** are qubits, which is more suitable.
-3. Python Class tensornetwork.Node or tensornetwork.AbstractNode is physical entity in 
-computer memory, so that operations to qubits can be done without given a new memory space,
-which saves memory and easy to code in implementation.
+
+1. While you are trying to use spilt_node(svd or qr), be careful about the
+   axis_names, which is involved in the calculation of the SVD/QR with left_edges and right_edges,
+   I wrote some strategy to ensure it is right, but might be ugly, and some of them are abolished.
+2. I set **Nodes** as qubits, which can be easily operated and more intuitive to understand. However, in
+   some theory, people believe that **Edges** are qubits, which is more suitable.
+3. Python Class tensornetwork.Node or tensornetwork.AbstractNode is physical entity in computer memory, so
+   that operations to qubits can be done without given a new memory space, which saves memory and easy to
+   code in implementation.
 
 ### Qubit
-Qubit is a basic unit in quantum computing, which is a two-level system. In this project,
-I use tn.Node or tn.AbstractNode as qubit, whose rank is changeable with contraction.
 
-**Attention:** Axis_names is an important property in TensorNetwork Package, which is a list
-in python, it easily makes mistakes. I designed it for qubit/tensor in picture below for a 
-general high-rank situation in current model of quantum computing.
+A qubit serves as the fundamental unit in quantum computing, representing a two-level quantum system. In the
+context of this project, I employ "tn.Node" or "tn.AbstractNode" as qubits, which can be dynamically adjusted
+in
+rank through contraction.
+
+**Attention:** Axis_names is an important property in TensorNetwork Package, which is a list in python, it
+easily makes mistakes. In this project, I have designed a general high-rank qubit/tensor representation for
+the current model of quantum computing. The qubit/tensor structure is depicted in the picture below:
 
 <p align="center">
 <img src="./fig_md/qubit_axis.svg" width="320" />
@@ -72,60 +90,73 @@ general high-rank situation in current model of quantum computing.
 
 Noticed that the indices name is explicit with number of qubit, for 1st qubit, it has name in pic.
 
-
 ### Quantum Gate
-Quantum Gates are generally defined as a matrix, but in tensornetwork it is treated as tensor,
-which is a generalization of matrix. From intuition, single-qubit gate like 'X' is a 2x2 matrix,
-which can be represented as a (2, 2) rank-2 tensor, and multi-qubit gate like 'CNOT' is a 4x4 
-matrix which can be represented as a (2, 2, 2, 2) rank-4 tensor. 
 
-I make a Class called TensorGate() in file basic_gate.py, it contains some basic quantum gates
-with property, like name, tensor, rank, shape, axis_names, etc. 
+Quantum Gates are commonly defined as matrices; however, in tensornetwork, they are treated as tensors, which
+represent a generalization of matrices. From a conceptual standpoint, a single-qubit gate like 'X' can be
+represented as a 2x2 matrix, which corresponds to a (2, 2) rank-2 tensor. Similarly, a multi-qubit gate like '
+CNOT' is typically represented as a 4x4 matrix, which can be equivalently represented as a (2, 2, 2, 2) rank-4
+tensor.
 
-**Attention:** Axis_names is an important property in TensorNetwork Package, which is a list
-in python, it easily makes mistakes. I designed it for gates/tensors in picture below, and
-it's easy to be generalized to many-qubit gates.
+I have developed a class named TensorGate() within the file basic_gate.py. This class includes fundamental
+quantum gates, each possessing properties such as name, tensor, rank, shape, axis_names, and others.
+
+**Attention:** Axis_names is an important property in TensorNetwork Package, which is a list in python, it
+easily makes mistakes. I have designed the TensorGate() class to handle gates/tensors, as depicted in the
+picture below. The class is readily extensible to accommodate many-qubit gates, providing a versatile and
+scalable solution.
 
 <p align="center">
 <img src="./fig_md/gate_axis.svg" width="320" />
 </p>
 
-Currently, I provided basic gates as: ['X', 'Y', 'Z', 'H', 'S', 'T', 'RX', 'RY', 'RZ', 'U1', 'U2',
-'U3', 'U', 'CNOT', 'CZ', 'SWAP', 'RZZ']. Their tensor form is formed with function 
+Currently, I provided basic gates
+as: ['X', 'Y', 'Z', 'H', 'S', 'T', 'RX', 'RY', 'RZ', 'U1', 'U2',
+'U3', 'U', 'CNOT', 'CZ', 'SWAP', 'RZZ']. Their tensor form is formed with
+function
 **torch.reshape()**, except CNOT, which tensor is derived from its truth table.
 
 ## Physics Implementation
 
-Adding quantum gates to qubits is the basic operation in quantum computing, and it's naturally
-to be show in tensornetwork form like picture below.
+Adding quantum gates to qubits is the basic operation in quantum computing, and it's naturally to be show
+in tensornetwork form like picture below.
 
 <p align="center">
 <img src="./fig_md/gate_add_strategy.svg" width="800" />
 </p>
 
-Quantum entanglement between qubits is the key to quantum computing, it's introduced by many-
-qubit gates, it gives qubit/tensor a new leg to survive. The main idea to use tensornetwork to 
-represents the quantum circuit is its contraction strategy. While people are spectating the result
-of a quantum circuit, it gives a probability distribution but not a series of nodes. Hence, the
-exponential disaster appear when people are trying to contract all the operated nodes together.
-Tensornetwork provide a series of contraction algorithms like DMRG, whose main idea is utilizing
-SVD function's truncation to speed up the calculation. Therefore, the implementation of adding 
-quantum gates here, I take strategy below to limit the dimension of bond between entangled 
-qubits.
-1. Do a local optimal approximation on inner indices by SVD, which is (this part is introduced
-by quantum noise, and I'll show it later).
+Quantum entanglement between qubits stands as a pivotal aspect of quantum computing, primarily facilitated by
+many-qubit gates. It bestows upon qubits/tensors an additional degree of freedom to coexist. Employing
+tensornetwork to represent quantum circuits is primarily motivated by its efficient contraction strategy.
+While observing the outcomes of a quantum circuit, one typically obtains a probability distribution rather
+than an explicit series of nodes. Unfortunately, attempting to contract all operated nodes simultaneously can
+lead to an exponential explosion of computational resources. To mitigate this issue, tensornetwork technique
+offers various contraction algorithms, such as DMRG, which leverage the truncation feature of the SVD function
+to accelerate calculations. Consequently, when implementing the addition of quantum gates, I have adopted a
+strategy to limit the dimension of bonds between entangled qubits, thereby ensuring computational tractability
+and enhancing the overall efficiency of the quantum circuit representation.
+
+1. Do a local optimal approximation on inner indices by SVD, which is (this part
+   is introduced
+   by quantum noise, and I'll show it later).
+
 ```math
     T_{l_k, r_k}^{s_k, a_k} = \sum_\mu U^{s_k, \mu}_{l_k, r_k} S_\mu V_{\mu, a_k}
 ```
+
 Keep $\kappa$ largest singular values $S_\mu$ after a layer of noise.
 
-2. Apply QR-decomposition on each Tensor from left to right (which forms a canonical form of MPO),
+2. Apply QR-decomposition on each Tensor from left to right (which forms a
+   canonical form of MPO),
+
 ```math
     T_{l_k, r_k}^{s_k, a_k} = \sum_\mu Q^{s_k, a_k}_{l_k, \mu} R_{\mu, r_k}
 ```
+
 Except the rightest tensor, all other tensors got left-orthogonalized.
 
 3. Apply SVD from right to left to truncate each of the bond indices,
+
 ```math
     \sum_ {l_ {k+1}} T_ {l_k, l_ {k+1}}^{s_k, a_k} T_ {l_ {k+1}, r_ {k+1}}^{s_ {k+1}, a_ {k+1}}\approx 
     \sum_ {\mu=1}^{\chi} U^{s_k, a_k}_ {l_k, \mu} S_\mu V_ {\mu, r_ {k+1}}^{s_ {k+1}, a_ {k+1}}
@@ -137,11 +168,17 @@ to perform step 2&3.
 </span>
 
 ## Mathematical Implementation
-Generally, in matrix operation, if a double-qubit gate was applied to qubits that are stepping
-over qubits, SWAP gates(or just permute) operation are needed to control the matrix elements.
-However, in tensornetwork, it's not necessary to do so, because the tensor form of quantum gates
-is spanning in subspaces with "legs", we could just choose the right legs to contract with the 
-qubits, it works directly without any permutation.
+
+Indeed, in traditional matrix operations, when applying a double-qubit gate to qubits that are non-adjacent (
+stepping over other qubits), SWAP gates or permutation operations are typically required to control the matrix
+elements appropriately.
+
+However, in the context of tensornetwork, such extra steps are not necessary. This advantage arises because
+the tensor representation of quantum gates operates within subspaces, each associated with "legs" that
+correspond to qubits. By intelligently choosing the right legs to contract with the relevant qubits, it
+becomes possible to perform the operation directly without any need for permutation or SWAP gates. This
+streamlined approach is one of the key benefits of using tensornetwork to represent quantum circuits, as it
+simplifies computations and minimizes the overhead typically associated with non-adjacent qubit interactions.
 
 <p align="center">
 <img src="./fig_md/gate_stepover.svg" width="400" />
@@ -150,34 +187,53 @@ qubits, it works directly without any permutation.
 And the entanglement are naturally to be spread between qubits with following operations.
 
 # Inplementation of Quantum Noise
-## United Theoretical Noise Model
-Quantum noise is a sophisticated topic in quantum physics, in quantum computation, it can
-be roughly divided into several types/channels, like amplitude damping, phase damping, which
-is shown in picture below,
+
+## Unified Theoretical Noise Model
+
+Quantum noise is a complex and essential aspect of quantum physics. Within the realm of quantum computation,
+it can be categorized into various types or channels, two of which are amplitude damping and phase damping, as
+illustrated in the diagram below:
 
 <p align="center">
 <img src="./fig_md/UnitedErrorModel.svg" width="1600" />
 </p>
 
-Detailed quantum noise simulation or noise channels can be easily found in books or papers,
-like QCQI, Nielsen, etc. I implemented quantum noise easily with the strategy like the
-**Actual circuit** in picture, which is important is that in double-qubit gate, the **DC** 
-is only applied to the **target qubit**, besides, **SPAM** is not implemented, because 
-of a low probability.
+Amplitude damping refers to the loss of quantum information due to interactions with the environment, leading
+to a decrease in the probability of the quantum state's amplitude. Phase damping, on the other hand, involves
+the random introduction of phase errors, which alters the quantum state's phase information.
+
+These quantum noise phenomena play a crucial role in the performance and reliability of quantum computations,
+necessitating thorough understanding and mitigation strategies in quantum algorithms and quantum error
+correction techniques.
+
+Indeed, detailed quantum noise simulation and various noise channels can be found in books and research papers
+on quantum computing and quantum information, such as "Quantum Computation and Quantum Information" (QCQI) by
+Nielsen and Chuang. The implementation of quantum noise in quantum circuits often involves considering various
+noise models and applying appropriate noise channels to simulate realistic quantum systems. The Actual circuit
+in the picture likely represents a specific quantum circuit with quantum noise included, where some noise
+channels are applied to the qubits.
+
+Moreover, it is true that accounting for state preparation and measurement (SPAM) errors can be more
+challenging, as they are typically associated with lower probabilities. In practice, researchers often focus
+on the dominant noise sources and their impact on the quantum computation, while accounting for SPAM errors
+when necessary.
 
 ## Real Noise (based on Experimental Data - $\chi$ Matrix)
 
-A **TRUE** quantum noise simulation function with the QPT-Chi matrix on **REAL** quantum
-computer CZ-gate is provided. A real quantum noise takes places in actual physical
+A **TRUE** quantum noise simulation function with the QPT-Chi matrix on **REAL**
+quantum
+computer CZ-gate is provided. A real quantum noise takes places in actual
+physical
 control of the superconducting qubits, two examples are shown in picture below,
 
 <p align="center">
 <img src="./fig_md/TrueError.svg" width="1600" />
 </p>
 
-
 ## Experimentation System
-You might be curious of the pulse-controlled quantum computing system, a sketch is shown below,
+
+You might be curious of the pulse-controlled quantum computing system, a sketch
+is shown below,
 
 <p align="center">
 <img src="./fig_md/PulseControl.svg" width=1600" />
@@ -185,23 +241,46 @@ You might be curious of the pulse-controlled quantum computing system, a sketch 
 
 # Structure of the Project
 
-- main: Test file for the project, passed while the environment is set up correctly.
+The project structure appears to be well-organized and modular. Below is a brief description of each component
+in the project:
+
+- `main`: This file serves as a test file for the project, ensuring that the environment is correctly set up.
 
 **Library**:
-- AbstractGate: Introduces an abstract class of quantum gates;
-- ADCircuits: Provides a class of quantum circuit with multiple methods, like add_gate;
-- ADGate: Provides basic information of quantum gates;
-- chipInfo: Provides basic information of quantum chips(Mainly used for noise simulation);
-- ElderFunc: Original codes in previous versions;
-- NoiseChannel: Provides noise channel for quantum circuit;
-- TNNOptimizer: Provides a class of optimizer for tensornetwork algorithm;
-- tools: Introduces a set of tools for implementing operations for inside program or outer program.
+
+- `AbstractGate`: This abstract class defines the interface for quantum gates, providing a blueprint for
+  implementing different types of quantum gates.
+
+- `ADCircuits`: This class represents a quantum circuit and includes various methods, such as `add_gate`, to
+  manipulate and construct the quantum circuit using quantum gates.
+
+- `ADGate`: This class provides essential information about individual quantum gates, likely including
+  properties like name, matrix representation, and other relevant attributes.
+
+- `chipInfo`: This module offers fundamental information about quantum chips, which is primarily used for
+  noise simulation in the context of quantum computation.
+
+- `ElderFunc`: This section holds the original codes from previous versions, possibly serving as a reference
+  or archive for earlier implementations.
+
+- `NoiseChannel`: This module provides noise channels for the quantum circuit, allowing the simulation of
+  realistic quantum noise during computations.
+
+- `TNNOptimizer`: This class implements an optimizer for tensornetwork algorithms, likely aimed at optimizing
+  the contraction strategy to enhance computational efficiency.
+
+- `tools`: This module introduces a set of tools to facilitate various operations within the program or
+  interface with external programs for specific functionalities.
+
+Overall, this structure seems to adhere to good software engineering practices, promoting modularity and
+reusability of components, which can lead to a more maintainable and scalable project.
 
 # Tutorial
 
 [Basic API Tutorial](https://colab.research.google.com/drive/1Fp9DolkPT-P_Dkg_s9PLbTOKSq64EVSu)
 
 ## Initialize Program
+
 ```python
 import tensornetwork as tn
 import Library.tools as tools
@@ -212,10 +291,11 @@ tn.set_default_backend("pytorch")
 ```
 
 ## Basic Information of Quantum Circuit
+
 ```python
 qnumber = 4
-ideal_circuit = False   # or True
-realNoise = True	# or False
+ideal_circuit = False  # or True
+realNoise = True  # or False
 chiFilename = './data/chi/chi1.mat'
 chi, kappa = None, None
 
@@ -238,6 +318,7 @@ An ideal=True circuit cannot work with realNoise=True,
 ```
 
 ## Establish a Quantum Circuit
+
 ```python
 # Establish a quantum circuit
 circuit = TensorCircuit(ideal=ideal_circuit, realNoise=realNoise,
@@ -253,7 +334,9 @@ circuit.add_gate(AbstractGate().cnot(), [1, 2])
 circuit.add_gate(AbstractGate().cnot(), [2, 3])
 
 ```
+
 ## An Initial Quantum State
+
 ```python
 """
 In tools.py, I provide several initial state like,
@@ -269,6 +352,7 @@ initState = tools.create_ket0Series(qnumber)
 ```
 
 ## Calculate Ket-space and Density Matrix $\rho$
+
 ```python
 """
 State returns a state vector for pure quantum state, or a density matrix.
@@ -282,10 +366,14 @@ state = circuit(state, state_vector=False, reduced_index=[])
 ```
 
 # Problems may be encountered
-**VQA** is not supported in this version, bugs still exist in the implementation of forward()
+
+**VQA** is not supported in this version, bugs still exist in the implementation
+of forward()
 and updating the parameters.
 
-**RealNoise** function is still sensitive, which causes a little bit high noise compare to
+**RealNoise** function is still sensitive, which causes a little bit high noise
+compare to
 QUTIP-fullMatrix simulation.
 
-**Memory Overflow** is possible to happen while unknown error occurs in the program.
+**Memory Overflow** is possible to happen while unknown error occurs in the
+program.
