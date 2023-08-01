@@ -1,6 +1,10 @@
-# Quantum error mitigation via different techniques
+# Quantum Computing and Error Mitigation
 
 ## Noise simulation with Qutip as Full matrix
+Not yet uploaded.
 
-## Noise simulation with TensorNetwork as MPDO State
+## Noise simulation via Matrix Product Density Operator
+Detailed information is provided in each project folder.
+
+## Error mitigation via Matrix Product State
 Detailed information is provided in each project folder.
