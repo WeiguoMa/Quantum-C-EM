@@ -32,6 +32,16 @@ class Chip_information(object):
 			self.status = True
 		return self
 
+	def worst4Test(self):
+		self.chipName = 'beta4Test'
+		if self.queryTime is None:
+			self.gateTime = 30
+			self.T1 = 2e2
+			self.T2 = 2e1
+			self.dpc_errorRate = 11e-2
+			self.status = True
+		return self
+
 	def show_property(self):
 		print('The chip name is: {}'.format(self.chipName))
 		print('The gate time is: {} {}'.format(self.gateTime, self.timeUnit))
