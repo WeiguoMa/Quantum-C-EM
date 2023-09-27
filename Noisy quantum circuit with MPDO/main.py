@@ -18,12 +18,12 @@ tn.set_default_backend("pytorch")
 # Basic information of circuit
 qnumber = 4
 ideal_circuit = False   # or True
-realNoise = True		# or False
+noiseType = 'realNoise'		# or 'realNoise' or 'idealNoise'
 chiFilename = './data/chi/chi1.mat'
 chi, kappa = None, None
 
 # Establish a quantum circuit
-circuit = TensorCircuit(ideal=ideal_circuit, realNoise=realNoise,
+circuit = TensorCircuit(ideal=ideal_circuit, noiseType=noiseType,
                         chiFilename=chiFilename, chi=chi, kappa=kappa)
 
 circuit.add_gate(AbstractGate().h(), [0])
@@ -42,4 +42,4 @@ state = circuit(state, state_vector=False, reduced_index=[])
 prob_dict = tools.density2prob(state, tolerant=5e-4)
 
 # plot probability distribution
-tools.plot_histogram(prob_dict, title='Probability Distribution')
+tools.plot_histogram(prob_dict, title=f'"{noiseType}" Probability Distribution')
