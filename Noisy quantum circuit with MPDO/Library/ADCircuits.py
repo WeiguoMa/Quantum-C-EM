@@ -20,32 +20,59 @@ from Library.realNoise import czExp_channel
 from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity
 
 class TensorCircuit(nn.Module):
-	def __init__(self, ideal: bool = True, realNoise: bool = False, chiFilename: str = None,
+	def __init__(self, ideal: bool = True, noiseType: str = 'no', chiFilename: str = None,
 	            chi: Optional[int] = None, kappa: Optional[int] = None, tnn_optimize: bool = True,
 	            chip: Optional[str] = None, device: str or int = 'cpu'):
+		"""
+		Args:
+			ideal: Whether the circuit is ideal.  --> Whether the one-qubit gate is ideal or not.
+			noiseType: The type of the noise channel.   --> Which kind of noise channel is added to the two-qubit gate.
+			chiFilename: The filename of the chi matrix.
+			chi: The chi parameter of the TNN.
+			kappa: The kappa parameter of the TNN.
+			tnn_optimize: Whether the TNN is optimized.
+			chip: The name of the chip.
+			device: The device of the torch.
+		"""
 		super(TensorCircuit, self).__init__()
 		self.fVR = None
 		self.i = 0
 		self.qnumber = None
 		self.state = None
 		self.initState = None
-		self.ideal = ideal
 		self.chip = chip
 
-		self.realNoise = realNoise
-		self.realNoiseChannelTensor = None
-		if self.realNoise is True:
-			self.realNoiseChannelTensor = czExp_channel(filename=chiFilename)
+		# Noisy Circuit Setting
+		self.ideal = ideal
+		self.realNoise = False
+		self.idealNoise = False
+		self.unified = None
+		if self.ideal is False:
+			self.Noise = NoiseChannel(chip=self.chip)
+			if noiseType == 'unified':
+				self.unified = True
+			elif noiseType == 'realNoise':
+				self.realNoise = True
+				# self.realNoise = realNoise
+				self.realNoiseChannelTensor = None
+				self.realNoiseChannelTensor = czExp_channel(filename=chiFilename)
+				#
+			elif noiseType == 'idealNoise':
+				self.idealNoise = True
+			else:
+				raise TypeError(f'Noise type "{noiseType}" is not supported yet.')
 
+		# Paras. About Torch
 		self.device = tools.select_device(device)
 		self.dtype = tc.complex128
-
 		self.layers = nn.Sequential()
 		self._oqs_list = []
 
+		# Density Matrix
 		self.DM = None
 		self.DMNode = None
 
+		# TNN Truncation
 		self.chi = chi
 		self.kappa = kappa
 		self.tnn_optimize = tnn_optimize
@@ -71,7 +98,6 @@ class TensorCircuit(nn.Module):
 			_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
 		else:
 			_gateList_, _oqsList_ = [_gate_], [_oqs_]
-
 		return _gateList_, _oqsList_
 
 	def _add_gate(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
@@ -106,11 +132,14 @@ class TensorCircuit(nn.Module):
 			if tools.is_nested(_oqs) is True:
 				raise NotImplementedError('Series CNOT gates are not supported yet.')
 			_edges = []
-			if self.realNoise is False:
+			if self.realNoise is False and self.idealNoise is False:
 				gate = tn.Node(gate.tensor, name=gate.name,
 				               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
 				                           f'inner_{_oqs[0]}', f'inner_{_oqs[1]}'])
 			else:
+				if self.idealNoise is True and self.realNoise is False:
+					gate.tensor = tc.einsum('ijklp, klmn -> ijmnp', self.Noise.dpCTensor2, gate.tensor)
+
 				if gate.tensor.shape[-1] == 1:
 					gate = tn.Node(gate.tensor.squeeze(), name=gate.name,
 					               axis_names=[f'physics_{_oqs[0]}', f'physics_{_oqs[1]}',
@@ -206,7 +235,7 @@ class TensorCircuit(nn.Module):
 				_right_AxisName.remove('bond_{}_{}'.format(_oqs[1], _oqs[0]))
 
 			# Cases that the EXPNoise is added as the first layer
-			if self.realNoise is True:
+			if self.realNoise is True or self.idealNoise is True:
 				if f'I_{_oqs[0]}' in gate.axis_names and f'I_{_oqs[0]}' not in _left_AxisName \
 						and f'I_{_oqs[0]}' not in _right_AxisName:
 					_right_AxisName.append(f'I_{_oqs[1]}')
@@ -321,7 +350,6 @@ class TensorCircuit(nn.Module):
 			# Contract the noise channel with the qubits
 			tn.connect(_qubits[_qnum][f'physics_{_qnum}'], _noise_nodeList[_ii]['inner'])
 			_qubits[_qnum] = tn.contract_between(_qubits[_qnum], _noise_nodeList[_ii], name=f'qubit_{_qnum}')
-			# ProcessFunction, for details, see the function definition.
 			tools.EdgeName2AxisName([_qubits[_qnum]])  # Tensor append a new rank call 'I_{}'.format(_qnum) here.
 			_dup_item, _dup_idx = tools.find_duplicate(_qubits[_qnum].axis_names)
 			if _dup_item:
@@ -565,16 +593,15 @@ class TensorCircuit(nn.Module):
 		for _i in range(len(self.layers)):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
 			if self.ideal is False:
-				Noise = NoiseChannel(chip=self.chip)
 				_oqs = self._oqs_list[_i]
 				_reverse = False
 				if self.layers[_i].single is False:
-					if self.realNoise is False:
+					if self.unified is True:
 						if self._oqs_list[_i][0] > self._oqs_list[_i][-1]:
 							_reverse = True
-						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise,
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=self.Noise,
 						                noise_type='depolarization')
-						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise,
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=self.Noise,
 						                noise_type='amplitude_phase_damping_error')
 					else:
 						pass
@@ -583,8 +610,9 @@ class TensorCircuit(nn.Module):
 						pass
 					else:
 						_reverse = None
-						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise, noise_type='depolarization')
-						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=Noise, noise_type='amplitude_phase_damping_error')
+
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=self.Noise, noise_type='depolarization')
+						self._add_noise(_state, oqs=_oqs, reverse=_reverse, noiseInfo=self.Noise, noise_type='amplitude_phase_damping_error')
 			if self.tnn_optimize is True:
 				check = checkConnectivity(_state)
 				if check is True:
