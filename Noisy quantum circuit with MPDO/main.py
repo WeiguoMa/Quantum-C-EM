@@ -17,14 +17,15 @@ tn.set_default_backend("pytorch")
 
 # Basic information of circuit
 qnumber = 4
-ideal_circuit = False   # or True
-noiseType = 'realNoise'		# or 'realNoise' or 'idealNoise'
+ideal_circuit = True   # or True
+crossTalk = True    # or False
+noiseType = 'crossTalk'		# or 'realNoise' or 'idealNoise'
 chiFilename = './data/chi/chi1.mat'
 chi, kappa = None, None
 
 # Establish a quantum circuit
-circuit = TensorCircuit(ideal=ideal_circuit, noiseType=noiseType,
-                        chiFilename=chiFilename, chi=chi, kappa=kappa)
+circuit = TensorCircuit(qn=qnumber, ideal=ideal_circuit, noiseType=noiseType,
+                        chiFilename=chiFilename, crossTalk=crossTalk, chi=chi, kappa=kappa)
 
 circuit.add_gate(AbstractGate().h(), [0])
 circuit.add_gate(AbstractGate().cnot(), [0, 1])
