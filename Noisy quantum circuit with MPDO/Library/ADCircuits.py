@@ -105,19 +105,16 @@ class TensorCircuit(nn.Module):
 	def _crossTalkZ_transpile(self, _gate_: AbstractGate, _oqs_: list[int]):
 		_minOqs, _maxOqs = min(_oqs_), max(_oqs_)
 		if _minOqs == _maxOqs:
-			print(f'in 1 == {_minOqs, _maxOqs}')
 			_Angle = np.random.normal(loc=np.pi / 16, scale=np.pi / 128,
 			                       size=(1, 2))  # Should be related to the chip-Exp information
 			_gateList_ = [AbstractGate(ideal=True).rz(_Angle[0][0]), _gate_, AbstractGate(ideal=True).rz(_Angle[0][1])]
 			_oqsList_ = [[_oqs_[0] - 1], _oqs_, [_oqs_[0] + 1]]
 		elif _minOqs + 1 == _maxOqs:
-			print(f'in 2 == {_minOqs, _maxOqs}')
 			_Angle = np.random.normal(loc=np.pi / 16, scale=np.pi / 128,
 			                       size=(1, 2))  # Should be related to the chip-Exp information
 			_gateList_ = [AbstractGate(ideal=True).rz(_Angle[0][0]), _gate_, AbstractGate(ideal=True).rz(_Angle[0][1])]
 			_oqsList_ = [[_minOqs - 1], _oqs_, [_maxOqs + 1]]
 		else:
-			print(f'in 3 == {_minOqs, _maxOqs}')
 			_Angle = np.random.normal(loc=np.pi / 16, scale=np.pi / 128,
 			                       size=(1, 4))  # Should be related to the chip-Exp information
 			_gateList_ = [AbstractGate(ideal=True).rz(_Angle[0][0]), AbstractGate(ideal=True).rz(_Angle[0][1]),

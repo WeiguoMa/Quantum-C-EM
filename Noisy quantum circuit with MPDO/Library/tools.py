@@ -430,3 +430,39 @@ def find_duplicate(_lst_):
     _duplicate_item_ = [item for item, count in collections.Counter(_lst_).items() if count > 1]
     _duplicate_idx_ = [idx for idx, item in enumerate(_lst_) if item in _duplicate_item_]
     return _duplicate_item_, _duplicate_idx_
+
+def sqrt_matrix(density_matrix):
+    r"""Compute the square root matrix of a density matrix where :math:`\rho = \sqrt{\rho} \times \sqrt{\rho}`
+
+    Args:
+        density_matrix (tensor_like): 2D density matrix of the quantum system.
+
+    Returns:
+        (tensor_like): Square root of the density matrix.
+    """
+    evs, vecs = tc.linalg.eigh(density_matrix)
+    evs = tc.where(evs > 0.0, evs, 0.0)
+    evs = tc.real(evs).to(tc.complex128)
+    return vecs @ tc.diag(tc.sqrt(evs)) @ vecs.T.conj()
+
+def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> float:
+    """
+    Calculate the fidelity between two density matrices.
+
+    Equation:
+        F(rho, sigma) = Tr(\sqrt{\sqrt{rho} sigma \sqrt{rho}})
+
+    Args:
+        rho: density matrix;
+        sigma: density matrix.
+    """
+    if rho.shape != sigma.shape:
+        raise ValueError('The shape of rho and sigma should be equal.')
+    if rho.shape[0] != rho.shape[1] or rho.shape[0] != sigma.shape[1]:
+        raise ValueError('The shape of rho and sigma should be square.')
+
+    _sqrt_rho = sqrt_matrix(rho)
+    _sqrt_rho_sigma = tc.matmul(_sqrt_rho, sigma)
+    _sqrt_rho_sigma_sqrt_rho = tc.matmul(_sqrt_rho_sigma, _sqrt_rho)
+
+    return tc.trace(_sqrt_rho_sigma_sqrt_rho).real
