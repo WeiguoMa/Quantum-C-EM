@@ -91,6 +91,13 @@ class AbstractGate(nn.Module):
 		self.single = self.gate.single
 		return self
 
+	def ii(self):
+		self.variational = False
+		self.gate = TensorGate().ii()
+		self.name = self.gate.name
+		self.single = self.gate.single
+		return self
+
 	def cx(self):
 		self.variational = False
 		self.gate = TensorGate().cx()

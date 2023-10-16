@@ -76,6 +76,17 @@ class TensorGate(object):
         self.single = True
         return self
 
+    def ii(self):
+        self.name = 'II'
+        self.tensor = tc.tensor([[1, 0, 0, 0],
+                                 [0, 1, 0, 0],
+                                 [0, 0, 1, 0],
+                                 [0, 0, 0, 1]], dtype=self.dtype).reshape((2, 2, 2, 2))
+        self.rank = 4
+        self.dimension = [[2, 2], [2, 2]]
+        self.single = False
+        return self
+
     def cx(self):
         self.name = 'CX'
         self.tensor = tc.tensor([[1, 0, 0, 0],

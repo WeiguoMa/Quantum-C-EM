@@ -8,6 +8,8 @@ import itertools
 import random
 import string
 import warnings
+from scipy.optimize import minimize
+from copy import deepcopy
 
 from typing import Optional
 import matplotlib.pyplot as plt
@@ -445,7 +447,7 @@ def sqrt_matrix(density_matrix):
     evs = tc.real(evs).to(tc.complex128)
     return vecs @ tc.diag(tc.sqrt(evs)) @ vecs.T.conj()
 
-def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> float:
+def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> tc.Tensor:
     """
     Calculate the fidelity between two density matrices.
 
@@ -462,7 +464,59 @@ def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> float:
         raise ValueError('The shape of rho and sigma should be square.')
 
     _sqrt_rho = sqrt_matrix(rho)
-    _sqrt_rho_sigma = tc.matmul(_sqrt_rho, sigma)
-    _sqrt_rho_sigma_sqrt_rho = tc.matmul(_sqrt_rho_sigma, _sqrt_rho)
+    _sqrt_rho_sigma_sqrt_rho = _sqrt_rho @ sigma @ _sqrt_rho
 
-    return tc.trace(_sqrt_rho_sigma_sqrt_rho).real
+    evs = tc.linalg.eigvalsh(_sqrt_rho_sigma_sqrt_rho)
+    evs = tc.real(evs)
+    evs = tc.where(evs > 0.0, evs, 0.0)
+
+    trace = tc.sum(tc.sqrt(evs), -1)
+
+    return trace
+
+
+def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True):
+    """
+    Produced by Dr.Shi  --- Data Science
+
+    Args:
+        rho: density matrix;
+        methodIdx: 0, 1, 2, refers to different scipy.optimal.minimize methods;
+        constraints: 'eq' or 'ineq';
+        hermitian: True or False.
+
+    Returns:
+        rho_semi: valid density matrix.
+
+    """
+    # rho = rho/np.trace(rho)
+    if hermitian:
+        rho = 0.5 * (rho + rho.T.conj())
+    ps, psi = np.linalg.eigh(rho)
+
+    traceV = 1.0                                        # tc.trace(rho)
+    fitFunc = lambda p: np.sum(np.abs(p - ps) ** 2)
+    bounds = [(0.0, traceV + 0.001) for idx in range(len(ps))]
+
+    x0 = deepcopy(ps)
+    x0[x0 < 0.0] = 0.0
+    x0 = x0 / np.sum(x0) * traceV
+
+    if constraints == 'eq':
+        cons = ({'type': 'eq', 'fun': lambda p: np.sum(p) - traceV})
+    elif constraints == 'ineq':
+        cons = ({'type': 'ineq', 'fun': lambda p: traceV - np.sum(p)})
+    else:
+        raise ValueError('constraints should be eq or ineq')
+
+    optMethods = ['L-BFGS-B', 'SLSQP', 'COBYLA']
+
+    res = minimize(fitFunc, x0, method=optMethods[methodIdx], constraints=cons, bounds=bounds)
+    newPs = res.x
+
+    psi, mewPs = tc.tensor(psi), tc.tensor(newPs)
+
+    rho_semi = psi @ np.diag(newPs) @ psi.T.conj()
+    return rho_semi
+
+
