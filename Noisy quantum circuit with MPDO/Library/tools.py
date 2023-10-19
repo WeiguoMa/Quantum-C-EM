@@ -54,7 +54,7 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
         for _edge in [_node[i] for i in range(_node.get_rank())]:
             # hardcode, which is relating to code design from weiguo
             if 'qr' in _edge.name:
-                _edge.name = _edge.name.replace('qr', '')
+                _edge.set_name(_edge.name.replace('qr', ''))
             if 'bond_' in _edge.name:          # Fact that 'bond_a_b' is the same as 'bond_b_a'
                 _split = _edge.name.split('_')
                 if int(_split[1]) > int(_split[2]):

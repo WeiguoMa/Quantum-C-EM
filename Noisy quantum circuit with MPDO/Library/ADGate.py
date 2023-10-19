@@ -10,12 +10,13 @@ from Library.tools import select_device
 
 
 class TensorGate(object):
-    def __init__(self, device: str or int = 'cpu', dtype=tc.complex128):
+    def __init__(self, ideal: bool = None, device: str or int = 'cpu', dtype=tc.complex128):
         self.name = None
         self.tensor = None
         self.rank = None
         self.dimension = None
         self.single = None
+        self.ideal = ideal
 
         self.device = select_device(device)
         self.dtype = dtype
