@@ -15,7 +15,7 @@ from Library.ADGate import TensorGate
 from Library.ADNGate import NoisyTensorGate
 from Library.AbstractGate import AbstractGate
 from Library.NoiseChannel import NoiseChannel
-from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity
+from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity, svdKappa_left2right
 from Library.realNoise import czExp_channel
 from Library.tools import select_device, generate_random_string_without_duplicate, move_index, find_duplicate, \
 	EdgeName2AxisName, is_nested
@@ -80,6 +80,20 @@ class TensorCircuit(nn.Module):
 		self.chi = chi
 		self.kappa = kappa
 		self.tnn_optimize = tnn_optimize
+
+	@staticmethod
+	def _calOrder(minIdx: int, maxIdx: int = None, lBond: bool = False,
+	              smallI: bool = False, bigI: bool = False, rBond: bool = False, single: bool = False):
+		if single:
+			_return = [f'bond_{minIdx - 1}_{minIdx}'] * lBond \
+			          + [f'physics_{minIdx}'] \
+			          + [f'I_{minIdx}'] * smallI + [f'bond_{minIdx}_{minIdx+1}' * rBond]
+		else:
+			_return = [f'bond_{minIdx - 1}_{minIdx}'] * lBond \
+			          + [f'physics_{minIdx}', f'physics_{maxIdx}'] \
+			          + [f'I_{minIdx}'] * smallI + [f'I_{maxIdx}'] * bigI \
+			          + [f'bond_{maxIdx}_{maxIdx + 1}'] * rBond
+		return _return
 
 	def _transpile_gate(self, _gate_: AbstractGate, _oqs_: list[int]):
 		_gateName_ = _gate_.name.lower()
@@ -192,10 +206,10 @@ class TensorCircuit(nn.Module):
 			if _oqs[0] > _oqs[1]:
 				_gString = _gString.replace('wp', 'pw')
 
-			_smallI, _bigI, _lBond, _rBond = f'I_{min(_oqs)}' in _contract_qubitsAxisName,\
-				f'I_{max(_oqs)}' in _contract_qubitsAxisName,\
-				'bond' in _contract_qubitsAxisName[0], \
-				'bond' in _contract_qubitsAxisName[-1]
+			_smallI, _bigI, _lBond, _rBond = f'I_{min(_oqs)}' in _contract_qubitsAxisName, \
+			                                 f'I_{max(_oqs)}' in _contract_qubitsAxisName, \
+			                                 f'bond_{_minIdx-1}_{_minIdx}' in _contract_qubitsAxisName, \
+			                                 f'bond_{_maxIdx}_{_maxIdx+1}' in _contract_qubitsAxisName
 
 			_qString = ''.join(['l' * _lBond, 'wp', 'm' * _smallI, 'n' * _bigI, 'r' * _rBond])
 
@@ -203,10 +217,7 @@ class TensorCircuit(nn.Module):
 			if _oqs[0] > _oqs[1]:
 				_qAFString = _qAFString.replace('ij', 'ji')
 
-			_reorderAxisName = [f'bond_{_minIdx - 1}_{_minIdx}'] * _lBond \
-			                   + [f'physics_{_minIdx}', f'physics_{_maxIdx}'] \
-			                   + [f'I_{_minIdx}'] * _smallI + [f'I_{_maxIdx}'] * _bigI \
-			                   + [f'bond_{_maxIdx}_{_maxIdx + 1}'] * _rBond
+			_reorderAxisName = _calOrder(_minIdx, _maxIdx, _lBond, _smallI, _bigI, _rBond)
 
 			_contract_qubits.reorder_edges([_contract_qubits[_element] for _element in _reorderAxisName])
 			_contract_qubitsTensor_AoP = tc.einsum(f'{_gString}, {_qString} -> {_qAFString}',
@@ -214,23 +225,27 @@ class TensorCircuit(nn.Module):
 			_qShape = _contract_qubitsTensor_AoP.shape
 
 			_mIdx, _qIdx = _qAFString.find('m'), _qAFString.find('n')
-			if _mIdx != -1:     # qubit[min] is Noisy before this gate-add operation
+			if _mIdx != -1:  # qubit[min] is Noisy before this gate-add operation
 				_qShape = _qShape[:_mIdx - 1] + (_qShape[_mIdx - 1] * _qShape[_mIdx],) + _qShape[_mIdx + 1:]
 				_contract_qubits.set_tensor(tc.reshape(_contract_qubitsTensor_AoP, _qShape))
 			else:
-				print(_contract_qubits.edges)
-				_contract_qubits.set_tensor(_contract_qubitsTensor_AoP)
 				if 'q' in _gString:
-					_contract_qubitsAxisName.insert(
-						_contract_qubitsAxisName.index(f'physics_{_maxIdx}') + 1, f'I_{_minIdx}'
-					)
+					_AFStringT = f'{_qAFString.replace("q", "")}{"q"}'
+					_contract_qubits.set_tensor(
+						tc.einsum(f"{_qAFString} -> {_AFStringT}", _contract_qubitsTensor_AoP))
+
+					_contract_qubitsAxisName.append(f'I_{_minIdx}')
 					_contract_qubits.add_axis_names(_contract_qubitsAxisName)
 					_new_edge = tn.Edge(_contract_qubits,
-					                    axis1=_contract_qubitsAxisName.index(f'I_{_minIdx}'), name=f'I_{_minIdx}')
-					_contract_qubits.edges.insert(_contract_qubitsAxisName.index(f'I_{_minIdx}'), _new_edge)
+					                    axis1=len(_contract_qubits.edges), name=f'I_{_minIdx}')
+					_contract_qubits.edges.append(_new_edge)
 					_contract_qubits.add_edge(_new_edge, f'I_{_minIdx}')
 
-			print(_contract_qubits.edges)
+					_smallI = True
+					_reorderAxisName = self._calOrder(_minIdx, _maxIdx, _lBond, _smallI, _bigI, _rBond)
+					_contract_qubits.reorder_edges([_contract_qubits[_element] for _element in _reorderAxisName])
+				else:
+					_contract_qubits.set_tensor(_contract_qubitsTensor_AoP)
 
 			# Split back to two qubits
 			_left_AxisName = ['bond_{}_{}'.format(_minIdx - 1, _minIdx)] * _lBond + [f'physics_{_minIdx}']
@@ -249,33 +264,7 @@ class TensorCircuit(nn.Module):
 			                                                      left_name=f'qubit_{_minIdx}',
 			                                                      right_name=f'qubit_{_maxIdx}',
 			                                                      edge_name=f'bond_{_minIdx}_{_maxIdx}')
-			EdgeName2AxisName([_qubits[_minIdx], _qubits[_minIdx]])
-
-			if (self.realNoise or self.idealNoise) and f'I_{_oqs[1]}' in _qubits[_oqs[1]].axis_names:
-				# Shape-relating
-				_shape = _qubits[_oqs[1]].tensor.shape
-				_left_edge_shape = [_shape[_ii_] for _ii_ in range(len(_shape) - 1)]
-				_left_dim = int(np.prod(_left_edge_shape))
-				# SVD to truncate the inner dimension
-				_u, _s, _ = tc.linalg.svd(tc.reshape(_qubits[_oqs[1]].tensor, (_left_dim, _shape[-1])),
-				                          full_matrices=False)
-				_s = _s.to(dtype=tc.complex128)
-
-				# Truncate the inner dimension
-				if self.kappa is None:
-					_kappa = _s.nelement()
-				else:
-					_kappa = self.kappa
-
-				_s = _s[: _kappa]
-				_u = _u[:, : _kappa]
-
-				if len(_s.shape) == 1:
-					_s = tc.diag(_s)
-
-				# Back to the former shape
-				_left_edge_shape.append(_s.shape[-1])
-				_qubits[_oqs[1]].tensor = tc.reshape(tc.matmul(_u, _s), _left_edge_shape)
+			EdgeName2AxisName([_qubits[_minIdx], _qubits[_maxIdx]])
 		else:
 			"""
 							| m                             | i
@@ -291,10 +280,12 @@ class TensorCircuit(nn.Module):
 					tc.reshape(
 						tc.einsum('ij, jkl, kmn -> imln', gate.tensor, self.Noise.dpCTensor, self.Noise.apdeCTensor),
 						(2, 2, -1))
-					if (self.idealNoise or self.unified) and not gate.ideal  # Noise channel is added ONLY when the cases idealNoise/Unified
+					if (
+								   self.idealNoise or self.unified) and not gate.ideal  # Noise channel is added ONLY when the cases idealNoise/Unified
 					else gate.tensor,
 					name=gate.name,
-					axis_names=[f'physics_{_idx}', f'inner_{_idx}', f'I_{_idx}'] if self.idealNoise or self.unified else [
+					axis_names=[f'physics_{_idx}', f'inner_{_idx}',
+					            f'I_{_idx}'] if self.idealNoise or self.unified else [
 						f'physics_{_idx}', f'inner_{_idx}']
 				)
 				for _idx in _oqs
@@ -304,30 +295,38 @@ class TensorCircuit(nn.Module):
 				_qubit = _qubits[_bit]
 				_qubitTensor, _qubitAxisName = _qubit.tensor, _qubit.axis_names
 
-				_qString = ''.join([
-					'l' * ('bond' in _qubitAxisName[0]),
-					'i',
-					'j' * (f'I_{_bit}' in _qubitAxisName),
-					'r' * ('bond' in _qubitAxisName[-1])
-				])
+				_I, _lBond, _rBond =\
+					f'I_{_bit}' in _qubitAxisName, 'bond' in _qubitAxisName[0], 'bond' in _qubitAxisName[-1]
+				_qString = ''.join(['l' * _lBond, 'i', 'j' * _I, 'r' * _rBond])
+
 				_gString = 'min' if len(gate_list[_i].shape) == 3 else 'mi'
 
 				_qAFString = _qString.replace('i', 'mn') if _gString == 'min' else _qString.replace('i', 'm')
-				_qubitTensor_AOP = tc.einsum(f'{_gString}, {_qString} -> {_qAFString}', gate_list[_i].tensor, _qubitTensor)
+				_qubitTensor_AOP = tc.einsum(f'{_gString}, {_qString} -> {_qAFString}', gate_list[_i].tensor,
+				                             _qubitTensor)
 				_qShape = _qubitTensor_AOP.shape
 
 				_jIdx, _nIdx = _qAFString.find('j'), _qAFString.find('n')
 				if _jIdx != -1 and _nIdx != -1:  # qubit is Noisy before this gate-add operation
-					_qShape = _qShape[:_jIdx - 1] + (_qShape[_jIdx - 1] * _qShape[_jIdx], ) + _qShape[_jIdx + 1:]
-					_qubit.tensor = tc.reshape(_qubitTensor_AOP, _qShape)
+					_qShape = _qShape[:_jIdx - 1] + (_qShape[_jIdx - 1] * _qShape[_jIdx],) + _qShape[_jIdx + 1:]
+					_qubit.set_tensor(tc.reshape(_qubitTensor_AOP, _qShape))
 				else:
-					_qubit.tensor = _qubitTensor_AOP
 					if 'n' in _gString:
+						_AFStringT = f'{_qAFString.replace("n", "")}{"n"}'
+						_qubit.set_tensor(
+							tc.einsum(f"{_qAFString} -> {_AFStringT}", _qubitTensor_AOP))
+
 						_qubitAxisName.insert(_qubitAxisName.index(f'physics_{_bit}') + 1, f'I_{_bit}')
 						_qubit.add_axis_names(_qubitAxisName)
-						_new_edge = tn.Edge(_qubit, axis1=_qubitAxisName.index(f'I_{_bit}'), name=f'I_{_bit}')
+						_new_edge = tn.Edge(_qubit, axis1=len(_qubit.edges), name=f'I_{_bit}')
 						_qubit.edges.insert(_qubitAxisName.index(f'I_{_bit}'), _new_edge)
 						_qubit.add_edge(_new_edge, f'I_{_bit}')
+
+						_I = True
+						_reorderAxisName = self._calOrder(minIdx=_bit, lBond=_lBond, smallI=_I, rBond=_rBond)
+						_qubit.reorder_edges([_qubit[_element] for _element in _reorderAxisName])
+					else:
+						_qubit.set_tensor(_qubitTensor_AOP)
 
 	def add_gate(self, gate: AbstractGate, oqs: list):
 		r"""
@@ -407,7 +406,7 @@ class TensorCircuit(nn.Module):
 				raise ValueError('Reduced index should not be larger than the qubit number.')
 
 		if not state_vector:
-			_qubits_conj = deepcopy(self.state)     # Node.copy() func. cannot work correctly
+			_qubits_conj = deepcopy(self.state)  # Node.copy() func. cannot work correctly
 			for _qubit in _qubits_conj:
 				_qubit.set_tensor(_qubit.tensor.conj())
 
@@ -437,10 +436,10 @@ class TensorCircuit(nn.Module):
 				reduced_index = []
 
 			_numList = [_i for _i in range(self.qnumber) if _i not in reduced_index]
-			_qOutOrder, _conQOutOrder = [self.state[i][f'physics_{i}'] for i in _numList],\
+			_qOutOrder, _conQOutOrder = [self.state[i][f'physics_{i}'] for i in _numList], \
 				[_qubits_conj[i][f'con_physics_{i}'] for i in _numList]
 
-			_dm = tn.contractors.auto(self.state + _qubits_conj,
+			_dm = tn.contractors.greedy(self.state + _qubits_conj,
 			                          output_edge_order=_qOutOrder + _conQOutOrder)
 
 			_reshape_size = self.qnumber - len(reduced_index)
@@ -483,6 +482,8 @@ class TensorCircuit(nn.Module):
 				if check is True:
 					qr_left2right(_state)
 					svd_right2left(_state, chi=self.chi)
+				if not self.ideal:
+					svdKappa_left2right(_state, kappa=self.kappa)
 		self.state = _state
 		_dm = self._calculate_DM(state_vector=state_vector, reduced_index=reduced_index)
 

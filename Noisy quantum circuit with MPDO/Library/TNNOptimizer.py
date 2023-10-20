@@ -6,6 +6,8 @@ Contact: weiguo.m@iphy.ac.cn
 import copy
 
 import tensornetwork as tn
+import torch as tc
+import numpy as np
 
 from Library.tools import EdgeName2AxisName
 
@@ -104,3 +106,49 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
                                          edge_name=_connector,
                                          max_singular_values=chi)
         # chi=None means no truncation
+
+def svdKappa_left2right(qubits: list[tn.Node] or list[tn.AbstractNode], kappa: int = None):
+    r"""
+    Perform SVD with optional dimension truncation on a list of quantum tensors.
+
+    Args:
+        qubits (list[tn.Node] or list[tn.AbstractNode]): List of quantum tensors.
+        kappa (int, optional): The truncation dimension. If None, no truncation is performed.
+
+    Returns:
+        None: The function modifies the input tensors in-place.
+    """
+    for _num, _qubit in enumerate(qubits):
+        # Shape-relating
+        _qubitTensor, _qubitAxisNames = _qubit.tensor, _qubit.axis_names
+        _qubitIdx = ''.join([
+            'l' * (f'bond_{_num-1}_{_num}' in _qubitAxisNames),
+            'i',
+            'j' * (f'I_{_num}' in _qubitAxisNames),
+            'r' * (f'bond_{_num}_{_num+1}' in _qubitAxisNames)
+        ])
+
+        _jIdx = _qubitIdx.find('j')
+        if _jIdx != -1:
+            _qubitIdxAOP = f'{_qubitIdx.replace("j", "")}j'
+            _qubitTensor = tc.einsum(f'{_qubitIdx} -> {_qubitIdxAOP}', _qubitTensor)
+            _shape = _qubitTensor.shape
+
+            # SVD to truncate the inner dimension
+            _u, _s, _ = tc.linalg.svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), full_matrices=False)
+            _s = _s.to(dtype=tc.complex128)
+
+            # Truncate the inner dimension
+            if kappa is None or kappa > _s.nelement():
+                kappa = _s.nelement()
+
+            _s = _s[: kappa]
+            _u = _u[:, : kappa]
+
+            if len(_s.shape) == 1:
+                _s = tc.diag(_s)
+
+            # Back to the former shape
+            _qubitTensor = tc.einsum(f'{_qubitIdxAOP} -> {_qubitIdx}',
+                                     tc.reshape(tc.matmul(_u, _s), _shape[:-1] + (kappa,)))
+            _qubit.set_tensor(_qubitTensor)
