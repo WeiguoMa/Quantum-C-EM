@@ -17,8 +17,7 @@ from Library.AbstractGate import AbstractGate
 from Library.NoiseChannel import NoiseChannel
 from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity, svdKappa_left2right
 from Library.realNoise import czExp_channel
-from Library.tools import select_device, generate_random_string_without_duplicate, move_index, find_duplicate, \
-	EdgeName2AxisName, is_nested
+from Library.tools import select_device, EdgeName2AxisName, is_nested
 
 
 class TensorCircuit(nn.Module):
@@ -87,7 +86,7 @@ class TensorCircuit(nn.Module):
 		if single:
 			_return = [f'bond_{minIdx - 1}_{minIdx}'] * lBond \
 			          + [f'physics_{minIdx}'] \
-			          + [f'I_{minIdx}'] * smallI + [f'bond_{minIdx}_{minIdx+1}' * rBond]
+			          + [f'I_{minIdx}'] * smallI + [f'bond_{minIdx}_{minIdx + 1}'] * rBond
 		else:
 			_return = [f'bond_{minIdx - 1}_{minIdx}'] * lBond \
 			          + [f'physics_{minIdx}', f'physics_{maxIdx}'] \
@@ -170,13 +169,13 @@ class TensorCircuit(nn.Module):
 
 		if single is False:  # Two-qubit gate
 			"""
-						   | l  | p                          | j              | w
+						   | i  | j                         | w              | p
 						___|____|___                    ____|____        ____|____
 						|          |                    |       |        |       |
-						|    DG    |---- q        l ----| Qubit |--------| Qubit |----v
+						|    DG    |---- q        l ----| Qubit |--------| Qubit |---- r
 						|__________|                    |_______|    k   |_______|
 						   |    |                           |                |
-						   | j  | w                         | m              | n
+						   | w  | p                         | m              | n
 			"""
 			if len(_oqs) != 2 or _minIdx == _maxIdx:
 				raise ValueError('Invalid operating qubits for a two-qubit gate.')
@@ -208,8 +207,8 @@ class TensorCircuit(nn.Module):
 
 			_smallI, _bigI, _lBond, _rBond = f'I_{min(_oqs)}' in _contract_qubitsAxisName, \
 			                                 f'I_{max(_oqs)}' in _contract_qubitsAxisName, \
-			                                 f'bond_{_minIdx-1}_{_minIdx}' in _contract_qubitsAxisName, \
-			                                 f'bond_{_maxIdx}_{_maxIdx+1}' in _contract_qubitsAxisName
+			                                 f'bond_{_minIdx - 1}_{_minIdx}' in _contract_qubitsAxisName, \
+			                                 f'bond_{_maxIdx}_{_maxIdx + 1}' in _contract_qubitsAxisName
 
 			_qString = ''.join(['l' * _lBond, 'wp', 'm' * _smallI, 'n' * _bigI, 'r' * _rBond])
 
@@ -217,7 +216,7 @@ class TensorCircuit(nn.Module):
 			if _oqs[0] > _oqs[1]:
 				_qAFString = _qAFString.replace('ij', 'ji')
 
-			_reorderAxisName = _calOrder(_minIdx, _maxIdx, _lBond, _smallI, _bigI, _rBond)
+			_reorderAxisName = self._calOrder(_minIdx, _maxIdx, _lBond, _smallI, _bigI, _rBond)
 
 			_contract_qubits.reorder_edges([_contract_qubits[_element] for _element in _reorderAxisName])
 			_contract_qubitsTensor_AoP = tc.einsum(f'{_gString}, {_qString} -> {_qAFString}',
@@ -278,10 +277,10 @@ class TensorCircuit(nn.Module):
 			gate_list = [
 				tn.Node(
 					tc.reshape(
-						tc.einsum('ij, jkl, kmn -> imln', gate.tensor, self.Noise.dpCTensor, self.Noise.apdeCTensor),
+						tc.einsum('nlm, ljk, ji -> nimk', self.Noise.dpCTensor, self.Noise.apdeCTensor, gate.tensor),
 						(2, 2, -1))
 					if (
-								   self.idealNoise or self.unified) and not gate.ideal  # Noise channel is added ONLY when the cases idealNoise/Unified
+							   self.idealNoise or self.unified) and not gate.ideal
 					else gate.tensor,
 					name=gate.name,
 					axis_names=[f'physics_{_idx}', f'inner_{_idx}',
@@ -295,7 +294,7 @@ class TensorCircuit(nn.Module):
 				_qubit = _qubits[_bit]
 				_qubitTensor, _qubitAxisName = _qubit.tensor, _qubit.axis_names
 
-				_I, _lBond, _rBond =\
+				_I, _lBond, _rBond = \
 					f'I_{_bit}' in _qubitAxisName, 'bond' in _qubitAxisName[0], 'bond' in _qubitAxisName[-1]
 				_qString = ''.join(['l' * _lBond, 'i', 'j' * _I, 'r' * _rBond])
 
@@ -323,7 +322,8 @@ class TensorCircuit(nn.Module):
 						_qubit.add_edge(_new_edge, f'I_{_bit}')
 
 						_I = True
-						_reorderAxisName = self._calOrder(minIdx=_bit, lBond=_lBond, smallI=_I, rBond=_rBond)
+						_reorderAxisName = self._calOrder(minIdx=_bit, lBond=_lBond, smallI=_I, rBond=_rBond,
+						                                  single=True)
 						_qubit.reorder_edges([_qubit[_element] for _element in _reorderAxisName])
 					else:
 						_qubit.set_tensor(_qubitTensor_AOP)
@@ -440,7 +440,7 @@ class TensorCircuit(nn.Module):
 				[_qubits_conj[i][f'con_physics_{i}'] for i in _numList]
 
 			_dm = tn.contractors.greedy(self.state + _qubits_conj,
-			                          output_edge_order=_qOutOrder + _conQOutOrder)
+			                            output_edge_order=_qOutOrder + _conQOutOrder)
 
 			_reshape_size = self.qnumber - len(reduced_index)
 
