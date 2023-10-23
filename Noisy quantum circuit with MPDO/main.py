@@ -4,6 +4,7 @@ Time: 04.30.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 import tensornetwork as tn
+import numpy as np
 
 import Library.tools as tools
 from Library.ADCircuits import TensorCircuit
@@ -16,21 +17,22 @@ from Library.AbstractGate import AbstractGate
 tn.set_default_backend("pytorch")
 
 # Basic information of circuit
-qnumber = 4
-ideal_circuit = True   # or True
-crossTalk = True    # or False
-noiseType = 'crossTalk'		# or 'realNoise' or 'idealNoise'
+qnumber = 5
+ideal_circuit = False   # or True
+crossTalk = False    # or False
+noiseType = 'realNoise'		# or 'realNoise' or 'idealNoise'
 chiFilename = './data/chi/chi1.mat'
-chi, kappa = None, None
+chi, kappa = 4, 4
 
 # Establish a quantum circuit
 circuit = TensorCircuit(qn=qnumber, ideal=ideal_circuit, noiseType=noiseType,
-                        chiFilename=chiFilename, crossTalk=crossTalk, chi=chi, kappa=kappa)
+                        chiFilename=chiFilename, crossTalk=crossTalk, chi=chi, kappa=kappa, chip='worst4Test')
 
 circuit.add_gate(AbstractGate().h(), [0])
 circuit.add_gate(AbstractGate().cnot(), [0, 1])
 circuit.add_gate(AbstractGate().cnot(), [1, 2])
 circuit.add_gate(AbstractGate().cnot(), [2, 3])
+circuit.add_gate(AbstractGate(_lastTrunc=True).cnot(), [3, 4])
 
 print(circuit)
 
