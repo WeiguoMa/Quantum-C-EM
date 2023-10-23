@@ -10,6 +10,7 @@ import numpy as np
 import tensornetwork as tn
 import torch as tc
 from torch import nn
+from tqdm import tqdm
 
 from Library.ADGate import TensorGate
 from Library.ADNGate import NoisyTensorGate
@@ -264,6 +265,8 @@ class TensorCircuit(nn.Module):
 			                                                      right_name=f'qubit_{_maxIdx}',
 			                                                      edge_name=f'bond_{_minIdx}_{_maxIdx}')
 			EdgeName2AxisName([_qubits[_minIdx], _qubits[_maxIdx]])
+			# # Reset MPS center
+			# _qubits[_minIdx].center, _qubits[_maxIdx].center = False, True
 		else:
 			"""
 							| m                             | i
@@ -292,7 +295,13 @@ class TensorCircuit(nn.Module):
 
 			for _i, _bit in enumerate(_oqs):
 				_qubit = _qubits[_bit]
-				_qubitTensor, _qubitAxisName = _qubit.tensor, _qubit.axis_names
+				_qubitTensor, _qubitAxisName, _qubitShape = \
+					_qubit.tensor, _qubit.axis_names, _qubit.tensor.shape
+				_gShape = gate_list[_i].shape
+
+				if self.realNoise:
+					gate_list[_i].set_tensor(gate_list[_i].tensor.conj())
+					_qubitTensor = _qubitTensor.conj()
 
 				_I, _lBond, _rBond = \
 					f'I_{_bit}' in _qubitAxisName, 'bond' in _qubitAxisName[0], 'bond' in _qubitAxisName[-1]
@@ -306,7 +315,7 @@ class TensorCircuit(nn.Module):
 				_qShape = _qubitTensor_AOP.shape
 
 				_jIdx, _nIdx = _qAFString.find('j'), _qAFString.find('n')
-				if _jIdx != -1 and _nIdx != -1:  # qubit is Noisy before this gate-add operation
+				if _jIdx != -1:     # Exist j -> Noisy Qubit
 					_qShape = _qShape[:_jIdx - 1] + (_qShape[_jIdx - 1] * _qShape[_jIdx],) + _qShape[_jIdx + 1:]
 					_qubit.set_tensor(tc.reshape(_qubitTensor_AOP, _qShape))
 				else:
@@ -325,7 +334,7 @@ class TensorCircuit(nn.Module):
 						_reorderAxisName = self._calOrder(minIdx=_bit, lBond=_lBond, smallI=_I, rBond=_rBond,
 						                                  single=True)
 						_qubit.reorder_edges([_qubit[_element] for _element in _reorderAxisName])
-					else:
+					else:   # Ideal Gate and Qubit
 						_qubit.set_tensor(_qubitTensor_AOP)
 
 	def add_gate(self, gate: AbstractGate, oqs: list):
@@ -475,7 +484,7 @@ class TensorCircuit(nn.Module):
 		self.qnumber = len(_state)
 		self.fVR = forceVectorRequire
 
-		for _i in range(len(self.layers)):
+		for _i in tqdm(range(len(self.layers))):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
 			if self.layers[_i]._lastTruncation and self.tnn_optimize is True:
 				check = checkConnectivity(_state)
