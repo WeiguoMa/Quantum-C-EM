@@ -3,8 +3,9 @@ Author: weiguo_ma
 Time: 04.27.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-class Chip_information(object):
+class Chip_information:
 	def __init__(self, query_time: str = None):
+		"""Initialize a ChipInformation object."""
 		self.queryTime = query_time
 		self.status = None
 
@@ -23,6 +24,7 @@ class Chip_information(object):
 			raise AttributeError(f'Chip: {item} is not supported.')
 
 	def beta4Test(self):
+		"""Set chip information for the beta4Test scenario."""
 		self.chipName = 'beta4Test'
 		if self.queryTime is None:
 			self.gateTime = 30
@@ -33,6 +35,7 @@ class Chip_information(object):
 		return self
 
 	def worst4Test(self):
+		"""Set chip information for the worst4Test scenario."""
 		self.chipName = 'beta4Test'
 		if self.queryTime is None:
 			self.gateTime = 30
@@ -49,7 +52,3 @@ class Chip_information(object):
 		print('The T2 time is: {} {}'.format(self.T2, self.timeUnit))
 		print('The depolarization error rate is: {}'.format(self.dpc_errorRate))
 		print('The status of the chip is: {}'.format(self.status))
-
-
-if __name__ == '__main__':
-	chipInfo = Chip_information().__getattr__('beta4Test')().show_property()
