@@ -480,10 +480,10 @@ class TensorCircuit(nn.Module):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
 			if layer._lastTruncation and self.tnn_optimize:
 				if checkConnectivity(_state):
+					if not self.ideal:
+						svdKappa_left2right(_state, kappa=self.kappa)
 					qr_left2right(_state)
 					svd_right2left(_state, chi=self.chi)
-				if not self.ideal:
-					svdKappa_left2right(_state, kappa=self.kappa)
 		# LastLayer noise-truncation
 		if self.tnn_optimize and not self.ideal:
 			svdKappa_left2right(_state, kappa=self.kappa)
