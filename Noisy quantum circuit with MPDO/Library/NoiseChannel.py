@@ -9,15 +9,14 @@ import numpy as np
 import tensornetwork as tn
 import torch as tc
 
+from Library.TensorOperations import tensorDot
 from Library.chipInfo import Chip_information
 from Library.tools import select_device
-from Library.TensorOperations import tensorDot
-from Library.ADGate import TensorGate
 
 tn.set_default_backend("pytorch")
 
 class NoiseChannel(object):
-    def __init__(self, chip: str = None, dtype=tc.complex128, device: str or int = 'cpu'):
+    def __init__(self, chip: str = None, dtype=tc.complex128, device: str or int = 0):
         self.dtype = dtype
         self.device = select_device(device)
 
@@ -77,8 +76,8 @@ class NoiseChannel(object):
 
         # Construct the error matrix
         _error_probList = [np.sqrt(1 - (4 ** qn - 1) * p / (4 ** qn))] + [np.sqrt(p / (4 ** qn))] * (4 ** qn - 1)
-        _error_diag = tc.diag(tc.tensor(_error_probList, dtype=tc.complex128))
-        _dpc_tensor = tc.stack(_iter_tensorDot(self._basisPauli, qn))
+        _error_diag = tc.diag(tc.tensor(_error_probList, dtype=tc.complex128, device=self.device))
+        _dpc_tensor = tc.stack(_iter_tensorDot(self._basisPauli, qn)).to(device=self.device)
         # Set the third edge as inner edge, which was introduced by the error_diag and the first edge as physics edge.
         _dpc_tensor = tc.einsum('ij, jfk -> fki', _error_diag, _dpc_tensor)
         # Reshape as tensor

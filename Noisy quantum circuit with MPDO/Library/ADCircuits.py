@@ -10,7 +10,6 @@ import numpy as np
 import tensornetwork as tn
 import torch as tc
 from torch import nn
-from tqdm import tqdm
 
 from Library.ADGate import TensorGate
 from Library.ADNGate import NoisyTensorGate
@@ -25,7 +24,7 @@ class TensorCircuit(nn.Module):
 	def __init__(self, qn: int, ideal: bool = True, noiseType: str = 'no', chiFilename: str = None,
 	             crossTalk: bool = False,
 	             chi: Optional[int] = None, kappa: Optional[int] = None, tnn_optimize: bool = True,
-	             chip: Optional[str] = None, device: str or int = 'cpu'):
+	             chip: Optional[str] = None, device: str or int = None):
 		"""
 		Args:
 			ideal: Whether the circuit is ideal.  --> Whether the one-qubit gate is ideal or not.
@@ -38,6 +37,13 @@ class TensorCircuit(nn.Module):
 			device: The device of the torch.
 		"""
 		super(TensorCircuit, self).__init__()
+		# Paras. About Torch
+		self.device = select_device(device)
+		self.dtype = tc.complex128
+		self.layers = nn.Sequential()
+		self._oqs_list = []
+
+		# About program
 		self.fVR = None
 		self.i = 0
 		self.qnumber = qn
@@ -50,27 +56,18 @@ class TensorCircuit(nn.Module):
 		self.idealNoise = False
 		self.unified = None
 		self.crossTalk = crossTalk
-		if self.ideal is False:
-			self.Noise = NoiseChannel(chip=chip)
+
+		if not self.ideal:
+			self.Noise = NoiseChannel(chip=chip, device=self.device)
 			if noiseType == 'unified':
 				self.unified = True
 			elif noiseType == 'realNoise':
-				self.realNoise = True
-				self.crossTalk = False
-				# self.realNoise = realNoise
-				self.realNoiseChannelTensor = None
-				self.realNoiseChannelTensor = czExp_channel(filename=chiFilename)
-			#
+				self.realNoise, self.crossTalk = True, False
+				self.realNoiseChannelTensor = czExp_channel(filename=chiFilename, device=self.device)
 			elif noiseType == 'idealNoise':
 				self.idealNoise = True
 			else:
 				raise TypeError(f'Noise type "{noiseType}" is not supported yet.')
-
-		# Paras. About Torch
-		self.device = select_device(device)
-		self.dtype = tc.complex128
-		self.layers = nn.Sequential()
-		self._oqs_list = []
 
 		# Density Matrix
 		self.DM = None
@@ -96,22 +93,37 @@ class TensorCircuit(nn.Module):
 		return _return
 
 	def _transpile_gate(self, _gate_: AbstractGate, _oqs_: list[int]):
+		"""
+	    Transpile a quantum gate into a sequence of gates and operating qubits.
+
+	    Args:
+	        _gate_: AbstractGate to be transpiled.
+	        _oqs_: Operating qubits.
+
+	    Returns:
+	        A tuple of transpiled gate list and operating qubits list.
+	    """
 		_gateName_ = _gate_.name.lower()
+		_gateTrunc = _gate_._lastTruncation
+
 		if _gateName_ == 'cnot' or _gateName_ == 'cx':
 			_gateList_ = [AbstractGate(ideal=True).ry(-np.pi / 2),
-			              AbstractGate().czEXP(EXPTensor=self.realNoiseChannelTensor),
+			              AbstractGate(_lastTrunc=_gateTrunc).czEXP(EXPTensor=self.realNoiseChannelTensor),
 			              AbstractGate(ideal=True).ry(np.pi / 2)]
 			_oqsList_ = [[_oqs_[-1]], _oqs_, [_oqs_[-1]]]
 		elif _gateName_ == 'rzz':
-			_gateList_ = [AbstractGate().cnot(), AbstractGate(ideal=True).rz(_gate_.para), AbstractGate().cnot()]
+			_gateList_ = [AbstractGate(_lastTrunc=_gateTrunc).cnot(),
+			              AbstractGate(ideal=True).rz(_gate_.para),
+			              AbstractGate(_lastTrunc=_gateTrunc).cnot()]
 			_oqsList_ = [_oqs_, [_oqs_[-1]], _oqs_]
 		elif _gateName_ == 'rxx':
-			_gateList_ = [AbstractGate(ideal=True).h(), AbstractGate().cnot(), AbstractGate(ideal=True).rz(_gate_.para),
-			              AbstractGate().cnot(), AbstractGate(ideal=True).h()]
+			_gateList_ = [AbstractGate(ideal=True).h(), AbstractGate(_lastTrunc=_gateTrunc).cnot(),
+			              AbstractGate(ideal=True).rz(_gate_.para),
+			              AbstractGate(_lastTrunc=_gateTrunc).cnot(), AbstractGate(ideal=True).h()]
 			_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
 		elif _gateName_ == 'ryy':
-			_gateList_ = [AbstractGate(ideal=True).rx(np.pi / 2), AbstractGate().cnot(),
-			              AbstractGate(ideal=True).rz(_gate_.para), AbstractGate().cnot(),
+			_gateList_ = [AbstractGate(ideal=True).rx(np.pi / 2), AbstractGate(_lastTrunc=_gateTrunc).cnot(),
+			              AbstractGate(ideal=True).rz(_gate_.para), AbstractGate(_lastTrunc=_gateTrunc).cnot(),
 			              AbstractGate(ideal=True).rx(-np.pi / 2)]
 			_oqsList_ = [_oqs_, _oqs_, [_oqs_[-1]], _oqs_, _oqs_]
 		else:
@@ -167,6 +179,7 @@ class TensorCircuit(nn.Module):
 			raise ValueError('Qubit index out of range.')
 
 		single = gate.single
+		gate.tensor = gate.tensor.to(device=self.device)
 
 		if single is False:  # Two-qubit gate
 			"""
@@ -350,8 +363,8 @@ class TensorCircuit(nn.Module):
 		"""
 		if not isinstance(gate, AbstractGate):
 			raise TypeError('Gate must be a AbstractGate.')
-		if isinstance(oqs, int):
-			oqs = [oqs]
+
+		oqs = [oqs] if isinstance(oqs, int) else oqs
 		if not isinstance(oqs, list):
 			raise TypeError('Operating qubits must be a list.')
 
@@ -397,22 +410,11 @@ class TensorCircuit(nn.Module):
 			ValueError: if the state is chosen to be a vector but is noisy;
 			ValueError: Reduced index should be empty as [] or None.
 		"""
-
-		def _re_permute(_axis_names_: list[str]):
-			_left_, _right_ = [], []
-			for _idx_, _name_ in enumerate(_axis_names_):
-				if 'con_' not in _name_:
-					_left_.append(_idx_)
-				else:
-					_right_.append(_idx_)
-			return _left_ + _right_
-
 		if not reduced_index:
 			reduced_index = None
 
-		if reduced_index is not None:
-			if reduced_index[np.argmax(reduced_index)] >= self.qnumber:
-				raise ValueError('Reduced index should not be larger than the qubit number.')
+		if reduced_index and max(reduced_index) >= self.qnumber:
+			raise ValueError('Reduced index should not be larger than the qubit number.')
 
 		if not state_vector:
 			_qubits_conj = deepcopy(self.state)  # Node.copy() func. cannot work correctly
@@ -422,25 +424,22 @@ class TensorCircuit(nn.Module):
 			# Differential name the conjugate qubits' edges name to permute the order of the indices
 			for _i, _qubit_conj in enumerate(_qubits_conj):
 				_qubit_conj.set_name(f'con_{_qubit_conj.name}')
-				for _ii in range(len(_qubit_conj.edges)):
-					if 'physics' in _qubit_conj[_ii].name:
-						_qubit_conj[_ii].set_name(f'con_{_qubit_conj[_ii].name}')
+				for _ii, _edge in enumerate(_qubit_conj.edges):
+					if 'physics' in _edge.name:
+						_edge.set_name(f'con_{_qubit_conj[_ii].name}')
 						_qubit_conj.axis_names[_ii] = f'con_{_qubit_conj.axis_names[_ii]}'
 
 			for i in range(len(self.state)):
-				if not self.ideal:
-					if f'I_{i}' in self.state[i].axis_names:
-						tn.connect(self.state[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
+				if not self.ideal and f'I_{i}' in self.state[i].axis_names:
+					tn.connect(self.state[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
 
 			# Reduced density matrix
 			if reduced_index is not None:
-				if isinstance(reduced_index, int):
-					reduced_index = [reduced_index]
+				reduced_index = [reduced_index] if isinstance(reduced_index, int) else reduced_index
 				if not isinstance(reduced_index, list):
 					raise TypeError('reduced_index should be int or list[int]')
 				for _idx in reduced_index:
-					tn.connect(self.state[_idx][f'physics_{_idx}'],
-					           _qubits_conj[_idx][f'con_physics_{_idx}'])
+					tn.connect(self.state[_idx][f'physics_{_idx}'], _qubits_conj[_idx][f'con_physics_{_idx}'])
 			else:
 				reduced_index = []
 
@@ -456,20 +455,15 @@ class TensorCircuit(nn.Module):
 			self.DM, self.DMNode = _dm.tensor.reshape((2 ** _reshape_size, 2 ** _reshape_size)), self.DMNode
 			return self.DM
 		else:
-			if self.fVR is False:
-				if self.ideal is False:
-					raise ValueError('Noisy circuit cannot be represented by state vector efficiently.')
+			if not self.fVR and not self.ideal:
+				raise ValueError('Noisy circuit cannot be represented by state vector efficiently.')
 			if reduced_index is not None:
 				raise ValueError('State vector cannot efficiently represents the reduced density matrix.')
 
 			_outOrder = [self.state[i][f'physics_{i}'] for i in list(range(self.qnumber))]
 			_vector = tn.contractors.auto(self.state, output_edge_order=_outOrder)
 
-			if self.fVR is False:
-				self.DM = _vector.tensor.reshape((2 ** self.qnumber, 1))
-			else:
-				self.DM = _vector.tensor
-
+			self.DM = _vector.tensor.reshape((2 ** self.qnumber, 1)) if not self.fVR else _vector.tensor
 			return self.DM
 
 	def forward(self, _state: list[tn.Node] = None,
@@ -480,19 +474,17 @@ class TensorCircuit(nn.Module):
 		Returns:
 			self.state: tensornetwork after forward propagation.
 		"""
-		self.initState = _state
-		self.qnumber = len(_state)
-		self.fVR = forceVectorRequire
+		self.initState, self.qnumber, self.fVR = _state, len(_state), forceVectorRequire
 
-		for _i in tqdm(range(len(self.layers))):
+		for _i, layer in enumerate(self.layers):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
-			if self.layers[_i]._lastTruncation and self.tnn_optimize is True:
-				check = checkConnectivity(_state)
-				if check is True:
+			if layer._lastTruncation and self.tnn_optimize:
+				if checkConnectivity(_state):
 					qr_left2right(_state)
 					svd_right2left(_state, chi=self.chi)
 				if not self.ideal:
 					svdKappa_left2right(_state, kappa=self.kappa)
+
 		self.state = _state
 		_dm = self._calculate_DM(state_vector=state_vector, reduced_index=reduced_index)
 

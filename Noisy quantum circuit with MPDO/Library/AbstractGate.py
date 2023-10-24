@@ -3,9 +3,10 @@ Author: weiguo_ma
 Time: 04.29.2023
 Contact: weiguo.m@iphy.ac.cn
 """
+from typing import Optional
+
 import torch as tc
 from torch import nn
-from typing import Optional
 
 from Library.ADGate import TensorGate
 from Library.ADNGate import NoisyTensorGate
@@ -14,7 +15,7 @@ from Library.tools import select_device
 
 class AbstractGate(nn.Module):
 	def __init__(self, requires_grad: bool = True, ideal: Optional[bool] = None,
-	             _lastTrunc: bool = False, device: str or int = 'cpu', dtype=tc.complex128):
+	             _lastTrunc: bool = False, device: str or int = 0, dtype=tc.complex128):
 		super(AbstractGate, self).__init__()
 		self.requires_grad = requires_grad
 		self.device = select_device(device)

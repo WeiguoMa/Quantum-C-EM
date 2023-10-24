@@ -3,22 +3,26 @@ Author: weiguo_ma
 Time: 04.13.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import copy
 
 import tensornetwork as tn
 import torch as tc
-import numpy as np
 
 from Library.tools import EdgeName2AxisName
 
 
 def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
+    """
+    Check if the qubits have connectivity.
 
-    assert len(_qubits) >= 1, 'input should be a list of qubits nodes'
+    Args:
+        qubits: List of qubit nodes.
+
+    Returns:
+        True if qubits are connected, False otherwise.
+    """
     connectivity = None
-    if len(_qubits) == 1:
-        connectivity = False
-        return connectivity
+    if len(_qubits) <= 1:
+        return False
     elif len(_qubits) == 2:
         return _qubits[0].has_nondangling_edge()
     else:
@@ -44,13 +48,10 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
         raise TypeError('input should be a list of qubits nodes')
 
     for _i in range(len(_qubits) - 1):
-        _left_edges_name, _right_edges_name = copy.deepcopy(_qubits[_i].axis_names), []
-        for _name in _qubits[_i].axis_names:
-            if 'bond_{}_'.format(_i) in _name:
-                _left_edges_name.remove(_name)
-                _right_edges_name.append(_name)
-        _left_edges = [_qubits[_i][_name] for _name in _left_edges_name]
-        _right_edges = [_qubits[_i][_name] for _name in _right_edges_name]
+        _left_edges_name, _right_edges_name = [name for name in _qubits[_i].axis_names if f'bond_{_i}_' not in name],\
+            [name for name in _qubits[_i].axis_names if f'bond_{_i}_' in name]
+        _left_edges, _right_edges = [_qubits[_i][_name] for _name in _left_edges_name],\
+            [_qubits[_i][_name] for _name in _right_edges_name]
         _q, _r = tn.split_node_qr(_qubits[_i],
                                   left_edges=_left_edges,
                                   right_edges=_right_edges,
@@ -59,8 +60,8 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
                                   edge_name=f'qrbond_{_i}_{_i+1}')
 
         _r = tn.contract_between(_r, _qubits[_i+1])
-
         _r.name = 'qubit_{}'.format(_i+1)
+
         _qubits[_i], _qubits[_i+1] = _q, _r
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([_qubits[_i], _qubits[_i + 1]])
@@ -81,16 +82,12 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
 
     for idx in range(len(_qubits) - 1, 0, -1):
         # SVD name cluster
-        _left_edges = copy.deepcopy(_qubits[idx - 1].axis_names)
-        _right_edges = copy.deepcopy(_qubits[idx].axis_names)
-        for _left_name in _left_edges:
-            for _right_name in _right_edges:
-                if _left_name == _right_name:
-                    # _connector is the connection edge name of two nodes where svd used to connect two nodes first
-                    _connector = _left_name
-                    _left_edges.remove(_connector), _right_edges.remove(_connector)
+        _left_edges = [name for name in _qubits[idx - 1].axis_names if name not in _qubits[idx].axis_names]
+        _right_edges = [name for name in _qubits[idx].axis_names if name not in _qubits[idx - 1].axis_names]
+
         _left_edges = [_qubits[idx - 1][_left_name] for _left_name in _left_edges]
         _right_edges = [_qubits[idx][_right_name] for _right_name in _right_edges]
+
         # Contract
         contracted_two_nodes = tn.contract_between(_qubits[idx - 1],
                                                    _qubits[idx],
@@ -103,9 +100,9 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
                                          right_edges=_right_edges,
                                          left_name=_qubits[idx - 1].name,
                                          right_name=_qubits[idx].name,
-                                         edge_name=_connector,
+                                         edge_name=f'bond_{idx-1}_{idx}',
                                          max_singular_values=chi)
-        # chi=None means no truncation
+        EdgeName2AxisName([_qubits[idx - 1], _qubits[idx]])
 
 def svdKappa_left2right(qubits: list[tn.Node] or list[tn.AbstractNode], kappa: int = None):
     r"""

@@ -156,8 +156,8 @@ def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex128, device: st
 
     return _tensor
 
-def czExp_channel(filename: str = None):
+def czExp_channel(filename: str = None, device: int or str = 0):
     _chi = readExpChi(filename=filename)
     _czExp_tensor = tc.stack(czNoisyTensor(_chi))
     _czExp_tensor = tc.einsum('ijlmn -> jlmni', _czExp_tensor)
-    return _czExp_tensor
+    return _czExp_tensor.to(device=device)

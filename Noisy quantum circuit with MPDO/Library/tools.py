@@ -8,14 +8,14 @@ import itertools
 import random
 import string
 import warnings
-from scipy.optimize import minimize
 from copy import deepcopy
-
 from typing import Optional
+
 import matplotlib.pyplot as plt
 import numpy as np
 import tensornetwork as tn
 import torch as tc
+from scipy.optimize import minimize
 
 from Library.TensorOperations import tensorDot
 
@@ -62,145 +62,151 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
             _axis_names.append(_edge.name)
         _node.axis_names = _axis_names
 
-def ket0(dtype):
+def ket0(dtype, device: str or int = 0):
     r"""
     Return: Return the state |0>
     """
-    return tc.tensor([1. + 0.j, 0. + 0.j], dtype=dtype)
+    return tc.tensor([1. + 0.j, 0. + 0.j], dtype=dtype, device=device)
 
-def ket1(dtype):
+def ket1(dtype, device: str or int = 0):
     r"""
     Return: Return the state |1>
     """
-    return tc.tensor([0. + 0.j, 1. + 0.j], dtype=dtype)
+    return tc.tensor([0. + 0.j, 1. + 0.j], dtype=dtype, device=device)
 
-def ket_hadamard(dtype):
+def ket_hadamard(dtype, device: str or int = 0):
     r"""
     Return: Return the state |+>
     """
-    return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype)
+    return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
-def ket_plus(dtype):
+def ket_plus(dtype, device: str or int = 0):
     r"""
     Return: Return the state |+>
     """
-    return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype)
+    return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
-def ket_minus(dtype):
+def ket_minus(dtype, device: str or int = 0):
     r"""
     Return: Return the state |->
     """
-    return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype)
+    return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
-def create_ket0Series(qnumber: int, dtype=tc.complex128) -> list:
+def create_ket0Series(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
     r"""
     create initial qubits
 
     Args:
         qnumber: the number of qubits;
-        dtype: the data type of the tensor.
+        dtype: the data type of the tensor;
+        device: cpu or gpu.
 
     Returns:
         _mps: the initial mps with the state |0> * _number
     """
 
     _mps = [
-        tn.Node(ket0(dtype), name='qubit_{}'.format(_ii),
+        tn.Node(ket0(dtype, device=device), name='qubit_{}'.format(_ii),
                 axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket1Series(qnumber: int, dtype=tc.complex128) -> list:
+def create_ket1Series(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
     r"""
     create initial qubits
 
     Args:
         qnumber: the number of qubits;
-        dtype: the data type of the tensor.
+        dtype: the data type of the tensor;
+        device: cpu or gpu.
 
     Returns:
         _mps: the initial mps with the state |1> * _number
     """
 
     _mps = [
-        tn.Node(ket1(dtype), name='qubit_{}'.format(_ii),
+        tn.Node(ket1(dtype, device=device), name='qubit_{}'.format(_ii),
                 axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128) -> list:
+def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
     r"""
     create initial qubits
 
     Args:
         qnumber: the number of qubits;
-        dtype: the data type of the tensor.
+        dtype: the data type of the tensor;
+        device: cpu or gpu.
 
     Returns:
         _mps: the initial mps with the state |+> * _number
     """
 
     _mps = [
-        tn.Node(ket_hadamard(dtype), name='qubit_{}'.format(_ii),
+        tn.Node(ket_hadamard(dtype, device=device), name='qubit_{}'.format(_ii),
                 axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketPlusSeries(qnumber: int, dtype=tc.complex128) -> list:
+def create_ketPlusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
     r"""
     create initial qubits
 
     Args:
         qnumber: the number of qubits;
-        dtype
+        dtype: the data type of the tensor;
+        device: cpu or gpu.
 
     Returns:
         _mps: the initial mps with the state |+> * _number
     """
 
     _mps = [
-        tn.Node(ket_plus(dtype), name='qubit_{}'.format(_ii),
+        tn.Node(ket_plus(dtype, device=device), name='qubit_{}'.format(_ii),
                 axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketMinusSeries(qnumber: int, dtype=tc.complex128) -> list:
+def create_ketMinusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
     r"""
     create initial qubits
 
     Args:
         qnumber: the number of qubits;
-        dtype: the data type of the tensor.
+        dtype: the data type of the tensor;
+        device: cpu or gpu.
 
     Returns:
         _mps: the initial mps with the state |-> * _number
     """
 
     _mps = [
-        tn.Node(ket_minus(dtype), name='qubit_{}'.format(_ii),
+        tn.Node(ket_minus(dtype, device=device), name='qubit_{}'.format(_ii),
                 axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex128) -> list:
+def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex128, device: str or int = 0) -> list:
     r"""
     create initial qubits
 
     Args:
         qnumber: the number of qubits;
         tensor: the tensor to be used to create nodes;
-        dtype: the data type of the tensor.
+        dtype: the data type of the tensor;
+        device: cpu or gpu.
 
     Returns:
         _mps: the initial mps with the state |random> * _number
     """
 
-    tensor = tensor.to(dtype=dtype)
+    tensor = tensor.to(dtype=dtype, device=device)
     _mps = [
         tn.Node(tensor, name='qubit_{}'.format(_ii),
                 axis_names=['physics_{}'.format(_ii)]) for _ii in range(qnumber)
@@ -341,7 +347,7 @@ def plot_histogram(prob_psi: dict, title: str = None, filename: str = None):
         plt.savefig(filename)
     plt.show()
 
-def select_device(device: str or int = 'cpu'):
+def select_device(device: str or int = None):
     if isinstance(device, str):
         return device
     else:
@@ -475,7 +481,7 @@ def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> tc.Tensor:
     return trace
 
 
-def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True):
+def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True, device: str or int = 0):
     """
     Produced by Dr.Shi  --- Data Science
 
@@ -483,7 +489,8 @@ def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True):
         rho: density matrix;
         methodIdx: 0, 1, 2, refers to different scipy.optimal.minimize methods;
         constraints: 'eq' or 'ineq';
-        hermitian: True or False.
+        hermitian: True or False;
+        device: cpu or gpu.
 
     Returns:
         rho_semi: valid density matrix.
@@ -492,6 +499,7 @@ def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True):
     # rho = rho/np.trace(rho)
     if hermitian:
         rho = 0.5 * (rho + rho.T.conj())
+    rho = rho.to(device='cpu')
     ps, psi = np.linalg.eigh(rho)
 
     traceV = 1.0                                        # tc.trace(rho)
@@ -517,6 +525,6 @@ def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True):
     psi, mewPs = tc.tensor(psi), tc.tensor(newPs)
 
     rho_semi = psi @ np.diag(newPs) @ psi.T.conj()
-    return rho_semi
+    return rho_semi.to(device=device)
 
 

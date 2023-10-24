@@ -10,7 +10,7 @@ from Library.tools import select_device
 
 
 class TensorGate(object):
-    def __init__(self, ideal: bool = None, device: str or int = 'cpu', dtype=tc.complex128):
+    def __init__(self, ideal: bool = None, device: str or int = 0, dtype=tc.complex128):
         self.name = None
         self.tensor = None
         self.rank = None
@@ -23,7 +23,7 @@ class TensorGate(object):
 
     def i(self):
         self.name = 'I'
-        self.tensor = tc.tensor([[1, 0], [0, 1]], dtype=self.dtype)
+        self.tensor = tc.tensor([[1, 0], [0, 1]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -31,7 +31,7 @@ class TensorGate(object):
 
     def x(self):
         self.name = 'X'
-        self.tensor = tc.tensor([[0, 1], [1, 0]], dtype=self.dtype)
+        self.tensor = tc.tensor([[0, 1], [1, 0]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -39,7 +39,7 @@ class TensorGate(object):
 
     def y(self):
         self.name = 'Y'
-        self.tensor = tc.tensor([[0, -1j], [1j, 0]], dtype=self.dtype)
+        self.tensor = tc.tensor([[0, -1j], [1j, 0]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -47,7 +47,7 @@ class TensorGate(object):
 
     def z(self):
         self.name = 'Z'
-        self.tensor = tc.tensor([[1, 0], [0, -1]], dtype=self.dtype)
+        self.tensor = tc.tensor([[1, 0], [0, -1]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -55,7 +55,7 @@ class TensorGate(object):
 
     def s(self):
         self.name = 'S'
-        self.tensor = tc.tensor([[1, 0], [0, 1j]], dtype=self.dtype)
+        self.tensor = tc.tensor([[1, 0], [0, 1j]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -63,7 +63,7 @@ class TensorGate(object):
 
     def t(self):
         self.name = 'T'
-        self.tensor = tc.tensor([[1, 0], [0, (1 + 1j) / np.sqrt(2)]], dtype=self.dtype)
+        self.tensor = tc.tensor([[1, 0], [0, (1 + 1j) / np.sqrt(2)]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -71,7 +71,7 @@ class TensorGate(object):
 
     def h(self):
         self.name = 'H'
-        self.tensor = tc.tensor([[1, 1], [1, -1]], dtype=self.dtype) / np.sqrt(2)
+        self.tensor = tc.tensor([[1, 1], [1, -1]], dtype=self.dtype, device=self.device) / np.sqrt(2)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -82,7 +82,7 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 1, 0, 0],
                                  [0, 0, 1, 0],
-                                 [0, 0, 0, 1]], dtype=self.dtype).reshape((2, 2, 2, 2))
+                                 [0, 0, 0, 1]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
@@ -93,7 +93,7 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 1, 0, 0],
                                  [0, 0, 0, 1],
-                                 [0, 0, 1, 0]], dtype=self.dtype).reshape((2, 2, 2, 2))
+                                 [0, 0, 1, 0]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
@@ -104,7 +104,7 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 1, 0, 0],
                                  [0, 0, 0, -1j],
-                                 [0, 0, 1j, 0]], dtype=self.dtype).reshape((2, 2, 2, 2))
+                                 [0, 0, 1j, 0]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
@@ -115,7 +115,7 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 1, 0, 0],
                                  [0, 0, 1, 0],
-                                 [0, 0, 0, -1]], dtype=self.dtype).reshape((2, 2, 2, 2))
+                                 [0, 0, 0, -1]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
@@ -126,7 +126,7 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 0, 1, 0],
                                  [0, 1, 0, 0],
-                                 [0, 0, 0, 1]], dtype=self.dtype).reshape((2, 2, 2, 2))
+                                 [0, 0, 0, 1]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
@@ -137,7 +137,7 @@ class TensorGate(object):
         self.tensor = tc.tensor([[1, 0, 0, 0],
                                  [0, 1, 0, 0],
                                  [0, 0, 0, 1],
-                                 [0, 0, 1, 0]], dtype=self.dtype).reshape((2, 2, 2, 2))
+                                 [0, 0, 1, 0]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
         self.single = False
@@ -156,7 +156,7 @@ class TensorGate(object):
         self.tensor = tc.tensor(
             [[tc.cos(theta / 2), -1j * tc.sin(theta / 2)],
              [-1j * tc.sin(theta / 2), tc.cos(theta / 2)]]
-            , dtype=self.dtype
+            , dtype=self.dtype, device=self.device
         )
         self.rank = 2
         self.dimension = [2, 2]
@@ -172,7 +172,7 @@ class TensorGate(object):
 
         self.name = 'RY'
         self.tensor = tc.tensor([[tc.cos(theta / 2), -tc.sin(theta / 2)],
-                                 [tc.sin(theta / 2), tc.cos(theta / 2)]], dtype=self.dtype)
+                                 [tc.sin(theta / 2), tc.cos(theta / 2)]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -187,7 +187,7 @@ class TensorGate(object):
 
         self.name = 'RZ'
         self.tensor = tc.tensor([[tc.exp(-1j * theta / 2), 0],
-                                 [0, tc.exp(1j * theta / 2)]], dtype=self.dtype)
+                                 [0, tc.exp(1j * theta / 2)]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -201,7 +201,7 @@ class TensorGate(object):
         theta = theta.to(device=self.device, dtype=self.dtype)
 
         self.name = 'U1'
-        self.tensor = tc.tensor([[1, 0], [0, tc.exp(1j * theta)]], dtype=self.dtype)
+        self.tensor = tc.tensor([[1, 0], [0, tc.exp(1j * theta)]], dtype=self.dtype, device=self.device)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -221,7 +221,8 @@ class TensorGate(object):
 
         self.name = 'U2'
         self.tensor = tc.tensor([[1, -tc.exp(1j * lam)],
-                                 [tc.exp(1j * phi), tc.exp(1j * (phi + lam))]]) / np.sqrt(2)
+                                 [tc.exp(1j * phi), tc.exp(1j * (phi + lam))]],
+                                device=self.device, dtype=self.dtype) / np.sqrt(2)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -247,7 +248,7 @@ class TensorGate(object):
         self.name = 'U3'
         self.tensor = tc.tensor([[tc.cos(theta / 2), -tc.exp(1j * lam) * tc.sin(theta / 2)],
                                  [tc.exp(1j * phi) * tc.sin(theta / 2),
-                                  tc.exp(1j * (phi + lam)) * tc.cos(theta / 2)]])
+                                  tc.exp(1j * (phi + lam)) * tc.cos(theta / 2)]], device=self.device, dtype=self.dtype)
         self.rank = 2
         self.dimension = [2, 2]
         self.single = True
@@ -267,7 +268,7 @@ class TensorGate(object):
                 [0, tc.exp(1j * theta), 0, 0],
                 [0, 0, tc.exp(1j * theta), 0],
                 [0, 0, 0, tc.exp(-1j * theta)],
-            ], dtype=self.dtype
+            ], dtype=self.dtype, device=self.device
         ).reshape((2, 2, 2, 2))
         self.rank = 4
         self.dimension = [[2, 2], [2, 2]]
