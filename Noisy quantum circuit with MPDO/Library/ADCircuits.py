@@ -484,6 +484,9 @@ class TensorCircuit(nn.Module):
 					svd_right2left(_state, chi=self.chi)
 				if not self.ideal:
 					svdKappa_left2right(_state, kappa=self.kappa)
+		# LastLayer noise-truncation
+		if self.tnn_optimize and not self.ideal:
+			svdKappa_left2right(_state, kappa=self.kappa)
 
 		self.state = _state
 		_dm = self._calculate_DM(state_vector=state_vector, reduced_index=reduced_index)
