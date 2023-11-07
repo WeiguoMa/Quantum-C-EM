@@ -16,7 +16,7 @@ from Library.tools import select_device
 tn.set_default_backend("pytorch")
 
 class NoiseChannel(object):
-    def __init__(self, chip: str = None, dtype=tc.complex128, device: str or int = 0):
+    def __init__(self, chip: str = None, dtype=tc.complex128, device: str or int = 'cpu'):
         self.dtype = dtype
         self.device = select_device(device)
 

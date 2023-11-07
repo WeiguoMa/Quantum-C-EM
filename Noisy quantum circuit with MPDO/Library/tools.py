@@ -62,37 +62,37 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
             _axis_names.append(_edge.name)
         _node.axis_names = _axis_names
 
-def ket0(dtype, device: str or int = 0):
+def ket0(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |0>
     """
     return tc.tensor([1. + 0.j, 0. + 0.j], dtype=dtype, device=device)
 
-def ket1(dtype, device: str or int = 0):
+def ket1(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |1>
     """
     return tc.tensor([0. + 0.j, 1. + 0.j], dtype=dtype, device=device)
 
-def ket_hadamard(dtype, device: str or int = 0):
+def ket_hadamard(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |+>
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
-def ket_plus(dtype, device: str or int = 0):
+def ket_plus(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |+>
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
-def ket_minus(dtype, device: str or int = 0):
+def ket_minus(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |->
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
-def create_ket0Series(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
+def create_ket0Series(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -112,7 +112,7 @@ def create_ket0Series(qnumber: int, dtype=tc.complex128, device: str or int = 0)
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket1Series(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
+def create_ket1Series(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -132,7 +132,7 @@ def create_ket1Series(qnumber: int, dtype=tc.complex128, device: str or int = 0)
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
+def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -152,7 +152,7 @@ def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128, device: str or i
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketPlusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
+def create_ketPlusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -172,7 +172,7 @@ def create_ketPlusSeries(qnumber: int, dtype=tc.complex128, device: str or int =
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketMinusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 0) -> list:
+def create_ketMinusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -192,7 +192,7 @@ def create_ketMinusSeries(qnumber: int, dtype=tc.complex128, device: str or int 
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex128, device: str or int = 0) -> list:
+def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex128, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -481,7 +481,7 @@ def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> tc.Tensor:
     return trace
 
 
-def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True, device: str or int = 0):
+def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True, device: str or int = 'cpu'):
     """
     Produced by Dr.Shi  --- Data Science
 
