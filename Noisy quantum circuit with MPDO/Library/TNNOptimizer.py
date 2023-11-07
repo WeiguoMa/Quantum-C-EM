@@ -9,13 +9,19 @@ import torch as tc
 
 from Library.tools import EdgeName2AxisName
 
+__all__ = [
+    'qr_left2right',
+    'svd_left2right',
+    'svd_right2left',
+    'svdKappa_left2right'
+]
 
 def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
     """
     Check if the qubits have connectivity.
 
     Args:
-        qubits: List of qubit nodes.
+        _qubits: List of qubit nodes.
 
     Returns:
         True if qubits are connected, False otherwise.
@@ -35,7 +41,7 @@ def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
         return connectivity
 
 def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
-    r"""
+    """
     QR decomposition from left to right.
 
     Args:
@@ -68,7 +74,7 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
 
 def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = None):
     r"""
-    SVD from right to left
+    SVD from right to left.
 
     Args:
         _qubits: list of nodes;
@@ -103,6 +109,44 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
                                          edge_name=f'bond_{idx-1}_{idx}',
                                          max_singular_values=chi)
         EdgeName2AxisName([_qubits[idx - 1], _qubits[idx]])
+
+def svd_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = None):
+    """
+        SVD from left to right.
+
+        Args:
+            _qubits: list of nodes;
+            chi: bond dimension.
+
+        Returns:
+            _qubits: list of nodes.
+        """
+    if not isinstance(_qubits, list):
+        raise TypeError('input should be a list of qubits nodes')
+
+    for idx in range(len(_qubits) - 1):
+        # SVD name cluster
+        _left_edges = [name for name in _qubits[idx].axis_names if name not in _qubits[idx + 1].axis_names]
+        _right_edges = [name for name in _qubits[idx + 1].axis_names if name not in _qubits[idx].axis_names]
+
+        _left_edges = [_qubits[idx][_left_name] for _left_name in _left_edges]
+        _right_edges = [_qubits[idx + 1][_right_name] for _right_name in _right_edges]
+
+        # Contract
+        contracted_two_nodes = tn.contract_between(_qubits[idx],
+                                                   _qubits[idx + 1],
+                                                   name='contract_two_nodes')
+        # ProcessFunction, for details, see the function definition.
+        EdgeName2AxisName([contracted_two_nodes])
+        # SVD
+        _qubits[idx], _qubits[idx + 1], _ = tn.split_node(contracted_two_nodes,
+                                                          left_edges=_left_edges,
+                                                          right_edges=_right_edges,
+                                                          left_name=_qubits[idx].name,
+                                                          right_name=_qubits[idx + 1].name,
+                                                          edge_name=f'nbond_{idx}_{idx + 1}',
+                                                          max_singular_values=chi)
+        EdgeName2AxisName([_qubits[idx], _qubits[idx + 1]])
 
 def svdKappa_left2right(qubits: list[tn.Node] or list[tn.AbstractNode], kappa: int = None):
     r"""

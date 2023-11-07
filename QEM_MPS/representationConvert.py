@@ -3,10 +3,10 @@ Author: weiguo_ma
 Time: 06.21.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import torch as tc
-import tensornetwork as tn
 from typing import List
 
+import tensornetwork as tn
+import torch as tc
 
 tn.set_default_backend("pytorch")
 
