@@ -3,91 +3,92 @@ Author: weiguo_ma
 Time: 05.19.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import copy
+from copy import deepcopy
+from typing import Union
 
-import torch as tc
 import tensornetwork as tn
-from Library.realNoise import czExp_channel
-from Library.tools import EdgeName2AxisName, generate_random_string_without_duplicate
+import torch as tc
 
+from Library.realNoise import czExp_channel
+from Library.tools import EdgeName2AxisName
 
 tn.set_default_backend("pytorch")
 
 
-class SuperOperator(object):
-	def __init__(self, operator: tc.Tensor or tn.AbstractNode = None, noisy: bool = True):
-		self.originalINPUT = operator
-		self.shape = operator.shape
-		self.noisy = noisy
-		if noisy is True:
-			self.qubitNum = int((len(self.shape) - 1) / 2)
-		else:
-			self.qubitNum = int(len(self.shape) / 2)
-		self.axisNames = self._getAxisNames()
-
+class SuperOperator:
+	def __init__(self, operator: Union[tc.Tensor, tn.AbstractNode] = None, noisy: bool = True):
 		if operator is None:
 			operator = czExp_channel('/Users/weiguo_ma/Python_Program/Quantum_error_mitigation'
 			                         '/Noisy quantum circuit with MPDO/data/chi/chi1.mat')
+		if not isinstance(operator, (tc.Tensor, tn.AbstractNode)):
+			raise TypeError("Operator must be a tensor or a node")
 
-		if not isinstance(operator, tc.Tensor) and not isinstance(operator, tn.AbstractNode):
-			raise TypeError("operator must be a tensor or a node")
-		if isinstance(operator, tc.Tensor):
-			if len(self.shape) != len(self.axisNames):
-				raise ValueError(f'Shape {self.shape} not match with axisNames {self.axisNames},'
-				                 f' check the noisy status and its corresponds tensor shape.')
-			self.operator = tn.Node(operator, name='realNoise', axis_names=self.axisNames)
-		if isinstance(operator, tn.Node):
-			if operator.axis_names != self.axisNames:
-				raise ValueError("operator axis names must be uniformed as {}".format(self.axisNames))
-			self.operator = copy.deepcopy(operator)
+		self.inverseTensor = None
+		self.shape = operator.shape
 
-		self.superOperator = None
-		self.superOperatorMPO = None
+		self.noisy = noisy
+		self.qubitNum = (len(operator.shape) - 1) // 2 if noisy else len(operator.shape) // 2
+		self.axisNames = self._getAxisNames()
 
-		self.uMPO()
+		self.operator = self._initialize_operator(operator)
+		self.superOperator = self.getSuperOperator()
+		self.superOperatorMPO = self.operatorMPO()
+		self.inverseSuperOperatorMPO = self.inverseMPO()
 
 	def _getAxisNames(self):
-		_axisNames = [f'physics_{_i}' for _i in range(self.qubitNum)] + \
-		             [f'inner_{_i}' for _i in range(self.qubitNum)]
-		if self.noisy is True:
-			_axisNames.append('I')
-		return _axisNames
+		return [f'{phase}_{i}' for phase in ('physics', 'inner') for i in range(self.qubitNum)] + ['I'] * self.noisy
 
 	def _getTTAxisNames(self):
-		_TTAxisNames = []
-		for _i in range(self.qubitNum):
-			_TTAxisNames += [f'Dphysics_{_i}', f'Dinner_{_i}']
-		for _i in range(self.qubitNum):
-			_TTAxisNames += [f'physics_{_i}', f'inner_{_i}']
-		return _TTAxisNames
+		return [f'{prefix}_{i}' for i in range(self.qubitNum) for prefix in ('Dphysics', 'Dinner')] \
+			+ [f'{prefix}_{i}' for i in range(self.qubitNum) for prefix in ('physics', 'inner')]
+
+	def _getStandardAxisNames(self):
+		return [f'{prefix}{i}' for prefix in ('Dphysics_', 'physics_', 'Dinner_', 'inner_') for i in
+		        range(self.qubitNum)]
+
+	def _initialize_operator(self, operator):
+		if isinstance(operator, tc.Tensor):
+			operator_node = tn.Node(operator, name='realNoise', axis_names=self.axisNames)
+		else:  # operator is already a tn.AbstractNode
+			operator_node = deepcopy(operator)
+		if operator_node.axis_names != self.axisNames:
+			raise ValueError(f"Operator's axis names must be uniformed as {self.axisNames}")
+		return operator_node
 
 	def getSuperOperator(self) -> tn.AbstractNode:
-		_daggerAxisNames = ['D' + _name for _name in self.axisNames if _name != 'I']
-		if self.noisy is True:
-			_daggerAxisNames += ['I']
+		_daggerAxisNames = ['D' + _name for _name in self.axisNames if _name != 'I'] + ['I'] * self.noisy
 
 		_operatorDagger = tn.Node(self.operator.tensor.conj(), name='realNoiseDagger', axis_names=_daggerAxisNames)
-		if self.noisy is True:
+		if self.noisy:
 			tn.connect(self.operator['I'], _operatorDagger['I'])
 
-		_superOperatorNode = tn.contract_between(self.operator, _operatorDagger,
+		_superOperatorNode = tn.contract_between(_operatorDagger, self.operator,
 		                                         name='superOperatorU', allow_outer_product=True)
 		# Process Function
 		EdgeName2AxisName(_superOperatorNode)
-
-		self.superOperator = _superOperatorNode
+		_superOperatorNode.reorder_edges([_superOperatorNode[_edge] for _edge in self._getStandardAxisNames()])
 		return _superOperatorNode
 
-	def uMPO(self) -> list[tn.AbstractNode]:
+	def operatorMPO(self):
+		_tensor = self.superOperator.tensor
+		return self.uMPO(_tensor)
+
+	def inverseMPO(self):
+		_tensor = self.superOperator.tensor
+		_shape = (2,) * (self.qubitNum * 2 * 2)
+		_mShape = (2 ** (2 * self.qubitNum), 2 ** (2 * self.qubitNum))
+		_tensor = tc.reshape(tc.inverse(_tensor.reshape(_mShape)), shape=_shape)
+		self.inverseTensor = _tensor
+		return self.uMPO(_tensor)
+
+	def uMPO(self, _tensor: tc.Tensor) -> list[tn.AbstractNode]:
 		# TT-decomposition to superOperatorNode
-		u = self.getSuperOperator()
+		u = tn.Node(tensor=_tensor, name='u', axis_names=self._getStandardAxisNames())
 		_TTAxisNames = self._getTTAxisNames()
 
 		TTSeries = []
 		_leftNode, _rightNode = None, None
-
-		_count = 0
-		_count_ = 0
+		_count, _count_ = 0, 0
 
 		for _i in range(self.qubitNum * 2):
 			_leftNames = _TTAxisNames[0:2]
@@ -108,7 +109,8 @@ class SuperOperator(object):
 				if _i > 0:
 					u = _rightNode
 
-				_leftEdges, _rightEdges = [u[_edgeName] for _edgeName in _leftNames], [u[_edgeName] for _edgeName in _rightNames]
+				_leftEdges, _rightEdges = [u[_edgeName] for _edgeName in _leftNames],\
+					[u[_edgeName] for _edgeName in _rightNames]
 
 				if _i < self.qubitNum - 1:
 					_leftNodeName, _rightNodeName = f'DU_{_i}', f'DU_{_i + 1}'
@@ -122,10 +124,11 @@ class SuperOperator(object):
 					_count_ += 1
 
 				_leftNode, _rightNode, _ = tn.split_node(node=u, left_edges=_leftEdges, right_edges=_rightEdges,
-				                                         left_name=_leftNodeName, right_name=_rightNodeName, edge_name=_edgeName)
-
+				                                         left_name=_leftNodeName, right_name=_rightNodeName,
+				                                         edge_name=_edgeName)
+				EdgeName2AxisName([_leftNode, _rightNode])
 				TTSeries.append(_leftNode)
 			else:
 				TTSeries.append(_rightNode)
-		self.superOperatorMPO = TTSeries
+
 		return TTSeries
