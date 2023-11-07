@@ -44,7 +44,7 @@ idealUMPO = SuperOperator(abCZ, noisy=False).superOperatorMPO
 idealUMPO2 = copy.deepcopy(idealUMPO)
 
 maps = Maps(superOperatorMPO=uMPO)
-uPMPO = UpdateNODES(maps=maps, epoch=100).uPMPO
+uPMPO = UpdateNODES(maps=maps, epoch=10).uPMPO
 
 ErrorInverse = ErrorInverse(idealMPO=idealUMPO, uPMPO=uPMPO, chi=None).EpsilonMinus1
 
