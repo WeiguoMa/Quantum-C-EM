@@ -311,10 +311,6 @@ class TensorCircuit(nn.Module):
 					_qubit.tensor, _qubit.axis_names, _qubit.tensor.shape
 				_gShape = gate_list[_i].shape
 
-				if self.realNoise:
-					gate_list[_i].set_tensor(gate_list[_i].tensor.conj())
-					_qubitTensor = _qubitTensor.conj()
-
 				_I, _lBond, _rBond = \
 					f'I_{_bit}' in _qubitAxisName, f'bond_{_bit-1}_{_bit}' in _qubitAxisName,\
 						f'bond_{_bit}_{_bit+1}' in _qubitAxisName
