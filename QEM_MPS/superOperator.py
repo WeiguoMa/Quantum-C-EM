@@ -23,7 +23,7 @@ class SuperOperator:
 		if not isinstance(operator, (tc.Tensor, tn.AbstractNode)):
 			raise TypeError("Operator must be a tensor or a node")
 
-		self.inverseTensor = None
+		self._inverseTensor = None
 		self.shape = operator.shape
 
 		self.noisy = noisy
@@ -33,7 +33,7 @@ class SuperOperator:
 		self.operator = self._initialize_operator(operator)
 		self.superOperator = self.getSuperOperator()
 		self.superOperatorMPO = self.operatorMPO()
-		self.inverseSuperOperatorMPO = self.inverseMPO()
+		self._inverseSuperOperatorMPO = self._inverseMPO()
 
 	def _getAxisNames(self):
 		return [f'{phase}_{i}' for phase in ('physics', 'inner') for i in range(self.qubitNum)] + ['I'] * self.noisy
@@ -73,12 +73,12 @@ class SuperOperator:
 		_tensor = self.superOperator.tensor
 		return self.uMPO(_tensor)
 
-	def inverseMPO(self):
+	def _inverseMPO(self):
 		_tensor = self.superOperator.tensor
 		_shape = (2,) * (self.qubitNum * 2 * 2)
 		_mShape = (2 ** (2 * self.qubitNum), 2 ** (2 * self.qubitNum))
 		_tensor = tc.reshape(tc.inverse(_tensor.reshape(_mShape)), shape=_shape)
-		self.inverseTensor = _tensor
+		self._inverseTensor = _tensor
 		return self.uMPO(_tensor)
 
 	def uMPO(self, _tensor: tc.Tensor) -> list[tn.AbstractNode]:
