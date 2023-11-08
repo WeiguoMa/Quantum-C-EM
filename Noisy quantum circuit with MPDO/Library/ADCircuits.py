@@ -380,6 +380,8 @@ class TensorCircuit(nn.Module):
 		for _num, _gate in enumerate(_transpile_gateList):
 			if _gate.para is None:
 				_para = None
+			elif type(_gate.para) is tc.Tensor and _gate.para.shape != ():
+				_para = None
 			else:
 				_para = _gate.para
 				if type(_para) is float:

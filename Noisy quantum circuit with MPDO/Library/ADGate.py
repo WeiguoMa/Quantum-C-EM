@@ -285,8 +285,8 @@ class TensorGate(object):
             self.tensor = tensor.to(device=self.device, dtype=self.dtype)
         else:
             raise TypeError('Tensor must be a numpy array or a torch tensor')
-        if tensor.shape != (2, 2):
-            raise ValueError('Tensor must be of shape (2, 2)')
+        if tensor.shape[:-1] != (2, 2):
+            raise ValueError('Tensor must be of shape (2, 2, kappa)')
 
         self.name = 'ArbGateSingle'
         self.rank = 2
@@ -304,8 +304,8 @@ class TensorGate(object):
             self.tensor = tensor.to(device=self.device, dtype=self.dtype)
         else:
             raise TypeError('Tensor must be a numpy array or a torch tensor')
-        if tensor.shape != (2, 2, 2, 2):
-            raise ValueError('Tensor must be of shape (2, 2, 2, 2)')
+        if tensor.shape[:-1] != (2, 2, 2, 2):
+            raise ValueError('Tensor must be of shape (2, 2, 2, 2, kappa)')
 
         self.name = 'ArbGateDouble'
         self.rank = 4

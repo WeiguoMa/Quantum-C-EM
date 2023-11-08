@@ -7,6 +7,8 @@ Contact: weiguo.m@iphy.ac.cn
 import tensornetwork as tn
 import torch as tc
 
+from typing import List, Union
+
 from Library.tools import EdgeName2AxisName
 
 __all__ = [
@@ -16,7 +18,7 @@ __all__ = [
     'svdKappa_left2right'
 ]
 
-def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
+def checkConnectivity(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     """
     Check if the qubits have connectivity.
 
@@ -40,7 +42,7 @@ def checkConnectivity(_qubits: list[tn.Node] or list[tn.AbstractNode]):
             connectivity = False
         return connectivity
 
-def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
+def qr_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     """
     QR decomposition from left to right.
 
@@ -72,7 +74,7 @@ def qr_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode]):
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([_qubits[_i], _qubits[_i + 1]])
 
-def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = None):
+def svd_right2left(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: int = None):
     r"""
     SVD from right to left.
 
@@ -83,7 +85,7 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
     Returns:
         _qubits: list of nodes.
     """
-    if not isinstance(_qubits, list):
+    if not isinstance(_qubits, List):
         raise TypeError('input should be a list of qubits nodes')
 
     for idx in range(len(_qubits) - 1, 0, -1):
@@ -110,7 +112,7 @@ def svd_right2left(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
                                          max_singular_values=chi)
         EdgeName2AxisName([_qubits[idx - 1], _qubits[idx]])
 
-def svd_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = None):
+def svd_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: int = None):
     """
         SVD from left to right.
 
@@ -121,7 +123,7 @@ def svd_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
         Returns:
             _qubits: list of nodes.
         """
-    if not isinstance(_qubits, list):
+    if not isinstance(_qubits, List):
         raise TypeError('input should be a list of qubits nodes')
 
     for idx in range(len(_qubits) - 1):
@@ -148,7 +150,7 @@ def svd_left2right(_qubits: list[tn.Node] or list[tn.AbstractNode], chi: int = N
                                                           max_singular_values=chi)
         EdgeName2AxisName([_qubits[idx], _qubits[idx + 1]])
 
-def svdKappa_left2right(qubits: list[tn.Node] or list[tn.AbstractNode], kappa: int = None):
+def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: int = None):
     r"""
     Perform SVD with optional dimension truncation on a list of quantum tensors.
 
