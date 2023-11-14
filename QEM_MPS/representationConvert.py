@@ -3,7 +3,7 @@ Author: weiguo_ma
 Time: 06.21.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-from typing import List
+from typing import List, Union
 
 import tensornetwork as tn
 import torch as tc
@@ -11,7 +11,7 @@ import torch as tc
 tn.set_default_backend("pytorch")
 
 
-def superoperator_to_kraus(superoperator: tc.Tensor, atol: float = 1e-10) -> List[tc.Tensor]:
+def superoperator_to_kraus(superoperator: tc.Tensor, atol: float = 1e-10) -> tc.Tensor:
 	r"""
     Returns a Kraus representation of a channel specified via the superoperator matrix.
 
@@ -51,7 +51,7 @@ def superoperator_to_kraus(superoperator: tc.Tensor, atol: float = 1e-10) -> Lis
 	return choi_to_kraus(superoperator_to_choi(superoperator), atol=atol)
 
 
-def choi_to_kraus(choi: tc.Tensor, atol: float = 1e-10) -> List[tc.Tensor]:
+def choi_to_kraus(choi: tc.Tensor, atol: float = 1e-10) -> tc.Tensor:
 	r"""Returns a Kraus representation of a channel with given Choi matrix.
 
 	Quantum channel E: L(H1) -> L(H2) may be described by a collection of operators A_i, called
@@ -87,19 +87,25 @@ def choi_to_kraus(choi: tc.Tensor, atol: float = 1e-10) -> List[tc.Tensor]:
 			ValueError: when choi is not a positive square matrix.
 		"""
 	d = int(tc.sqrt(tc.tensor(choi.shape[0])))
-	if choi.shape != (d * d, d * d):
-		raise ValueError(f"Invalid Choi matrix shape, expected {(d * d, d * d)}, got {choi.shape}")
-	if not tc.allclose(choi, choi.T.conj(), atol=atol):
-		raise ValueError("Choi matrix must be Hermitian")
+	# if choi.shape != (d * d, d * d):
+	# 	raise ValueError(f"Invalid Choi matrix shape, expected {(d * d, d * d)}, got {choi.shape}")
+	# if not tc.allclose(choi, choi.T.conj(), atol=atol):
+	# 	raise ValueError("Choi matrix must be Hermitian")
 
 	w, v = tc.linalg.eigh(choi)
-	if tc.any(w < -atol):
-		raise ValueError(f"Choi matrix must be positive, got one with eigenvalues {w}")
+	w, v = w.flip(dims=(-1,)), v.flip(dims=(-1,))
+	w = w.to(dtype=tc.complex128)
+	# if tc.any(w < -atol):
+	# 	raise ValueError(f"Choi matrix must be positive, got one with eigenvalues {w}")
 
-	w = tc.maximum(w.to(dtype=tc.float64), tc.tensor(0.0, dtype=tc.float64)).to(dtype=tc.complex128)
+	# w = tc.maximum(w.to(dtype=tc.float64), tc.tensor(0.0, dtype=tc.float64)).to(dtype=tc.complex128)
 	u = tc.sqrt(w) * v
-	keep = tc.norm(u, dim=-1) > atol
-	return [k.reshape(d, d) for k, keep_i in zip(u.T, keep) if keep_i]
+	# keep = tc.linalg.norm(u, dim=-1) > atol
+	# kraus = tc.stack([k.reshape(d, d) for k, keep_i in zip(u.T, keep) if keep_i]).permute(1, 2, 0)
+	kraus = tc.stack([k.reshape(d, d) for k in u.T]).permute(1, 2, 0)
+	print(kraus.shape)
+
+	return tc.reshape(kraus, shape=((2,)*d + (kraus.size(-1),)))
 
 
 def superoperator_to_choi(superoperator: tc.Tensor) -> tc.Tensor:
@@ -151,7 +157,7 @@ def superoperator_to_choi(superoperator: tc.Tensor) -> tc.Tensor:
 	return c.reshape(d * d, d * d)
 
 
-def kraus_to_superoperator(kraus_operators: List[tc.Tensor]) -> tc.Tensor:
+def kraus_to_superoperator(kraus_operators: Union[List[tc.Tensor], tc.Tensor]) -> tc.Tensor:
 	r"""Returns the matrix representation of the linear map with given Kraus operators.
 
 	Quantum channel E: L(H1) -> L(H2) may be described by a collection of operators A_i, called
@@ -182,7 +188,10 @@ def kraus_to_superoperator(kraus_operators: List[tc.Tensor]) -> tc.Tensor:
 	Returns:
 		Superoperator matrix of the channel specified by kraus_operators.
 	"""
-	d_out, d_in = kraus_operators[0].shape
-	ops_list = tc.stack(kraus_operators)
+	d_out, d_in = kraus_operators.shape[0], kraus_operators.shape[1]
+	if isinstance(kraus_operators, list):
+		ops_list = tc.stack(kraus_operators)
+	else:
+		ops_list = kraus_operators.permute(2, 0, 1)
 	m = tc.einsum('bij,bkl->ikjl', ops_list, ops_list.conj())
 	return m.reshape((d_out * d_out, d_in * d_in))
