@@ -4,7 +4,7 @@ Time: 04.26.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, Dict
 
 import numpy as np
 import tensornetwork as tn
@@ -15,7 +15,7 @@ from Library.ADGate import TensorGate
 from Library.ADNGate import NoisyTensorGate
 from Library.AbstractGate import AbstractGate
 from Library.NoiseChannel import NoiseChannel
-from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity, svdKappa_left2right
+from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity, svdKappa_left2right, cal_entropy
 from Library.realNoise import czExp_channel
 from Library.tools import select_device, EdgeName2AxisName, is_nested
 
@@ -24,7 +24,7 @@ class TensorCircuit(nn.Module):
 	def __init__(self, qn: int, ideal: bool = True, noiseType: str = 'no', chiFilename: str = None,
 	             crossTalk: bool = False,
 	             chi: Optional[int] = None, kappa: Optional[int] = None, tnn_optimize: bool = True,
-	             chip: Optional[str] = None, device: str or int = None):
+	             chip: Optional[str] = None, device: str or int = None, _entropy: bool = False):
 		"""
 		Args:
 			ideal: Whether the circuit is ideal.  --> Whether the one-qubit gate is ideal or not.
@@ -34,7 +34,8 @@ class TensorCircuit(nn.Module):
 			kappa: The kappa parameter of the TNN.
 			tnn_optimize: Whether the TNN is optimized.
 			chip: The name of the chip.
-			device: The device of the torch.
+			device: The device of the torch;
+			_entropy: Whether to record the system entropy.
 		"""
 		super(TensorCircuit, self).__init__()
 		# Paras. About Torch
@@ -49,6 +50,10 @@ class TensorCircuit(nn.Module):
 		self.qnumber = qn
 		self.state = None
 		self.initState = None
+
+		# Entropy
+		self._entropy = _entropy
+		self._entropyList = {f'qEntropy_{_i}': [] for _i in range(self.qnumber)}
 
 		# Noisy Circuit Setting
 		self.ideal = ideal
@@ -201,7 +206,7 @@ class TensorCircuit(nn.Module):
 				if not self.realNoise:
 					# Adding depolarization noise channel to Two-qubit gate
 					gate.tensor = tc.einsum('ijklp, klmn -> ijmnp', self.Noise.dpCTensor2, gate.tensor)
-				if gate.tensor.shape[-1] != 1 or len(gate.tensor.shape) != 4:
+				if (gate.tensor.shape[-1] != 1 or len(gate.tensor.shape) != 4) and not gate.ideal:
 					_gateAxisNames.append(f'I_{_minIdx}')
 
 			gate = tn.Node(gate.tensor.squeeze(), name=gate.name, axis_names=_gateAxisNames)
@@ -277,8 +282,6 @@ class TensorCircuit(nn.Module):
 			                                                      right_name=f'qubit_{_maxIdx}',
 			                                                      edge_name=f'bond_{_minIdx}_{_maxIdx}')
 			EdgeName2AxisName([_qubits[_minIdx], _qubits[_maxIdx]])
-			# # Reset MPS center
-			# _qubits[_minIdx].center, _qubits[_maxIdx].center = False, True
 		else:
 			"""
 							| m                             | i
@@ -471,7 +474,7 @@ class TensorCircuit(nn.Module):
 			return self.DM
 
 	def forward(self, _state: list[tn.Node] = None,
-	            state_vector: bool = False, reduced_index: list = None, forceVectorRequire: bool = False) -> tc.Tensor:
+	            state_vector: bool = False, reduced_index: list = None, forceVectorRequire: bool = False) -> (tc.Tensor, Dict):
 		r"""
 		Forward propagation of tensornetwork.
 
@@ -488,6 +491,10 @@ class TensorCircuit(nn.Module):
 						svdKappa_left2right(_state, kappa=self.kappa)
 					qr_left2right(_state)
 					svd_right2left(_state, chi=self.chi)
+			if self._entropy:
+				_entropy = cal_entropy(_state, kappa=self.kappa)
+				for _oqs in self._oqs_list[_i]:
+					self._entropyList[f'qEntropy_{_oqs}'].append(_entropy[f'qEntropy_{_oqs}'])
 		# LastLayer noise-truncation
 		if self.tnn_optimize and not self.ideal:
 			svdKappa_left2right(_state, kappa=self.kappa)
