@@ -36,7 +36,7 @@ class Chip_information:
 
 	def worst4Test(self):
 		"""Set chip information for the worst4Test scenario."""
-		self.chipName = 'beta4Test'
+		self.chipName = 'worst4Test'
 		if self.queryTime is None:
 			self.gateTime = 30
 			self.T1 = 2e2

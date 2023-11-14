@@ -16,6 +16,7 @@ class NoisyTensorGate(object):
 		self.rank = None
 		self.dimension = None
 		self.single = None
+		self.ideal = False
 
 		self.device = select_device(device)
 		self.dtype = dtype

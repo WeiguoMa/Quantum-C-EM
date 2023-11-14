@@ -134,15 +134,3 @@ class NoiseChannel(object):
                                                      [0, 0]]], dtype=self.dtype, device=self.device)
         _apdc_tensor = tc.einsum('ijk -> jki', _apdc_tensor)
         return _apdc_tensor
-
-
-if __name__ == '__main__':
-    noise = NoiseChannel()
-    dpCTensor = noise.dpCTensor2
-    print(dpCTensor.shape)
-    cnotTensor = tc.tensor([[1, 0, 0, 0],
-                            [0, 1, 0, 0],
-                            [0, 0, 0, 1],
-                            [0, 0, 1, 0]], dtype=tc.complex128).reshape((2, 2, 2, 2))
-    exTensorB = tc.einsum('ijklp, klmn -> ijmnp', dpCTensor, cnotTensor)
-    print(exTensorB[:, :, :, :, 4])
