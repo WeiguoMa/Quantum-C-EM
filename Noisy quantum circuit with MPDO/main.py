@@ -25,7 +25,7 @@ chi, kappa = 4, 4
 
 # Establish a quantum circuit
 circuit = TensorCircuit(qn=qnumber, ideal=ideal_circuit, noiseType=noiseType,
-                        chiFilename=chiFilename, crossTalk=crossTalk, chi=chi, kappa=kappa, chip='worst4Test')
+                        chiFilename=chiFilename, crossTalk=crossTalk, chi=chi, kappa=kappa, chip='worst4Test', device='cpu')
 
 circuit.add_gate(AbstractGate().h(), [0])
 circuit.add_gate(AbstractGate().cnot(), [0, 1])
