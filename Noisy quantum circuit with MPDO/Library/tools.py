@@ -92,7 +92,7 @@ def ket_minus(dtype, device: str or int = 'cpu'):
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
-def create_ket0Series(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
+def create_ket0Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -112,7 +112,7 @@ def create_ket0Series(qnumber: int, dtype=tc.complex128, device: str or int = 'c
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ket1Series(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
+def create_ket1Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -132,7 +132,7 @@ def create_ket1Series(qnumber: int, dtype=tc.complex128, device: str or int = 'c
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
+def create_ketHadamardSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -152,7 +152,7 @@ def create_ketHadamardSeries(qnumber: int, dtype=tc.complex128, device: str or i
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketPlusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
+def create_ketPlusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -172,7 +172,7 @@ def create_ketPlusSeries(qnumber: int, dtype=tc.complex128, device: str or int =
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketMinusSeries(qnumber: int, dtype=tc.complex128, device: str or int = 'cpu') -> list:
+def create_ketMinusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -192,7 +192,7 @@ def create_ketMinusSeries(qnumber: int, dtype=tc.complex128, device: str or int 
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex128, device: str or int = 'cpu') -> list:
+def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -265,7 +265,7 @@ def basis_list(N: int) -> list:
     """
     _view_basis = []
     for ii in range(2 ** N):
-        _basis = tc.zeros((2 ** N, 1), dtype=tc.complex128)
+        _basis = tc.zeros((2 ** N, 1), dtype=tc.complex64)
         _basis[ii] = 1
         _view_basis.append(_basis)
     return _view_basis
@@ -412,7 +412,7 @@ def gates_list(N: int, basis_gates: list = None) -> list:
     g_set = [''.join(i) for i in itertools.product(basis_gates, repeat=N)]
     return g_set
 
-def name2matrix(operation_name: str, dtype=tc.complex128, device: str or int = 'cpu'):
+def name2matrix(operation_name: str, dtype=tc.complex64, device: str or int = 'cpu'):
     r"""
     As you can see below, A CAPITAL stands for a basis, actually an operation, that is arbitrarily defined.
     :param operation_name: like 'ZZZ'
@@ -450,7 +450,7 @@ def sqrt_matrix(density_matrix):
     """
     evs, vecs = tc.linalg.eigh(density_matrix)
     evs = tc.where(evs > 0.0, evs, 0.0)
-    evs = tc.real(evs).to(tc.complex128)
+    evs = tc.real(evs).to(tc.complex64)
     return vecs @ tc.diag(tc.sqrt(evs)) @ vecs.T.conj()
 
 def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> tc.Tensor:

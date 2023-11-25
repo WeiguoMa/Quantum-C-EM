@@ -186,7 +186,7 @@ def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kap
 
             # SVD to truncate the inner dimension
             _u, _s, _ = tc.linalg.svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), full_matrices=False)
-            _s = _s.to(dtype=tc.complex128)
+            _s = _s.to(dtype=tc.complex64)
 
             # Truncate the inner dimension
             if kappa is None or kappa > _s.nelement():
@@ -232,7 +232,7 @@ def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: int 
             _shape = _qubitTensor.shape
             # SVD to truncate the inner dimension
             _u, _s, _ = tc.linalg.svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), full_matrices=False)
-            _s = _s.to(dtype=tc.complex128)
+            _s = _s.to(dtype=tc.complex64)
             # Truncate the inner dimension
             if kappa is None or kappa > _s.nelement():
                 kappa = _s.nelement()

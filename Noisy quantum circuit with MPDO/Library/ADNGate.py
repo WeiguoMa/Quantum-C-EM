@@ -10,7 +10,7 @@ from Library.tools import select_device
 
 
 class NoisyTensorGate(object):
-	def __init__(self, chi: int = None, device: str or int = 'cpu', dtype=tc.complex128):
+	def __init__(self, chi: int = None, device: str or int = 'cpu', dtype=tc.complex64):
 		self.name = None
 		self.tensor = None
 		self.rank = None

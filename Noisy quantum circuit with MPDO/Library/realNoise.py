@@ -32,7 +32,7 @@ def readExpChi(filename: str = None):
     else:
         raise TypeError('Current file-type is not supported.')
 
-def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex128, device: str or int = 'cpu') -> list[tc.Tensor]:
+def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str or int = 'cpu') -> list[tc.Tensor]:
     r"""
     :param chi: Chi matrix from experiment;
     :param gate_factor: Manual API;

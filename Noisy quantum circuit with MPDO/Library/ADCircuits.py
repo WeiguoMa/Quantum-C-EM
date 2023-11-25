@@ -40,7 +40,7 @@ class TensorCircuit(nn.Module):
 		super(TensorCircuit, self).__init__()
 		# Paras. About Torch
 		self.device = select_device(device)
-		self.dtype = tc.complex128
+		self.dtype = tc.complex64
 		self.layers = nn.Sequential()
 		self._oqs_list = []
 
@@ -486,9 +486,9 @@ class TensorCircuit(nn.Module):
 		for _i, layer in enumerate(self.layers):
 			self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
 			if layer._lastTruncation and self.tnn_optimize:
+				if not self.ideal:
+					svdKappa_left2right(_state, kappa=self.kappa)
 				if checkConnectivity(_state):
-					if not self.ideal:
-						svdKappa_left2right(_state, kappa=self.kappa)
 					qr_left2right(_state)
 					svd_right2left(_state, chi=self.chi)
 			if self._entropy:

@@ -54,4 +54,4 @@ def tc_expect(operator: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
 def tc_basis(dimension: int, N: int = 0):
     ls = np.array([0] * dimension).reshape(dimension, 1)
     ls[N] = 1
-    return tc.tensor(ls, dtype=tc.complex128)
+    return tc.tensor(ls, dtype=tc.complex64)
