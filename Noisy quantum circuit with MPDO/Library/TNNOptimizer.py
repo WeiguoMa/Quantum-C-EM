@@ -4,10 +4,10 @@ Time: 04.13.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 
+from typing import List, Union, Optional
+
 import tensornetwork as tn
 import torch as tc
-
-from typing import List, Union
 
 from Library.tools import EdgeName2AxisName
 
@@ -17,6 +17,7 @@ __all__ = [
     'svd_right2left',
     'svdKappa_left2right'
 ]
+
 
 def checkConnectivity(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     """
@@ -42,12 +43,14 @@ def checkConnectivity(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
             connectivity = False
         return connectivity
 
+
 def von_neumann_entropy(rho):
     eigenvalues, _ = tc.linalg.eigh(rho)
     eigenvalues = eigenvalues.abs()
     eigenvalues = eigenvalues[eigenvalues > 1e-10]
     entropy = -tc.sum(eigenvalues * tc.log(eigenvalues))
     return entropy
+
 
 def qr_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     """
@@ -59,29 +62,30 @@ def qr_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     Returns:
         Nodes after QR decomposition, on progress.
     """
-    if not isinstance(_qubits, list):
+    if not isinstance(_qubits, List):
         raise TypeError('input should be a list of qubits nodes')
 
     for _i in range(len(_qubits) - 1):
-        _left_edges_name, _right_edges_name = [name for name in _qubits[_i].axis_names if f'bond_{_i}_' not in name],\
+        _left_edges_name, _right_edges_name = [name for name in _qubits[_i].axis_names if f'bond_{_i}_' not in name], \
             [name for name in _qubits[_i].axis_names if f'bond_{_i}_' in name]
-        _left_edges, _right_edges = [_qubits[_i][_name] for _name in _left_edges_name],\
+        _left_edges, _right_edges = [_qubits[_i][_name] for _name in _left_edges_name], \
             [_qubits[_i][_name] for _name in _right_edges_name]
         _q, _r = tn.split_node_qr(_qubits[_i],
                                   left_edges=_left_edges,
                                   right_edges=_right_edges,
                                   left_name=f'qubit_{_i}',
                                   right_name='right_waiting4contract2form_right',
-                                  edge_name=f'qrbond_{_i}_{_i+1}')
+                                  edge_name=f'qrbond_{_i}_{_i + 1}')
 
-        _r = tn.contract_between(_r, _qubits[_i+1])
-        _r.name = 'qubit_{}'.format(_i+1)
+        _r = tn.contract_between(_r, _qubits[_i + 1])
+        _r.name = 'qubit_{}'.format(_i + 1)
 
-        _qubits[_i], _qubits[_i+1] = _q, _r
+        _qubits[_i], _qubits[_i + 1] = _q, _r
         # ProcessFunction, for details, see the function definition.
         EdgeName2AxisName([_qubits[_i], _qubits[_i + 1]])
 
-def svd_right2left(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: int = None):
+
+def svd_right2left(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: Optional[int] = None):
     r"""
     SVD from right to left.
 
@@ -111,15 +115,16 @@ def svd_right2left(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: in
         EdgeName2AxisName([contracted_two_nodes])
         # SVD
         _qubits[idx - 1], _qubits[idx], _ = tn.split_node(contracted_two_nodes,
-                                         left_edges=_left_edges,
-                                         right_edges=_right_edges,
-                                         left_name=_qubits[idx - 1].name,
-                                         right_name=_qubits[idx].name,
-                                         edge_name=f'bond_{idx-1}_{idx}',
-                                         max_singular_values=chi)
+                                                          left_edges=_left_edges,
+                                                          right_edges=_right_edges,
+                                                          left_name=_qubits[idx - 1].name,
+                                                          right_name=_qubits[idx].name,
+                                                          edge_name=f'bond_{idx - 1}_{idx}',
+                                                          max_singular_values=chi)
         EdgeName2AxisName([_qubits[idx - 1], _qubits[idx]])
 
-def svd_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: int = None):
+
+def svd_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: Optional[int] = None):
     """
         SVD from left to right.
 
@@ -157,7 +162,8 @@ def svd_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]], chi: in
                                                           max_singular_values=chi)
         EdgeName2AxisName([_qubits[idx], _qubits[idx + 1]])
 
-def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: int = None):
+
+def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: Optional[int] = None):
     r"""
     Perform SVD with optional dimension truncation on a list of quantum tensors.
 
@@ -172,10 +178,10 @@ def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kap
         # Shape-relating
         _qubitTensor, _qubitAxisNames = _qubit.tensor, _qubit.axis_names
         _qubitIdx = ''.join([
-            'l' * (f'bond_{_num-1}_{_num}' in _qubitAxisNames),
+            'l' * (f'bond_{_num - 1}_{_num}' in _qubitAxisNames),
             'i',
             'j' * (f'I_{_num}' in _qubitAxisNames),
-            'r' * (f'bond_{_num}_{_num+1}' in _qubitAxisNames)
+            'r' * (f'bond_{_num}_{_num + 1}' in _qubitAxisNames)
         ])
 
         _jIdx = _qubitIdx.find('j')
@@ -203,7 +209,8 @@ def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kap
                                      tc.reshape(tc.matmul(_u, _s), _shape[:-1] + (kappa,)))
             _qubit.set_tensor(_qubitTensor)
 
-def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: int = None):
+
+def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: List[int] = None):
     r"""
     Perform SVD with optional dimension truncation on a list of quantum tensors.
 
@@ -219,10 +226,10 @@ def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: int 
         # Shape-relating
         _qubitTensor, _qubitAxisNames = _qubit.tensor, _qubit.axis_names
         _qubitIdx = ''.join([
-            'l' * (f'bond_{_num-1}_{_num}' in _qubitAxisNames),
+            'l' * (f'bond_{_num - 1}_{_num}' in _qubitAxisNames),
             'i',
             'j' * (f'I_{_num}' in _qubitAxisNames),
-            'r' * (f'bond_{_num}_{_num+1}' in _qubitAxisNames)
+            'r' * (f'bond_{_num}_{_num + 1}' in _qubitAxisNames)
         ])
 
         _jIdx = _qubitIdx.find('j')

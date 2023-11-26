@@ -32,6 +32,7 @@ def is_nested(_lst: list) -> bool:
     """
     return any(isinstance(_i, list) for _i in _lst)
 
+
 def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
     r"""
     ProcessFunction -->
@@ -55,12 +56,13 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
             # hardcode, which is relating to code design from weiguo
             if 'qr' in _edge.name:
                 _edge.set_name(_edge.name.replace('qr', ''))
-            if 'bond_' in _edge.name:          # Fact that 'bond_a_b' is the same as 'bond_b_a'
+            if 'bond_' in _edge.name:  # Fact that 'bond_a_b' is the same as 'bond_b_a'
                 _split = _edge.name.split('_')
                 if int(_split[1]) > int(_split[2]):
                     _edge.name = f'bond_{_split[2]}_{_split[1]}'
             _axis_names.append(_edge.name)
         _node.axis_names = _axis_names
+
 
 def ket0(dtype, device: str or int = 'cpu'):
     r"""
@@ -68,11 +70,13 @@ def ket0(dtype, device: str or int = 'cpu'):
     """
     return tc.tensor([1. + 0.j, 0. + 0.j], dtype=dtype, device=device)
 
+
 def ket1(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |1>
     """
     return tc.tensor([0. + 0.j, 1. + 0.j], dtype=dtype, device=device)
+
 
 def ket_hadamard(dtype, device: str or int = 'cpu'):
     r"""
@@ -80,17 +84,20 @@ def ket_hadamard(dtype, device: str or int = 'cpu'):
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
+
 def ket_plus(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |+>
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
+
 def ket_minus(dtype, device: str or int = 'cpu'):
     r"""
     Return: Return the state |->
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
+
 
 def create_ket0Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
@@ -112,6 +119,7 @@ def create_ket0Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cp
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
+
 def create_ket1Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
@@ -131,6 +139,7 @@ def create_ket1Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cp
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
+
 
 def create_ketHadamardSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
@@ -152,6 +161,7 @@ def create_ketHadamardSeries(qnumber: int, dtype=tc.complex64, device: str or in
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
+
 def create_ketPlusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
@@ -172,6 +182,7 @@ def create_ketPlusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
+
 def create_ketMinusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
     create initial qubits
@@ -191,6 +202,7 @@ def create_ketMinusSeries(qnumber: int, dtype=tc.complex64, device: str or int =
     ]
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
+
 
 def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64, device: str or int = 'cpu') -> list:
     r"""
@@ -214,6 +226,7 @@ def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64, 
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
+
 def plot_nodes(_nodes):
     r"""
     Plot tensor network nodes.
@@ -225,6 +238,7 @@ def plot_nodes(_nodes):
         None
     """
     raise NotImplementedError('Plotting is not supported yet.')
+
 
 def tc_expect(operator: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
     if not isinstance(operator, tc.Tensor) or not isinstance(state, tc.Tensor):
@@ -239,6 +253,7 @@ def tc_expect(operator: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
         result = tc.matmul(state.T.conj(), tc.matmul(operator, state))
         return tc.abs(result)
 
+
 def basis_name_list(N: int) -> list:
     r"""
     Generate a series of bases' name, like
@@ -247,6 +262,7 @@ def basis_name_list(N: int) -> list:
     _binary_rep = ['0', '1']
     _b_set = [''.join(ii) for ii in itertools.product(_binary_rep, repeat=N)]
     return _b_set
+
 
 def basis_list(N: int) -> list:
     r"""
@@ -270,7 +286,9 @@ def basis_list(N: int) -> list:
         _view_basis.append(_basis)
     return _view_basis
 
-def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None, tolerant: Optional[float] = None) -> dict:
+
+def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None,
+                 tolerant: Optional[float] = None) -> dict:
     r"""
     Transform density matrix into probability distribution with provided bases.
 
@@ -316,6 +334,7 @@ def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None,
                 continue
     return _dc
 
+
 def plot_histogram(prob_psi: dict, title: str = None, filename: str = None):
     r"""
     Plot a histogram of probability distribution.
@@ -347,6 +366,7 @@ def plot_histogram(prob_psi: dict, title: str = None, filename: str = None):
         plt.savefig(filename)
     plt.show()
 
+
 def select_device(device: str or int = None):
     if isinstance(device, str):
         return device
@@ -360,6 +380,7 @@ def select_device(device: str or int = None):
             warnings.warn('CUDA is not available, use CPU instead.')
             return 'cpu'
 
+
 def generate_random_string_without_duplicate(_n: int):
     r"""
     Generate a random string without duplicate characters.
@@ -370,6 +391,7 @@ def generate_random_string_without_duplicate(_n: int):
     Returns:
         _str: The random string.
     """
+
     def _generate_random_string(_n_):
         return ''.join(random.choices(string.ascii_lowercase, k=_n_))
 
@@ -377,6 +399,7 @@ def generate_random_string_without_duplicate(_n: int):
     while len(_str) != len(set(_str)):
         _str = _generate_random_string(_n)
     return _str
+
 
 def move_index(_str: str, _idx1: int, _idx2: int):
     r"""
@@ -393,6 +416,7 @@ def move_index(_str: str, _idx1: int, _idx2: int):
     _str = list(_str)
     _str.insert(_idx2, _str.pop(_idx1))
     return ''.join(_str)
+
 
 def gates_list(N: int, basis_gates: list = None) -> list:
     r"""
@@ -411,6 +435,7 @@ def gates_list(N: int, basis_gates: list = None) -> list:
         basis_gates = ['I', 'X', 'Y', 'Z']
     g_set = [''.join(i) for i in itertools.product(basis_gates, repeat=N)]
     return g_set
+
 
 def name2matrix(operation_name: str, dtype=tc.complex64, device: str or int = 'cpu'):
     r"""
@@ -439,6 +464,7 @@ def find_duplicate(_lst_):
     _duplicate_idx_ = [idx for idx, item in enumerate(_lst_) if item in _duplicate_item_]
     return _duplicate_item_, _duplicate_idx_
 
+
 def sqrt_matrix(density_matrix):
     r"""Compute the square root matrix of a density matrix where :math:`\rho = \sqrt{\rho} \times \sqrt{\rho}`
 
@@ -452,6 +478,7 @@ def sqrt_matrix(density_matrix):
     evs = tc.where(evs > 0.0, evs, 0.0)
     evs = tc.real(evs).to(tc.complex64)
     return vecs @ tc.diag(tc.sqrt(evs)) @ vecs.T.conj()
+
 
 def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> tc.Tensor:
     """
@@ -502,7 +529,7 @@ def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True, devic
     rho = rho.to(device='cpu')
     ps, psi = np.linalg.eigh(rho)
 
-    traceV = 1.0                                        # tc.trace(rho)
+    traceV = 1.0  # tc.trace(rho)
     fitFunc = lambda p: np.sum(np.abs(p - ps) ** 2)
     bounds = [(0.0, traceV + 0.001) for idx in range(len(ps))]
 
@@ -526,5 +553,3 @@ def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True, devic
 
     rho_semi = psi @ np.diag(newPs) @ psi.T.conj()
     return rho_semi.to(device=device)
-
-

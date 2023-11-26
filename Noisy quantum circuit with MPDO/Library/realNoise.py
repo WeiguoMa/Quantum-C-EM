@@ -32,6 +32,7 @@ def readExpChi(filename: str = None):
     else:
         raise TypeError('Current file-type is not supported.')
 
+
 def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str or int = 'cpu') -> list[tc.Tensor]:
     r"""
     :param chi: Chi matrix from experiment;
@@ -47,6 +48,7 @@ def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str
         N < Actual_space_size:
             raise Error that space for describing such system is not complete.
     """
+
     def _czNoisySPara(_chi):
         r"""
         Get $ E_i = \sqrt{d_i}\sum_jU_{ji}\tilde{E}_j $
@@ -137,24 +139,25 @@ def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str
     if gate_factor is None:
         gate_factor = _czNoisySPara(chi)
 
-    if is_nested_dict(gate_factor) is True:     # Multiple Error generator E_{} exist
+    if is_nested_dict(gate_factor) is True:  # Multiple Error generator E_{} exist
         _tensor = []
         for _value in gate_factor.values():
             _step_tensor = tc.zeros((2, 2, 2, 2), dtype=dtype, device=device)
             for _name_, _value_ in _value.items():
                 # linear equations
                 _step_tensor += tc.reshape(tc.tensor(_value_, dtype=dtype, device=device) * name2matrix(_name_),
-                                                                        shape=(2, 2, 2, 2))
+                                           shape=(2, 2, 2, 2))
             _tensor.append(_step_tensor)
     else:
         _tensor = tc.zeros((2, 2, 2, 2), dtype=dtype, device=device)
         for _name_, _value_ in gate_factor.items():
             # linear equations
             _tensor += tc.reshape(tc.tensor(_value_, dtype=dtype, device=device) * name2matrix(_name_),
-                                                                        shape=(2, 2, 2, 2))
+                                  shape=(2, 2, 2, 2))
         _tensor = [_tensor]
 
     return _tensor
+
 
 def czExp_channel(filename: str = None, device: int or str = 'cpu'):
     _chi = readExpChi(filename=filename)

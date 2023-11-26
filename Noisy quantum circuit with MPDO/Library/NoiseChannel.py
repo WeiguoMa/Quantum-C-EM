@@ -15,6 +15,7 @@ from Library.tools import select_device
 
 tn.set_default_backend("pytorch")
 
+
 class NoiseChannel(object):
     def __init__(self, chip: str = None, dtype=tc.complex64, device: str or int = 'cpu'):
         self.dtype = dtype
@@ -128,9 +129,9 @@ class NoiseChannel(object):
 
         _apdc_tensor = tc.tensor([[[1, 0],
                                    [0, np.sqrt(1 - (_param_T1 + _param_T2))]],
-                                            [[0, 0],
-                                             [0, np.sqrt(_param_T2)]],
-                                                    [[0, np.sqrt(_param_T1)],
-                                                     [0, 0]]], dtype=self.dtype, device=self.device)
+                                  [[0, 0],
+                                   [0, np.sqrt(_param_T2)]],
+                                  [[0, np.sqrt(_param_T1)],
+                                   [0, 0]]], dtype=self.dtype, device=self.device)
         _apdc_tensor = tc.einsum('ijk -> jki', _apdc_tensor)
         return _apdc_tensor

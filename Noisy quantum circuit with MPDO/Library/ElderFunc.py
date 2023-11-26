@@ -25,6 +25,7 @@ def contract_mps(_qubits):
         op = tn.contract_between(op, _qubits[i], allow_outer_product=True)
     return op
 
+
 def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
     r"""
     Calculate the density matrix of the state.
@@ -39,6 +40,7 @@ def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
         _dm: the density matrix node;
         _dm_tensor: the density matrix tensor.
     """
+
     def _re_permute(_axis_names_: list[str]):
         _left_, _right_ = [], []
         for _idx_, _name_ in enumerate(_axis_names_):
@@ -63,7 +65,7 @@ def calculate_DM(_qubits, noisy: bool = False, reduced_index: list = None):
     for i in range(len(_qubits)):
         if noisy is True:
             tn.connect(_qubits[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
-            _allowed_outer_product = False      # Edges between ket-bra are now connected, outer product is not allowed.
+            _allowed_outer_product = False  # Edges between ket-bra are now connected, outer product is not allowed.
         _contract_nodes.append(tn.contract_between(_qubits[i], _qubits_conj[i], name=f'contracted_qubit_{i}',
                                                    allow_outer_product=_allowed_outer_product))
     EdgeName2AxisName(_contract_nodes)
