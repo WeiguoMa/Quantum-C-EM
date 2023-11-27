@@ -302,7 +302,7 @@ class TensorCircuit(nn.Module):
                     else gate.tensor,
                     name=gate.name,
                     axis_names=[f'physics_{_idx}', f'inner_{_idx}',
-                                f'I_{_idx}'] if self.idealNoise or self.unified else [
+                                f'I_{_idx}'] if (self.idealNoise or self.unified) and not gate.ideal else [
                         f'physics_{_idx}', f'inner_{_idx}']
                 )
                 for _idx in _oqs

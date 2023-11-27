@@ -9,23 +9,20 @@ import numpy as np
 import tensornetwork as tn
 import torch as tc
 
-from Library.TensorOperations import tensorDot
 from Library.chipInfo import Chip_information
 from Library.tools import select_device
+from typing import Optional, Union
 
 tn.set_default_backend("pytorch")
 
 
-class NoiseChannel(object):
-    def __init__(self, chip: str = None, dtype=tc.complex64, device: str or int = 'cpu'):
+class NoiseChannel:
+    def __init__(self, chip: Optional[str] = None, dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         self.dtype = dtype
         self.device = select_device(device)
 
         # chip Info
-        if chip is None:
-            # chip = 'beta4Test'
-            chip = 'worst4Test'
-        self.chip = Chip_information().__getattribute__(chip)()
+        self.chip = (Chip_information().__getattribute__(chip or 'worst4Test'))()
         self.T1 = self.chip.T1
         self.T2 = self.chip.T2
         self.GateTime = self.chip.gateTime
@@ -42,48 +39,46 @@ class NoiseChannel(object):
         self.apdeCTensor = self.amp_phase_damping_error(time=self.GateTime, T1=self.T1, T2=self.T2)
 
     def depolarization_noise_channel(self, p: float, qn: int = 1) -> tc.Tensor:
-        r"""
-        The depolarization noise channel.
+        """
+        Constructs the depolarization noise channel tensor.
 
-        Args:
-            p: The probability of the depolarization noise.
-            qn: The number of qubits.
+        Parameters:
+        p : float
+            The probability of the depolarization noise.
+        qn : int, optional
+            The number of qubits, default is 1.
 
         Returns:
-            _dpc_tensor: The depolarization noise channel.
+        tc.Tensor
+            The tensor representing the depolarization noise channel.
 
-        Additional information:
-            .. math::
+        Raises:
+        ValueError
+            If the probability 'p' is not in the range [0, 1].
 
-                \epsilon(\rho) = (1 - \frac{3p}{4})\rho + \frac{p}{4}\left(X\rho X + Y\rho Y + Z\rho Z\right)
-
-                \epsilon(\rho) = (1 - p)\rho + \frac{p}{3}\left(X\rho X + Y\rho Y + Z\rho Z\right)
+        Notes:
+        The depolarization channel is modeled as:
+            \epsilon(\rho) = (1 - 3p/4)\rho + p/4(X\rhoX + Y\rhoY + Z\rhoZ) for a single qubit.
         """
+        if not 0 <= p <= 1:
+            raise ValueError('Probability p must be in the range [0, 1].')
 
-        def _iter_tensorDot(_inList: list, _qn: int):
-            __outList = []
-            for __element in _inList:
-                __outList += [tensorDot(__element, __elementIn) for __elementIn in self._basisPauli]
-            _qn -= 1
-            if _qn == 1:
-                return __outList
-            elif _qn == 0:
-                return self._basisPauli
-            else:
-                return _iter_tensorDot(__outList, _qn)
+        error_prob_list = [np.sqrt(1 - (4 ** qn - 1) * p / (4 ** qn))]
+        error_prob_list.extend([np.sqrt(p / (4 ** qn))] * (4 ** qn - 1))
 
-        if p < 0 or p > 1:
-            raise ValueError('The probability of the depolarization noise must be in [0, 1].')
+        error_diag = tc.diag(tc.tensor(error_prob_list, dtype=self.dtype, device=self.device))
 
-        # Construct the error matrix
-        _error_probList = [np.sqrt(1 - (4 ** qn - 1) * p / (4 ** qn))] + [np.sqrt(p / (4 ** qn))] * (4 ** qn - 1)
-        _error_diag = tc.diag(tc.tensor(_error_probList, dtype=tc.complex64, device=self.device))
-        _dpc_tensor = tc.stack(_iter_tensorDot(self._basisPauli, qn)).to(device=self.device)
-        # Set the third edge as inner edge, which was introduced by the error_diag and the first edge as physics edge.
-        _dpc_tensor = tc.einsum('ij, jfk -> fki', _error_diag, _dpc_tensor)
-        # Reshape as tensor
-        _dpc_tensor = _dpc_tensor.reshape([2] * (2 * qn) + [_dpc_tensor.shape[-1]])
-        return _dpc_tensor
+        # Direct implementation of tensor product using torch.kron
+        def iter_kron_product(input_list, remaining_qubits):
+            if remaining_qubits == 0:
+                return input_list
+            output_list = [tc.kron(e, b) for e in input_list for b in self._basisPauli]
+            return iter_kron_product(output_list, remaining_qubits - 1)
+
+        dpc_tensor = tc.stack(iter_kron_product(self._basisPauli, qn - 1)).to(device=self.device)
+        dpc_tensor = tc.einsum('ij, jfk -> fki', error_diag, dpc_tensor)
+        dpc_tensor = dpc_tensor.reshape([2] * (2 * qn) + [dpc_tensor.shape[-1]])
+        return dpc_tensor
 
     def amp_phase_damping_error(self, time: float, T1: float, T2: float) -> tc.Tensor:
         r"""

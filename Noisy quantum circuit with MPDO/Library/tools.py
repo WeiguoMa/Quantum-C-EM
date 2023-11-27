@@ -17,8 +17,6 @@ import tensornetwork as tn
 import torch as tc
 from scipy.optimize import minimize
 
-from Library.TensorOperations import tensorDot
-
 
 def is_nested(_lst: List) -> bool:
     r"""
@@ -227,7 +225,6 @@ def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64,
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
-
 def tc_expect(oper: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
     """
         Calculates the expectation value for operator(s) and state(s) in PyTorch,
@@ -249,7 +246,7 @@ def tc_expect(oper: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
 
     def _single_expect(o, s):
         if s.dim() == 1:  # State vector (ket)
-            return tc.matmul(tc.matmul(s.T.conj(), o), s)
+            return tc.einsum('i, ij, j', s.conj(), o, s)
         elif s.dim() == 2:  # Density matrix
             return tc.trace(tc.matmul(o, s))
         else:
@@ -298,7 +295,7 @@ def density2prob(rho_in: tc.Tensor, bases: Optional[Dict] = None, tolerant: Opti
             )
 
     # Calculate probabilities
-    _prob = [tc.abs(tc_expect(rho_in, base)).item() for base in _view_basis]
+    _prob = [tc.abs(tc_expect(rho_in, base.view(-1))).item() for base in _view_basis]
 
     # Create dictionary and normalize
     _prob_sum = sum(_prob)
@@ -371,44 +368,53 @@ def generate_random_string_without_duplicate(_n: int):
     return _str
 
 
-def gates_list(N: int, basis_gates: Optional[List] = None) -> List:
-    r"""
-    Generates a series of gate sets as basis,
-    N = 1 --> list[I, X, Y, Z]
-    N = 2 --> list[II, IX, IY, IZ, XI, XX, XY, XZ, YI, YX, YY, YZ, ZI, ZX, ZY, ZZ]
-    ... Strings are inside of list.
-    Attention:
-        This function ONLY fit well A CAPITAL as a gate. Ugly but useful
-                                        , u might found that this is just a representation.
-    :param N: Number of qubits;
-    :param basis_gates: basis you chose as basis;
-    :return: Basis list.
+def gates_list(N: int, basis_gates: Optional[List[str]] = None) -> List[str]:
+    """
+    Generates a series of gate sets as basis.
+
+    For N qubits, it creates all possible combinations of the specified basis gates.
+    Example:
+    - N = 1 --> ['I', 'X', 'Y', 'Z']
+    - N = 2 --> ['II', 'IX', 'IY', 'IZ', 'XI', 'XX', 'XY', 'XZ', 'YI', 'YX', 'YY', 'YZ', 'ZI', 'ZX', 'ZY', 'ZZ']
+
+    Args:
+        N: Number of qubits.
+        basis_gates: List of basis gates. Default is ['I', 'X', 'Y', 'Z'].
+
+    Returns:
+        List of strings representing gate combinations.
     """
     if basis_gates is None:
         basis_gates = ['I', 'X', 'Y', 'Z']
-    g_set = [''.join(i) for i in itertools.product(basis_gates, repeat=N)]
-    return g_set
+
+    return [''.join(gates) for gates in itertools.product(basis_gates, repeat=N)]
 
 
 def name2matrix(operation_name: str, dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-    r"""
-    As you can see below, A CAPITAL stands for a basis, actually an operation, that is arbitrarily defined.
-    :param operation_name: like 'ZZZ'
-    :param dtype: data type
-    :param device: cpu or gpu
-    :return: Product matrix
     """
-    operation_list = []
-    for letter in operation_name:
-        if letter == 'I':
-            operation_list.append(tc.eye(2, dtype=dtype, device=device))
-        elif letter == 'X':
-            operation_list.append(tc.tensor([[0, 1], [1, 0]], dtype=dtype, device=device))
-        elif letter == 'Y':
-            operation_list.append(-1j * tc.tensor([[0, -1j], [1j, 0]], dtype=dtype, device=device))
-        elif letter == 'Z':
-            operation_list.append(tc.tensor([[1, 0], [0, -1]], dtype=dtype, device=device))
-    return tensorDot(operation_list)
+    Generate a product matrix for a given operation sequence.
+
+    Args:
+        operation_name: String representing operations, like 'ZZZ'.
+        dtype: Data type of the tensors.
+        device: Computation device ('cpu' or GPU index).
+
+    Returns:
+        Product matrix corresponding to the sequence of operations.
+    """
+    # Define the operation matrices
+    operations = {
+        'I': tc.eye(2, dtype=dtype, device=device),
+        'X': tc.tensor([[0, 1], [1, 0]], dtype=dtype, device=device),
+        'Y': -1j * tc.tensor([[0, -1j], [1j, 0]], dtype=dtype, device=device),
+        'Z': tc.tensor([[1, 0], [0, -1]], dtype=dtype, device=device)
+    }
+
+    # Generate the list of operation matrices
+    operation_list = [operations[letter] for letter in operation_name]
+
+    # Compute the tensor product of the matrices
+    return reduce(tc.kron, operation_list)
 
 
 def sqrt_matrix(density_matrix: tc.Tensor) -> tc.Tensor:
