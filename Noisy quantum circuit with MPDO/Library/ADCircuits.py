@@ -4,7 +4,7 @@ Time: 04.26.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 from copy import deepcopy
-from typing import Optional, Dict, Union
+from typing import Optional, Dict, Union, List
 
 import numpy as np
 import tensornetwork as tn
@@ -21,10 +21,15 @@ from Library.tools import select_device, EdgeName2AxisName, is_nested
 
 
 class TensorCircuit(nn.Module):
-    def __init__(self, qn: int, ideal: bool = True, noiseType: str = 'no', chiFilename: str = None,
+    def __init__(self, qn: int,
+                 ideal: bool = True,
+                 noiseType: str = 'no',
+                 chiFilename: Optional[str] = None,
                  crossTalk: bool = False,
-                 chi: Optional[int] = None, kappa: Optional[int] = None, tnn_optimize: bool = True,
-                 chip: Optional[str] = None, device: Optional[Union[str, int]] = None, _entropy: bool = False):
+                 chi: Optional[int] = None, kappa: Optional[int] = None,
+                 tnn_optimize: bool = True,
+                 chip: Optional[str] = None, device: Optional[Union[str, int]] = None,
+                 _entropy: bool = False):
         """
         Args:
             ideal: Whether the circuit is ideal.  --> Whether the one-qubit gate is ideal or not.
@@ -84,7 +89,7 @@ class TensorCircuit(nn.Module):
         self.tnn_optimize = tnn_optimize
 
     @staticmethod
-    def _calOrder(minIdx: int, maxIdx: int = None, lBond: bool = False,
+    def _calOrder(minIdx: int, maxIdx: Optional[int] = None, lBond: bool = False,
                   smallI: bool = False, bigI: bool = False, rBond: bool = False, single: bool = False):
         if single:
             _return = [f'bond_{minIdx - 1}_{minIdx}'] * lBond \
@@ -97,7 +102,7 @@ class TensorCircuit(nn.Module):
                       + [f'bond_{maxIdx}_{maxIdx + 1}'] * rBond
         return _return
 
-    def _transpile_gate(self, _gate_: AbstractGate, _oqs_: list[int]):
+    def _transpile_gate(self, _gate_: AbstractGate, _oqs_: List[int]):
         """
         Transpile a quantum gate into a sequence of gates and operating qubits.
 
@@ -135,7 +140,7 @@ class TensorCircuit(nn.Module):
             _gateList_, _oqsList_ = [_gate_], [_oqs_]
         return _gateList_, _oqsList_
 
-    def _crossTalkZ_transpile(self, _gate_: AbstractGate, _oqs_: list[int]):
+    def _crossTalkZ_transpile(self, _gate_: AbstractGate, _oqs_: List[int]):
         _minOqs, _maxOqs = min(_oqs_), max(_oqs_)
         if _minOqs == _maxOqs:
             _Angle = np.random.normal(loc=np.pi / 16, scale=np.pi / 128,
@@ -159,8 +164,7 @@ class TensorCircuit(nn.Module):
             _gateList_.pop(-1), _oqsList_.pop(-1)
         return _gateList_, _oqsList_
 
-    def _add_gate(self, _qubits: list[tn.Node] or list[tn.AbstractNode],
-                  _layer_num: int, _oqs: list[int]):
+    def _add_gate(self, _qubits: List[tn.AbstractNode], _layer_num: int, _oqs: List[int]):
         r"""
         Add quantum Gate to tensornetwork
 
@@ -174,11 +178,11 @@ class TensorCircuit(nn.Module):
         gate = self.layers[_layer_num].gate
         _maxIdx, _minIdx = max(_oqs), min(_oqs)
 
-        if not isinstance(_qubits, list):
+        if not isinstance(_qubits, List):
             raise TypeError('Qubit must be a list of nodes.')
         if not isinstance(gate, (TensorGate, NoisyTensorGate)):
             raise TypeError(f'Gate must be a TensorGate, current type is {type(gate)}.')
-        if not isinstance(_oqs, list):
+        if not isinstance(_oqs, List):
             raise TypeError('Operating qubits must be a list.')
         if _maxIdx >= self.qnumber:
             raise ValueError('Qubit index out of range.')
@@ -186,7 +190,7 @@ class TensorCircuit(nn.Module):
         single = gate.single
         gate.tensor = gate.tensor.to(device=self.device)
 
-        if single is False:  # Two-qubit gate
+        if not single:  # Two-qubit gate
             """
                            | i  | j                         | w              | p
                         ___|____|___                    ____|____        ____|____
@@ -266,11 +270,13 @@ class TensorCircuit(nn.Module):
                     _contract_qubits.set_tensor(_contract_qubitsTensor_AoP)
 
             # Split back to two qubits
-            _left_AxisName = ['bond_{}_{}'.format(_minIdx - 1, _minIdx)] * _lBond + [f'physics_{_minIdx}'] + \
-                             [f'I_{_minIdx}'] * (self.idealNoise or self.realNoise)
-            _right_AxisName = [f'physics_{_maxIdx}'] \
-                              + [f'I_{_maxIdx}'] * ((self.idealNoise or self.realNoise) and _bigI) \
-                              + ['bond_{}_{}'.format(_maxIdx, _maxIdx + 1)] * _rBond
+            _left_AxisName = [f'bond_{_minIdx - 1}_{_minIdx}'] * _lBond
+            _left_AxisName.extend([f'physics_{_minIdx}'])
+            _left_AxisName.extend([f'I_{_minIdx}'] * (self.idealNoise or self.realNoise))
+
+            _right_AxisName = [f'physics_{_maxIdx}']
+            _right_AxisName.extend([f'I_{_maxIdx}'] * ((self.idealNoise or self.realNoise) and _bigI))
+            _right_AxisName.extend([f'bond_{_maxIdx}_{_maxIdx + 1}'] * _rBond)
 
             _left_edges, _right_edges = [_contract_qubits[name] for name in _left_AxisName], \
                 [_contract_qubits[name] for name in _right_AxisName]
@@ -355,7 +361,7 @@ class TensorCircuit(nn.Module):
                     else:  # Ideal Gate and Qubit
                         _qubit.set_tensor(_qubitTensor_AOP)
 
-    def add_gate(self, gate: AbstractGate, oqs: list):
+    def add_gate(self, gate: AbstractGate, oqs: List):
         r"""
         Add quantum gate to circuit layer by layer.
 
@@ -370,7 +376,7 @@ class TensorCircuit(nn.Module):
             raise TypeError('Gate must be a AbstractGate.')
 
         oqs = [oqs] if isinstance(oqs, int) else oqs
-        if not isinstance(oqs, list):
+        if not isinstance(oqs, List):
             raise TypeError('Operating qubits must be a list.')
 
         if self.realNoise:
@@ -397,8 +403,8 @@ class TensorCircuit(nn.Module):
         self.i += 1
 
     def _calculate_DM(self, state_vector: bool = False,
-                      reduced_index: Optional[list[list[int] or int]] = None) -> tc.Tensor:
-        r"""
+                      reduced_index: Optional[List[Union[List[int], int]]] = None) -> tc.Tensor:
+        """
         Calculate the density matrix of the state.
 
         Args:
@@ -473,10 +479,12 @@ class TensorCircuit(nn.Module):
             self.DM = _vector.tensor.reshape((2 ** self.qnumber, 1)) if not self.fVR else _vector.tensor
             return self.DM
 
-    def forward(self, _state: list[tn.Node] = None,
-                state_vector: bool = False, reduced_index: list = None, forceVectorRequire: bool = False) -> (
-    tc.Tensor, Dict):
-        r"""
+    def forward(self,
+                _state: List[tn.AbstractNode],
+                state_vector: bool = False,
+                reduced_index: Optional[List] = None,
+                forceVectorRequire: bool = False) -> Union[tc.Tensor, Dict]:
+        """
         Forward propagation of tensornetwork.
 
         Returns:
