@@ -175,7 +175,6 @@ class TensorCircuit(nn.Module):
         """
 
         gate = self.layers[_layer_num].gate
-        print(self.layers[_layer_num])
         _maxIdx, _minIdx = max(_oqs), min(_oqs)
 
         if not isinstance(_qubits, List):
