@@ -7,10 +7,10 @@ Contact: weiguo.m@iphy.ac.cn
 from abc import ABC, abstractmethod
 from typing import Union, List
 
-from torch import Tensor
+from torch import Tensor, nn
 
 
-class QuantumGate(ABC):
+class QuantumGate(ABC, nn.Module):
     """
     Base class for quantum gates.
     """

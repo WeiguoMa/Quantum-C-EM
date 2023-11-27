@@ -33,7 +33,7 @@ class IIGate(QuantumGate):
                           [0, 1, 0, 0],
                           [0, 0, 1, 0],
                           [0, 0, 0, 1]],
-                         dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)\
+                         dtype=self.dtype, device=self.device, requires_grad=self.requires_grad) \
             .reshape((2, 2, 2, 2))
 
     @property
@@ -74,7 +74,7 @@ class CNOTGate(QuantumGate):
         return tc.tensor([[1, 0, 0, 0],
                           [0, 1, 0, 0],
                           [0, 0, 0, 1],
-                          [0, 0, 1, 0]], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)\
+                          [0, 0, 1, 0]], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad) \
             .reshape((2, 2, 2, 2))
 
     @property
