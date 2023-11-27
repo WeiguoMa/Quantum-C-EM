@@ -3,7 +3,7 @@ Author: weiguo_ma
 Time: 11.27.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-from typing import Union
+from typing import Union, Optional
 from warnings import warn
 
 import torch as tc
@@ -16,7 +16,7 @@ class IIGate(QuantumGate):
         II gate.
     """
 
-    def __init__(self, ideal: bool = True, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(IIGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
@@ -56,7 +56,7 @@ class CNOTGate(QuantumGate):
         CNOT gate.
     """
 
-    def __init__(self, ideal: bool = True, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CNOTGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
@@ -95,7 +95,7 @@ class ArbDoubleGate(QuantumGate):
         CNOT gate.
     """
 
-    def __init__(self, tensor: tc.Tensor, ideal: bool = True, truncation: bool = False,
+    def __init__(self, tensor: tc.Tensor, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(ArbDoubleGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
@@ -111,7 +111,7 @@ class ArbDoubleGate(QuantumGate):
     def tensor(self):
         if self.Tensor.shape != (2, 2, 2, 2):
             warn('You are probably adding a noisy double qubit gate, current shape is {}'.format(self.Tensor.shape))
-        return self.Tensor
+        return self.Tensor.reshape(2, 2, 2, 2, -1).squeeze()
 
     @property
     def rank(self):

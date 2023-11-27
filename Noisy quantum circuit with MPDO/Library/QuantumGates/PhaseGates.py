@@ -17,7 +17,7 @@ class SGate(QuantumGate):
     S gate.
     """
 
-    def __init__(self, ideal: bool = True, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(SGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
@@ -54,7 +54,7 @@ class TGate(QuantumGate):
     S gate.
     """
 
-    def __init__(self, ideal: bool = True, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(TGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
@@ -91,13 +91,15 @@ class PGate(QuantumGate):
     S gate.
     """
 
-    def __init__(self, theta: tc.Tensor, ideal: bool = True, truncation: bool = False,
+    def __init__(self, theta: tc.Tensor, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(PGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
 
         self._theta = theta.to(dtype=self.dtype, device=self.device)
+
+        self.para = theta
 
     @property
     def name(self):
@@ -138,6 +140,8 @@ class CPGate(QuantumGate):
         self.dtype = dtype
 
         self._theta = theta.to(dtype=self.dtype, device=self.device)
+
+        self.para = theta
 
     @property
     def name(self):

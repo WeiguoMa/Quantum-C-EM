@@ -16,7 +16,7 @@ class ZGate(QuantumGate):
     X gate.
     """
 
-    def __init__(self, ideal: bool = True, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(ZGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
@@ -61,6 +61,8 @@ class RZGate(QuantumGate):
 
         self._theta = theta.to(dtype=self.dtype, device=self.device)
 
+        self.para = theta
+
     @property
     def name(self):
         return 'RZ'
@@ -93,7 +95,7 @@ class CZGate(QuantumGate):
         CZ gate.
     """
 
-    def __init__(self, ideal: bool = True, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CZGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
@@ -140,6 +142,8 @@ class RZZGate(QuantumGate):
         self.dtype = dtype
 
         self._theta = theta.to(dtype=self.dtype, device=self.device)
+
+        self.para = theta
 
     @property
     def name(self):
