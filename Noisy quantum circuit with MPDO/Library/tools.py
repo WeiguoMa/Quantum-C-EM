@@ -3,13 +3,13 @@ Author: weiguo_ma
 Time: 04.07.2023
 Contact: weiguo.m@iphy.ac.cn
 """
-import collections
 import itertools
 import random
 import string
 import warnings
 from copy import deepcopy
-from typing import Optional
+from functools import reduce
+from typing import Optional, List, Union, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +20,7 @@ from scipy.optimize import minimize
 from Library.TensorOperations import tensorDot
 
 
-def is_nested(_lst: list) -> bool:
+def is_nested(_lst: List) -> bool:
     r"""
     Check if a list is nested
 
@@ -30,10 +30,10 @@ def is_nested(_lst: list) -> bool:
     Returns:
         True if the list is nested, False otherwise
     """
-    return any(isinstance(_i, list) for _i in _lst)
+    return any(isinstance(_i, List) for _i in _lst)
 
 
-def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
+def EdgeName2AxisName(_nodes: List[tn.AbstractNode]):
     r"""
     ProcessFunction -->
         In tensornetwork package, axis_name is not equal to _name_of_edge_. While calculating, to ensure that
@@ -45,8 +45,8 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
     Returns:
         None, but the axis_names of _nodes will be set in memory.
     """
-    if not isinstance(_nodes, list):
-        if not isinstance(_nodes, tn.Node) and not isinstance(_nodes, tn.AbstractNode):
+    if not isinstance(_nodes, List):
+        if not isinstance(_nodes, tn.AbstractNode):
             raise ValueError('The input should be a list of nodes.')
         _nodes = [_nodes]
 
@@ -64,42 +64,42 @@ def EdgeName2AxisName(_nodes: list[tn.Node] or list[tn.AbstractNode]):
         _node.axis_names = _axis_names
 
 
-def ket0(dtype, device: str or int = 'cpu'):
+def ket0(dtype, device: Union[str, int] = 'cpu'):
     r"""
     Return: Return the state |0>
     """
     return tc.tensor([1. + 0.j, 0. + 0.j], dtype=dtype, device=device)
 
 
-def ket1(dtype, device: str or int = 'cpu'):
+def ket1(dtype, device: Union[str, int] = 'cpu'):
     r"""
     Return: Return the state |1>
     """
     return tc.tensor([0. + 0.j, 1. + 0.j], dtype=dtype, device=device)
 
 
-def ket_hadamard(dtype, device: str or int = 'cpu'):
+def ket_hadamard(dtype, device: Union[str, int] = 'cpu'):
     r"""
     Return: Return the state |+>
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
 
-def ket_plus(dtype, device: str or int = 'cpu'):
+def ket_plus(dtype, device: Union[str, int] = 'cpu'):
     r"""
     Return: Return the state |+>
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), 1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
 
-def ket_minus(dtype, device: str or int = 'cpu'):
+def ket_minus(dtype, device: Union[str, int] = 'cpu'):
     r"""
     Return: Return the state |->
     """
     return tc.tensor([1. / tc.sqrt(tc.tensor(2.)), -1. / tc.sqrt(tc.tensor(2.))], dtype=dtype, device=device)
 
 
-def create_ket0Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
+def create_ket0Series(qnumber: int, dtype=tc.complex64, device: Union[str, int] = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -120,7 +120,7 @@ def create_ket0Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cp
     return _mps
 
 
-def create_ket1Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
+def create_ket1Series(qnumber: int, dtype=tc.complex64, device: Union[str, int] = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -141,7 +141,7 @@ def create_ket1Series(qnumber: int, dtype=tc.complex64, device: str or int = 'cp
     return _mps
 
 
-def create_ketHadamardSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
+def create_ketHadamardSeries(qnumber: int, dtype=tc.complex64, device: Union[str, int] = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -162,7 +162,7 @@ def create_ketHadamardSeries(qnumber: int, dtype=tc.complex64, device: str or in
     return _mps
 
 
-def create_ketPlusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
+def create_ketPlusSeries(qnumber: int, dtype=tc.complex64, device: Union[str, int] = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -183,7 +183,7 @@ def create_ketPlusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 
     return _mps
 
 
-def create_ketMinusSeries(qnumber: int, dtype=tc.complex64, device: str or int = 'cpu') -> list:
+def create_ketMinusSeries(qnumber: int, dtype=tc.complex64, device: Union[str, int] = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -204,7 +204,8 @@ def create_ketMinusSeries(qnumber: int, dtype=tc.complex64, device: str or int =
     return _mps
 
 
-def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64, device: str or int = 'cpu') -> list:
+def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64,
+                           device: Union[str, int] = 'cpu') -> list:
     r"""
     create initial qubits
 
@@ -227,115 +228,86 @@ def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64, 
     return _mps
 
 
-def plot_nodes(_nodes):
-    r"""
-    Plot tensor network nodes.
-
-    Args:
-        _nodes: nodes to be plotted.
-
-    Returns:
-        None
+def tc_expect(oper: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
     """
-    raise NotImplementedError('Plotting is not supported yet.')
+        Calculates the expectation value for operator(s) and state(s) in PyTorch,
+        using torch.matmul for matrix multiplication.
 
+        Parameters
+        ----------
+        oper : torch.Tensor/list
+            A single or a `list` of operators for expectation value.
 
-def tc_expect(operator: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
-    if not isinstance(operator, tc.Tensor) or not isinstance(state, tc.Tensor):
-        raise TypeError('torch.Tensor should be input')
-    if state.shape[0] == state.shape[1]:
-        matrix = tc.matmul(state, operator)
-        return tc.abs(tc.sum(tc.diag(matrix)))
+        state : torch.Tensor/list
+            A single or a `list` of quantum state vectors or density matrices.
+
+        Returns
+        -------
+        expt : torch.Tensor
+            Expectation value as a PyTorch tensor. Complex if `oper` is not Hermitian.
+        """
+
+    def _single_expect(o, s):
+        if s.dim() == 1:  # State vector (ket)
+            return tc.matmul(tc.matmul(s.T.conj(), o), s)
+        elif s.dim() == 2:  # Density matrix
+            return tc.trace(tc.matmul(o, s))
+        else:
+            raise ValueError("State must be a vector or matrix.")
+
+    # Handling a single operator and state
+    if isinstance(oper, tc.Tensor) and isinstance(state, tc.Tensor):
+        return _single_expect(oper, state)
+
+    # Handling a list of operators
+    elif isinstance(oper, (list, tc.Tensor)):
+        if isinstance(state, tc.Tensor):
+            return tc.tensor([_single_expect(o, state) for o in oper], dtype=tc.complex64)
+
+    # Handling a list of states
+    elif isinstance(state, (list, tc.Tensor)):
+        return tc.tensor([_single_expect(oper, x) for x in state], dtype=tc.complex64)
+
     else:
-        if state.shape[0] == 1:
-            # state is row
-            state.reshape((state.shape[0], 1))
-        result = tc.matmul(state.T.conj(), tc.matmul(operator, state))
-        return tc.abs(result)
+        raise TypeError('Arguments must be torch.Tensors or lists thereof')
 
 
-def basis_name_list(N: int) -> list:
-    r"""
-    Generate a series of bases' name, like
-            N = 2, ['00', '01', '10', '11']
+def density2prob(rho_in: tc.Tensor, bases: Optional[Dict] = None, tolerant: Optional[float] = None) -> Dict:
     """
-    _binary_rep = ['0', '1']
-    _b_set = [''.join(ii) for ii in itertools.product(_binary_rep, repeat=N)]
-    return _b_set
-
-
-def basis_list(N: int) -> list:
-    r"""
-    Generate a series of bases, like
-                |00> = tensor([basis(2, 0), basis(2, 0)])
-                |10> = tensor([basis(2, 1), basis(2, 0)])
-
-    Attention:
-            different from qutip.basis(4, 0), which != |00>
-
-    Notice:
-        Author didn't find whether there exists another fast way to generate such basis set,
-            main goal is to get probability distribution from a density matrix.
-                That is, p_{basis} = qutip.expect(density_matrix, basis)
-                            --> p = <\psi|density_matrix|\psi>
-    """
-    _view_basis = []
-    for ii in range(2 ** N):
-        _basis = tc.zeros((2 ** N, 1), dtype=tc.complex64)
-        _basis[ii] = 1
-        _view_basis.append(_basis)
-    return _view_basis
-
-
-def density2prob(rho_in: tc.Tensor, bases: list = None, basis_name: list = None,
-                 tolerant: Optional[float] = None) -> dict:
-    r"""
     Transform density matrix into probability distribution with provided bases.
 
     Args:
         rho_in: density matrix;
-        bases: provided projected bases;
-        basis_name: name of bases, like '00000';
+        bases: basis set, should be input as a dict with format {'Bases': List[tc.Tensor], 'BasesName': List[str]};
         tolerant: probability under this threshold will not be shown.
-
-    Additional information:
-        function utilized:
-                tc_expect()
     """
-    _qn = int(np.log(rho_in.shape[0]) / np.log(2))
+    _qn = int(np.log2(rho_in.shape[0]))  # Number of qubits
 
     if bases is None:
-        bases = basis_list(_qn)
+        # Generate basis states
+        _view_basis = [tc.zeros((2 ** _qn, 1), dtype=tc.complex64).scatter_(0, tc.tensor([[ii]]), 1) for ii in
+                       range(2 ** _qn)]
+        # Generate basis names
+        _basis_name = [''.join(ii) for ii in itertools.product('01', repeat=_qn)]
+    else:
+        try:
+            _view_basis, _basis_name = bases['Bases'], bases['BasesName']
+        except ValueError:
+            raise ValueError(
+                'The input bases should be a dict with format {\'Bases\': List[tc.Tensor], \'BasesName\': List[str]}'
+            )
 
-    _prob = []
-    for _ii in range(len(bases)):
-        _prob.append(float(tc_expect(rho_in, bases[_ii])))
+    # Calculate probabilities
+    _prob = [tc.abs(tc_expect(rho_in, base)).item() for base in _view_basis]
 
-    # Form a dictionary
-    if basis_name is None:
-        basis_name = basis_name_list(_qn)
+    # Create dictionary and normalize
+    _prob_sum = sum(_prob)
+    _dc = {name: prob / _prob_sum for name, prob in zip(_basis_name, _prob) if tolerant is None or prob >= tolerant}
 
-    _dc = {}
-    for _i in range(len(basis_name)):
-        _dc[basis_name[_i]] = _prob[_i]
-
-    # Normalization
-    _sum_result = 0
-    for _value in _dc.values():
-        _sum_result += _value
-    for _name in _dc.keys():
-        _dc[_name] = _dc[_name] / _sum_result
-
-    if tolerant is not None:
-        # Remove prob. under threshold
-        for _name in list(_dc.keys()):
-            if _dc[_name] < tolerant:
-                del _dc[_name]
-                continue
     return _dc
 
 
-def plot_histogram(prob_psi: dict, title: str = None, filename: str = None):
+def plot_histogram(prob_psi: Dict, title: Optional[str] = None, filename: Optional[str] = None):
     r"""
     Plot a histogram of probability distribution.
 
@@ -344,30 +316,28 @@ def plot_histogram(prob_psi: dict, title: str = None, filename: str = None):
         title: title of the fig, while None, it does not work;
         filename: location to save the fig, while None, it does not work.
     """
-    if not isinstance(prob_psi, dict):
+    if not isinstance(prob_psi, Dict):
         raise TypeError('Prob distribution should be input as a dict, with keys as basis_name.')
 
-    qnumber = len(list(prob_psi.keys())[0])
+    qnumber = len(next(iter(prob_psi)))
+
+    title = title or f'Probability distribution qnumber={qnumber}'
 
     plt.figure(figsize=(10, 8), dpi=300)
     plt.bar(prob_psi.keys(), prob_psi.values(), color='b')
-    plt.ylim(ymax=1)
+    plt.ylim(ymin=0, ymax=1)
     plt.xticks(rotation=-45)
-
-    if title is None:
-        plt.title(f'Probability distribution qnumber={qnumber}')
-    else:
-        plt.title(title)
-
+    plt.title(title)
     plt.xlabel('State')
-    plt.ylabel('Prob')
+    plt.ylabel('Probability')
 
     if filename is not None:
         plt.savefig(filename)
+
     plt.show()
 
 
-def select_device(device: str or int = None):
+def select_device(device: Optional[Union[str, int]] = None):
     if isinstance(device, str):
         return device
     else:
@@ -401,24 +371,7 @@ def generate_random_string_without_duplicate(_n: int):
     return _str
 
 
-def move_index(_str: str, _idx1: int, _idx2: int):
-    r"""
-    Move the index from _idx1 to _idx2.
-
-    Args:
-        _str: The string;
-        _idx1: The index to be moved;
-        _idx2: The index to be moved to.
-
-    Returns:
-        _str: The string after moving the index.
-    """
-    _str = list(_str)
-    _str.insert(_idx2, _str.pop(_idx1))
-    return ''.join(_str)
-
-
-def gates_list(N: int, basis_gates: list = None) -> list:
+def gates_list(N: int, basis_gates: Optional[List] = None) -> List:
     r"""
     Generates a series of gate sets as basis,
     N = 1 --> list[I, X, Y, Z]
@@ -437,7 +390,7 @@ def gates_list(N: int, basis_gates: list = None) -> list:
     return g_set
 
 
-def name2matrix(operation_name: str, dtype=tc.complex64, device: str or int = 'cpu'):
+def name2matrix(operation_name: str, dtype=tc.complex64, device: Union[str, int] = 'cpu'):
     r"""
     As you can see below, A CAPITAL stands for a basis, actually an operation, that is arbitrarily defined.
     :param operation_name: like 'ZZZ'
@@ -458,14 +411,7 @@ def name2matrix(operation_name: str, dtype=tc.complex64, device: str or int = 'c
     return tensorDot(operation_list)
 
 
-def find_duplicate(_lst_):
-    """ Find the duplicate items and their indices in a list """
-    _duplicate_item_ = [item for item, count in collections.Counter(_lst_).items() if count > 1]
-    _duplicate_idx_ = [idx for idx, item in enumerate(_lst_) if item in _duplicate_item_]
-    return _duplicate_item_, _duplicate_idx_
-
-
-def sqrt_matrix(density_matrix):
+def sqrt_matrix(density_matrix: tc.Tensor) -> tc.Tensor:
     r"""Compute the square root matrix of a density matrix where :math:`\rho = \sqrt{\rho} \times \sqrt{\rho}`
 
     Args:
@@ -508,7 +454,11 @@ def cal_fidelity(rho: tc.Tensor, sigma: tc.Tensor) -> tc.Tensor:
     return trace
 
 
-def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True, device: str or int = 'cpu'):
+def validDensityMatrix(rho,
+                       methodIdx: int = 1,
+                       constraints: str = 'eq',
+                       hermitian: bool = True,
+                       device: Union[str, int] = 'cpu'):
     """
     Produced by Dr.Shi  --- Data Science
 
@@ -553,3 +503,22 @@ def validDensityMatrix(rho, methodIdx=1, constraints='eq', hermitian=True, devic
 
     rho_semi = psi @ np.diag(newPs) @ psi.T.conj()
     return rho_semi.to(device=device)
+
+
+def iSing_hamiltonian_near(qnumber: int) -> tc.Tensor:
+    # Predefined matrices
+    qeye = tc.tensor([[1, 0], [0, 1]], dtype=tc.complex64)
+    sigma_z = tc.tensor([[1, 0], [0, -1]], dtype=tc.complex64)
+
+    def tensor_sigmaz(N: int, order: int):
+        _list = [sigma_z if _i == order else qeye for _i in range(N)]
+        return reduce(tc.kron, _list)
+
+    # Initialize Hamiltonian
+    Ham = tc.zeros(size=(2 ** qnumber, 2 ** qnumber), dtype=tc.complex64)
+
+    # Construct Hamiltonian
+    for i in range(qnumber - 1):
+        Ham -= tc.matmul(tensor_sigmaz(qnumber, i), tensor_sigmaz(qnumber, i + 1))
+
+    return Ham
