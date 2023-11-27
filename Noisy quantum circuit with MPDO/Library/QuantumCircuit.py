@@ -12,6 +12,7 @@ import torch as tc
 from torch import nn
 
 from Library.ADGate import TensorGate
+from Library.ADNGate import NoisyTensorGate
 from Library.AbstractGate import AbstractGate
 from Library.NoiseChannel import NoiseChannel
 from Library.TNNOptimizer import svd_right2left, qr_left2right, checkConnectivity, svdKappa_left2right, cal_entropy
@@ -179,7 +180,7 @@ class TensorCircuit(nn.Module):
 
         if not isinstance(_qubits, List):
             raise TypeError('Qubit must be a list of nodes.')
-        if not isinstance(gate, TensorGate):
+        if not isinstance(gate, (TensorGate, NoisyTensorGate)):
             raise TypeError(f'Gate must be a TensorGate, current type is {type(gate)}.')
         if not isinstance(_oqs, List):
             raise TypeError('Operating qubits must be a list.')
