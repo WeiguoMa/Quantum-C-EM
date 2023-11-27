@@ -17,11 +17,10 @@ class CZEXPGate(QuantumGate):
     """
 
     def __init__(self, tensor: Optional[tc.Tensor] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CZEXPGate, self).__init__(truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
         self.ideal = False
         self.Tensor = tensor
@@ -61,11 +60,10 @@ class CPEXPGate(QuantumGate):
     """
 
     def __init__(self, tensor: Optional[tc.Tensor] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CPEXPGate, self).__init__(truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
         self.ideal = False
         self.Tensor = tensor

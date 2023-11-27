@@ -17,11 +17,10 @@ class XGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(XGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -29,7 +28,7 @@ class XGate(QuantumGate):
 
     @property
     def tensor(self):
-        return tc.tensor([[0, 1], [1, 0]], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        return tc.tensor([[0, 1], [1, 0]], dtype=self.dtype, device=self.device)
 
     @property
     def rank(self):
@@ -55,13 +54,12 @@ class RXGate(QuantumGate):
 
     def __init__(self, theta: tc.Tensor,
                  ideal: Optional[bool] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(RXGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -73,7 +71,7 @@ class RXGate(QuantumGate):
         return tc.tensor(
             [[tc.cos(self._theta / 2), -1j * tc.sin(self._theta / 2)],
              [-1j * tc.sin(self._theta / 2), tc.cos(self._theta / 2)]],
-            dtype=self.dtype, device=self.device, requires_grad=self.requires_grad
+            dtype=self.dtype, device=self.device
         )
 
     @property
@@ -99,11 +97,10 @@ class CXGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CXGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -114,8 +111,7 @@ class CXGate(QuantumGate):
         return tc.tensor([[1, 0, 0, 0],
                           [0, 1, 0, 0],
                           [0, 0, 0, 1],
-                          [0, 0, 1, 0]], dtype=self.dtype, device=self.device,
-                         requires_grad=self.requires_grad).reshape((2, 2, 2, 2))
+                          [0, 0, 1, 0]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):
@@ -141,13 +137,12 @@ class RXXGate(QuantumGate):
 
     def __init__(self, theta: tc.Tensor,
                  ideal: Optional[bool] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(RXXGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -161,8 +156,7 @@ class RXXGate(QuantumGate):
              [0, tc.cos(self._theta / 2), -1j * tc.sin(self._theta / 2), 0],
              [0, -1j * tc.sin(self._theta / 2), tc.cos(self._theta / 2), 0],
              [-1j * tc.sin(self._theta / 2), 0, 0, tc.cos(self._theta / 2)]],
-            dtype=self.dtype, device=self.device, requires_grad=self.requires_grad
-        ).reshape((2, 2, 2, 2))
+            dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):

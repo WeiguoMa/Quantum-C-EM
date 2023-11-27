@@ -17,11 +17,10 @@ class YGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(YGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -29,7 +28,7 @@ class YGate(QuantumGate):
 
     @property
     def tensor(self):
-        return tc.tensor([[0, -1j], [1j, 0]], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        return tc.tensor([[0, -1j], [1j, 0]], dtype=self.dtype, device=self.device)
 
     @property
     def rank(self):
@@ -55,13 +54,12 @@ class RYGate(QuantumGate):
 
     def __init__(self, theta: tc.Tensor,
                  ideal: Optional[bool] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(RYGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -71,8 +69,7 @@ class RYGate(QuantumGate):
     def tensor(self):
         self._check_Tensor(self._theta)
         return tc.tensor([[tc.cos(self._theta / 2), -tc.sin(self._theta / 2)],
-                          [tc.sin(self._theta / 2), tc.cos(self._theta / 2)]], dtype=self.dtype, device=self.device,
-                         requires_grad=self.requires_grad)
+                          [tc.sin(self._theta / 2), tc.cos(self._theta / 2)]], dtype=self.dtype, device=self.device)
 
     @property
     def rank(self):
@@ -97,11 +94,10 @@ class CYGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CYGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -112,8 +108,7 @@ class CYGate(QuantumGate):
         return tc.tensor([[1, 0, 0, 0],
                           [0, 1, 0, 0],
                           [0, 0, 0, -1j],
-                          [0, 0, 1j, 0]], dtype=self.dtype, device=self.device,
-                         requires_grad=self.requires_grad).reshape((2, 2, 2, 2))
+                          [0, 0, 1j, 0]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):
@@ -139,13 +134,12 @@ class RYYGate(QuantumGate):
 
     def __init__(self, theta: tc.Tensor,
                  ideal: Optional[bool] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(RYYGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -159,8 +153,7 @@ class RYYGate(QuantumGate):
              [0, tc.cos(self._theta / 2), tc.sin(self._theta / 2), 0],
              [0, -tc.sin(self._theta / 2), tc.cos(self._theta / 2), 0],
              [tc.sin(self._theta / 2), 0, 0, tc.cos(self._theta / 2)]],
-            dtype=self.dtype, device=self.device, requires_grad=self.requires_grad
-        ).reshape((2, 2, 2, 2))
+            dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):

@@ -17,11 +17,10 @@ class IIGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(IIGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -33,8 +32,7 @@ class IIGate(QuantumGate):
                           [0, 1, 0, 0],
                           [0, 0, 1, 0],
                           [0, 0, 0, 1]],
-                         dtype=self.dtype, device=self.device, requires_grad=self.requires_grad) \
-            .reshape((2, 2, 2, 2))
+                         dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):
@@ -59,11 +57,10 @@ class CNOTGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CNOTGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -74,8 +71,7 @@ class CNOTGate(QuantumGate):
         return tc.tensor([[1, 0, 0, 0],
                           [0, 1, 0, 0],
                           [0, 0, 0, 1],
-                          [0, 0, 1, 0]], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad) \
-            .reshape((2, 2, 2, 2))
+                          [0, 0, 1, 0]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):
@@ -100,13 +96,12 @@ class ArbDoubleGate(QuantumGate):
     """
 
     def __init__(self, tensor: tc.Tensor, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(ArbDoubleGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self.Tensor = tensor.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self.Tensor = tensor.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):

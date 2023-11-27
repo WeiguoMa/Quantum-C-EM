@@ -19,11 +19,10 @@ class IGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(IGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -31,7 +30,7 @@ class IGate(QuantumGate):
 
     @property
     def tensor(self):
-        return tc.tensor([[1, 0], [0, 1]], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        return tc.tensor([[1, 0], [0, 1]], dtype=self.dtype, device=self.device)
 
     @property
     def rank(self):
@@ -56,11 +55,10 @@ class HGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(HGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -68,8 +66,7 @@ class HGate(QuantumGate):
 
     @property
     def tensor(self):
-        return tc.tensor([[1, 1], [1, -1]], dtype=self.dtype, device=self.device,
-                         requires_grad=self.requires_grad) / np.sqrt(2)
+        return tc.tensor([[1, 1], [1, -1]], dtype=self.dtype, device=self.device) / np.sqrt(2)
 
     @property
     def rank(self):
@@ -94,13 +91,12 @@ class U1Gate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(U1Gate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -109,10 +105,8 @@ class U1Gate(QuantumGate):
     @property
     def tensor(self):
         self._check_Tensor(self._theta)
-        return tc.tensor(
-            [[1, 0], [0, tc.exp(1j * self._theta)]],
-            dtype=self.dtype, device=self.device, requires_grad=self.requires_grad
-        )
+        return tc.tensor([[1, 0], [0, tc.exp(1j * self._theta)]],
+            dtype=self.dtype, device=self.device)
 
     @property
     def rank(self):
@@ -137,14 +131,13 @@ class U2Gate(QuantumGate):
     """
 
     def __init__(self, phi: tc.Tensor, lam: tc.Tensor, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(U2Gate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._phi = phi.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
-        self._lam = lam.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._phi = phi.to(dtype=self.dtype, device=self.device)
+        self._lam = lam.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -156,7 +149,7 @@ class U2Gate(QuantumGate):
         return tc.tensor(
             [[1, -tc.exp(1j * self._lam)],
              [tc.exp(1j * self._phi), tc.exp(1j * (self._phi + self._lam))]],
-            device=self.device, dtype=self.dtype, requires_grad=self.requires_grad
+            device=self.device, dtype=self.dtype
         ) / np.sqrt(2)
 
     @property
@@ -182,15 +175,14 @@ class U3Gate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor, phi: tc.Tensor, lam: tc.Tensor, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(U3Gate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
-        self._phi = phi.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
-        self._lam = lam.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
+        self._phi = phi.to(dtype=self.dtype, device=self.device)
+        self._lam = lam.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -203,7 +195,7 @@ class U3Gate(QuantumGate):
             [[tc.cos(self._theta / 2), -tc.exp(1j * self._lam) * tc.sin(self._theta / 2)],
              [tc.exp(1j * self._phi) * tc.sin(self._theta / 2),
               tc.exp(1j * (self._phi + self._lam)) * tc.cos(self._theta / 2)]],
-            device=self.device, dtype=self.dtype, requires_grad=self.requires_grad
+            device=self.device, dtype=self.dtype
         )
 
     @property
@@ -229,13 +221,12 @@ class ArbSingleGate(QuantumGate):
     """
 
     def __init__(self, tensor: tc.Tensor, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(ArbSingleGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self.Tensor = tensor.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self.Tensor = tensor.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):

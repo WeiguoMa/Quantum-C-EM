@@ -17,11 +17,10 @@ class ZGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(ZGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -29,7 +28,7 @@ class ZGate(QuantumGate):
 
     @property
     def tensor(self, _parameters: Optional[Union[tc.Tensor, List[tc.Tensor]]] = None):
-        return tc.tensor([[1, 0], [0, -1]], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        return tc.tensor([[1, 0], [0, -1]], dtype=self.dtype, device=self.device)
 
     @property
     def rank(self):
@@ -55,13 +54,12 @@ class RZGate(QuantumGate):
 
     def __init__(self, theta: tc.Tensor,
                  ideal: Optional[bool] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(RZGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -71,8 +69,7 @@ class RZGate(QuantumGate):
     def tensor(self):
         self._check_Tensor(self._theta)
         return tc.tensor([[tc.exp(-1j * self._theta / 2), 0],
-                          [0, tc.exp(1j * self._theta / 2)]], dtype=self.dtype, device=self.device,
-                         requires_grad=self.requires_grad)
+                          [0, tc.exp(1j * self._theta / 2)]], dtype=self.dtype, device=self.device)
 
     @property
     def rank(self):
@@ -97,11 +94,10 @@ class CZGate(QuantumGate):
     """
 
     def __init__(self, ideal: bool = True, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(CZGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
     @property
     def name(self):
@@ -112,8 +108,7 @@ class CZGate(QuantumGate):
         return tc.tensor([[1, 0, 0, 0],
                           [0, 1, 0, 0],
                           [0, 0, 1, 0],
-                          [0, 0, 0, -1]], dtype=self.dtype, device=self.device,
-                         requires_grad=self.requires_grad).reshape((2, 2, 2, 2))
+                          [0, 0, 0, -1]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):
@@ -139,13 +134,12 @@ class RZZGate(QuantumGate):
 
     def __init__(self, theta: tc.Tensor,
                  ideal: Optional[bool] = None, truncation: bool = False,
-                 dtype=tc.complex64, device: Union[str, int] = 'cpu', requires_grad: bool = False):
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
         super(RZZGate, self).__init__(ideal=ideal, truncation=truncation)
         self.device = device
         self.dtype = dtype
-        self.requires_grad = requires_grad
 
-        self._theta = theta.to(dtype=self.dtype, device=self.device, requires_grad=self.requires_grad)
+        self._theta = theta.to(dtype=self.dtype, device=self.device)
 
     @property
     def name(self):
@@ -160,8 +154,7 @@ class RZZGate(QuantumGate):
                 [0, tc.exp(1j * self._theta), 0, 0],
                 [0, 0, tc.exp(1j * self._theta), 0],
                 [0, 0, 0, tc.exp(-1j * self._theta)],
-            ], dtype=self.dtype, device=self.device, requires_grad=self.requires_grad
-        ).reshape((2, 2, 2, 2))
+            ], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
     def rank(self):
