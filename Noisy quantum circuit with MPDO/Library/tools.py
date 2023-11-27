@@ -225,6 +225,7 @@ def create_ketRandomSeries(qnumber: int, tensor: tc.Tensor, dtype=tc.complex64,
     # Initial nodes has no edges need to be connected, which exactly cannot be saying as a MPO.
     return _mps
 
+
 def tc_expect(oper: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
     """
         Calculates the expectation value for operator(s) and state(s) in PyTorch,

@@ -4,6 +4,7 @@ Time: 04.17.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 import warnings
+from typing import Optional, Union
 
 import numpy as np
 import tensornetwork as tn
@@ -11,7 +12,6 @@ import torch as tc
 
 from Library.chipInfo import Chip_information
 from Library.tools import select_device
-from typing import Optional, Union
 
 tn.set_default_backend("pytorch")
 

@@ -27,7 +27,7 @@ class QuantumGate(ABC, nn.Module):
 
     @staticmethod
     def _check_Tensor(_parameters: Union[Tensor, List[Tensor]]):
-        if not isinstance(_parameters, list):
+        if not isinstance(_parameters, List):
             _parameters = [_parameters]  # Convert to a list for uniform processing
 
         for param in _parameters:

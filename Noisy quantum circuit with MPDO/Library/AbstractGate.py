@@ -174,7 +174,8 @@ class AbstractGate(nn.Module):
     def u3(self, theta, phi, lam):
         self.variational = True
         self.para = [theta, phi, lam]
-        self.gate = TensorGate(ideal=self.ideal, requires_grad=self.requires_grad).u3(self.para[0], self.para[1], self.para[2])
+        self.gate = TensorGate(ideal=self.ideal, requires_grad=self.requires_grad)\
+            .u3(self.para[0], self.para[1], self.para[2])
         self.name = self.gate.name
         self.single = self.gate.single
         return self
