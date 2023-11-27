@@ -5,7 +5,7 @@ Contact: weiguo.m@iphy.ac.cn
 """
 import torch as tc
 
-from Library.realNoise import czExp_channel
+from Library.realNoise import czExp_channel, cpExp_channel
 from Library.tools import select_device
 
 
@@ -23,8 +23,19 @@ class NoisyTensorGate(object):
 
     def czEXP(self, tensor: tc.Tensor = None):
         self.name = 'CZEXP'
-        if tensor is None:  # NO input may cause high memory cost and time cose
+        if tensor is None:  # NO input may cause high memory cost and time cost
             self.tensor = czExp_channel()
+        else:
+            self.tensor = tensor.to(device=self.device, dtype=self.dtype)
+        self.rank = 5
+        self.dimension = [[2, 2], [2, 2], ['int[According2EXP]']]
+        self.single = False
+        return self
+
+    def cpEXP(self, tensor: tc.Tensor = None):
+        self.name = 'CPEXP'
+        if tensor is None:  # NO input may cause high memory cost and time cost
+            self.tensor = cpExp_channel()
         else:
             self.tensor = tensor.to(device=self.device, dtype=self.dtype)
         self.rank = 5

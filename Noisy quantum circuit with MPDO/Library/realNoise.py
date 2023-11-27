@@ -13,7 +13,8 @@ from scipy.io import loadmat
 from Library.tools import gates_list, name2matrix
 
 __all__ = [
-    'czExp_channel'
+    'czExp_channel',
+    'cpExp_channel'
 ]
 
 
@@ -33,7 +34,7 @@ def readExpChi(filename: str = None):
         raise TypeError('Current file-type is not supported.')
 
 
-def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str or int = 'cpu') -> list[tc.Tensor]:
+def noisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str or int = 'cpu') -> list[tc.Tensor]:
     r"""
     :param chi: Chi matrix from experiment;
     :param gate_factor: Manual API;
@@ -161,6 +162,13 @@ def czNoisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str
 
 def czExp_channel(filename: str = None, device: int or str = 'cpu'):
     _chi = readExpChi(filename=filename)
-    _czExp_tensor = tc.stack(czNoisyTensor(_chi))
+    _czExp_tensor = tc.stack(noisyTensor(_chi))
     _czExp_tensor = tc.einsum('ijlmn -> jlmni', _czExp_tensor)
     return _czExp_tensor.to(device=device)
+
+
+def cpExp_channel(filename: str = None, device: int or str = 'cpu'):
+    _chi = readExpChi(filename=filename)
+    _cpExp_tensor = tc.stack(noisyTensor(_chi))
+    _cpExp_tensor = tc.einsum('ijlmn -> jlmni', _cpExp_tensor)
+    return _cpExp_tensor.to(device=device)
