@@ -18,19 +18,6 @@ import torch as tc
 from scipy.optimize import minimize
 
 
-def is_nested(_lst: List) -> bool:
-    r"""
-    Check if a list is nested
-
-    Args:
-        _lst: the list to be checked
-
-    Returns:
-        True if the list is nested, False otherwise
-    """
-    return any(isinstance(_i, List) for _i in _lst)
-
-
 def EdgeName2AxisName(_nodes: List[tn.AbstractNode]):
     r"""
     ProcessFunction -->
@@ -270,14 +257,18 @@ def tc_expect(oper: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
         raise TypeError('Arguments must be torch.Tensors or lists thereof')
 
 
-def density2prob(rho_in: tc.Tensor, bases: Optional[Dict] = None, tolerant: Optional[float] = None) -> Dict:
+def density2prob(rho_in: tc.Tensor,
+                 bases: Optional[Dict] = None,
+                 tol: Optional[float] = None,
+                 _dict: Optional[bool] = True) -> Dict:
     """
     Transform density matrix into probability distribution with provided bases.
 
     Args:
         rho_in: density matrix;
         bases: basis set, should be input as a dict with format {'Bases': List[tc.Tensor], 'BasesName': List[str]};
-        tolerant: probability under this threshold will not be shown.
+        tol: probability under this threshold will not be shown;
+        _dict: return a dict or np.array.
     """
     _qn = int(np.log2(rho_in.shape[0]))  # Number of qubits
 
@@ -300,9 +291,10 @@ def density2prob(rho_in: tc.Tensor, bases: Optional[Dict] = None, tolerant: Opti
 
     # Create dictionary and normalize
     _prob_sum = sum(_prob)
-    _dc = {name: prob / _prob_sum for name, prob in zip(_basis_name, _prob) if tolerant is None or prob >= tolerant}
-
-    return _dc
+    if _dict:
+        return {name: prob / _prob_sum for name, prob in zip(_basis_name, _prob) if tol is None or prob >= tol}
+    else:
+        return np.array(_prob) / _prob_sum
 
 
 def plot_histogram(prob_psi: Dict, title: Optional[str] = None, filename: Optional[str] = None):
@@ -488,7 +480,7 @@ def validDensityMatrix(rho,
 
     traceV = 1.0  # tc.trace(rho)
     fitFunc = lambda p: np.sum(np.abs(p - ps) ** 2)
-    bounds = [(0.0, traceV + 0.001) for idx in range(len(ps))]
+    bounds = [(0.0, traceV + 0.001) for _ in range(len(ps))]
 
     x0 = deepcopy(ps)
     x0[x0 < 0.0] = 0.0

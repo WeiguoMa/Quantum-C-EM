@@ -17,9 +17,9 @@ class SGate(QuantumGate):
     S gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(SGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(SGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -54,9 +54,9 @@ class TGate(QuantumGate):
     S gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(TGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(TGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -91,9 +91,9 @@ class PGate(QuantumGate):
     S gate.
     """
 
-    def __init__(self, theta: tc.Tensor, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, theta: tc.Tensor, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(PGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(PGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -107,7 +107,7 @@ class PGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor([[1, 0], [0, tc.exp(self._theta * 1j)]], dtype=self.dtype, device=self.device)
 
     @property
@@ -133,9 +133,9 @@ class CPGate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor,
-                 ideal: Optional[bool] = None, truncation: bool = False,
+                 ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(CPGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(CPGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -149,7 +149,7 @@ class CPGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor(
             [
                 [1, 0, 0, 0],

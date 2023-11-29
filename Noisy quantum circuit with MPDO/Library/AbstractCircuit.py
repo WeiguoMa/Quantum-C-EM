@@ -4,9 +4,11 @@ Time: 11.27.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 from abc import ABC
-from typing import List
+from typing import List, Union, Optional, Dict, Any
 
-from torch import Tensor, nn, pi, tensor
+from torch import Tensor, nn, pi, tensor, complex64
+
+from Library.realNoise import czExp_channel, cpExp_channel
 
 
 class QuantumCircuit(ABC, nn.Module):
@@ -14,263 +16,337 @@ class QuantumCircuit(ABC, nn.Module):
     Abstract class for quantum circuit.
     """
 
-    def __init__(self, realNoise: bool):
+    def __init__(self,
+                 realNoise: bool,
+                 noiseFiles: Optional[Dict[str, Dict[str, Any]]] = None,
+                 dtype=complex64,
+                 device: Union[str, int] = 'cpu'):
         super(QuantumCircuit, self).__init__()
+
+        self.device = device
+        self.dtype = dtype
+        self.Truncate = False
+
         self.layers = nn.Sequential()
-        self._oqsList = []
+        self._oqs_list = []
 
-    def _iter_add_module(self, _gate_list: List, oqs_list: List):
+        # Noise
+        self.realNoise = realNoise
+        self.noiseFiles = noiseFiles if realNoise else None
+
+        #
+        if self.realNoise:
+            self._load_exp_tensors()
+
+        self._sequence = 0
+
+    def _load_exp_tensors(self):
+        self._cz_expTensors, self._cp_expTensors = {}, {}
+        if 'CZ' in self.noiseFiles.keys():
+            _czDict = self.noiseFiles['CZ']
+            for _keys in _czDict.keys():
+                self._cz_expTensors[_keys] = czExp_channel(filename=_czDict[_keys]).to(self.device, dtype=self.dtype)
+        if 'CP' in self.noiseFiles.keys():
+            _cpDict = self.noiseFiles['CP']
+            for _keys in _cpDict.keys():
+                self._cp_expTensors[_keys] = cpExp_channel(filename=_cpDict[_keys]).to(self.device, dtype=self.dtype)
+
+    def _add_module(self, _gate: nn.Module, oqs: List, headline: str):
+        self._oqs_list.append(oqs)
+        self.layers.add_module(headline + f'-S{self._sequence}', _gate)
+        self._sequence += 1
+
+    def _iter_add_module(self, _gate_list: List, oqs_list: List, _transpile: bool = False):
         for _gate, _oq in zip(_gate_list, oqs_list):
-            _paraI, _paraD = ('{:.3f}'.format(_gate.para.item()) if _gate.para is not None else None).split('.')
-            self.layers.add_module(f"{_gate.name}[{_oq}]|{_paraI};{_paraD}-TRANS", _gate)
+            if _transpile and _gate.name == 'CX' or 'CNOT':
+                if _gate.para is None:
+                    _headline = f"{_gate.name}{_oq}|None-TRANS"
+                else:
+                    _paraI, _paraD = '{:.3f}'.format(_gate.para.item()).split('.')
+                    _headline = f"{_gate.name}{_oq}|({_paraI};{_paraD})-TRANS"
 
-    def i(self, oqs: List):
+                self._add_module(_gate, _oq, _headline)
+            else:
+                self.__getattribute__(f'{_gate.name.lower()}')(_oq)
+
+    def i(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ArbSingleGates import IGate
 
-        from QuantumGates.ArbSingleGates import IGate
-        self.layers.add_module(f"I{oqs}|None", IGate())
+        _headline = f"I{oqs}|None"
 
-    def h(self, oqs: List):
+        self._add_module(IGate(_ideal), oqs, _headline)
+
+    def h(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ArbSingleGates import HGate
 
-        from QuantumGates.ArbSingleGates import HGate
-        self.layers.add_module(f"H{oqs}|None", HGate())
+        _headline = f"H{oqs}|None"
 
-    def x(self, oqs: List):
+        self._add_module(HGate(_ideal), oqs, _headline)
+
+    def x(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.XGates import XGate
 
-        from QuantumGates.XGates import XGate
-        self.layers.add_module(f"X{oqs}|None", XGate())
+        _headline = f"X{oqs}|None"
 
-    def y(self, oqs: List):
+        self._add_module(XGate(_ideal), oqs, _headline)
+
+    def y(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.YGates import YGate
 
-        from QuantumGates.YGates import YGate
-        self.layers.add_module(f"Y{oqs}|None", YGate())
+        _headline = f"Y{oqs}|None"
 
-    def z(self, oqs: List):
+        self._add_module(YGate(_ideal), oqs, _headline)
+
+    def z(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ZGates import ZGate
 
-        from QuantumGates.ZGates import ZGate
-        self.layers.add_module(f"Z{oqs}|None", ZGate())
+        _headline = f"Z{oqs}|None"
 
-    def rx(self, theta: Tensor, oqs: List):
+        self._add_module(ZGate(_ideal), oqs, _headline)
+
+    def rx(self, theta: Tensor, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.XGates import RXGate
 
-        from QuantumGates.XGates import RXGate
-        self.layers.add_module("RX{}|{:.3f}".format(oqs, theta.item()), RXGate(theta))
+        _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+        _headline = f"RX{oqs}|({_paraI};{_paraD})"
 
-    def ry(self, theta: Tensor, oqs: List):
+        self._add_module(RXGate(theta, _ideal), oqs, _headline)
+
+    def ry(self, theta: Tensor, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.YGates import RYGate
 
-        from QuantumGates.YGates import RYGate
-        self.layers.add_module("RY{}|{:.3f}".format(oqs, theta.item()), RYGate(theta))
+        _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+        _headline = f"RY{oqs}|({_paraI};{_paraD})"
 
-    def rz(self, theta: Tensor, oqs: List):
+        self._add_module(RYGate(theta, _ideal), oqs, _headline)
+
+    def rz(self, theta: Tensor, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ZGates import RZGate
 
-        from QuantumGates.ZGates import RZGate
-        self.layers.add_module("RZ{}|{:.3f}".format(oqs, theta.item()), RZGate(theta))
+        _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+        _headline = f"RZ{oqs}|({_paraI};{_paraD})"
 
-    def rxx(self, theta: Tensor, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
+        self._add_module(RZGate(theta, _ideal), oqs, _headline)
 
-        if self.realNoise:
-            from QuantumGates.XGates import RXXGate
-            self.layers.add_module("RXX{}|{:.3f}".format(oqs, theta.item()), RXXGate(theta))
-        else:
-            from QuantumGates.ArbSingleGates import HGate
-            from QuantumGates.ZGates import RZGate
-            from QuantumGates.XGates import CXGate
-
-            _transpiled_gates_ = [HGate(True), CXGate(), RZGate(theta, True), CXGate(), HGate(True)]
-            _transpiled_oqs_ = [oqs, oqs, [oqs[-1]], oqs, oqs]
-
-            self._iter_add_module(_transpiled_gates_, _transpiled_oqs_)
-
-    def ryy(self, theta: Tensor, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
-
-        if self.realNoise:
-            from QuantumGates.YGates import RYYGate
-            self.layers.add_module("RYY{}|{:.3f}".format(oqs, theta.item()), RYYGate(theta))
-        else:
-            from QuantumGates.ZGates import RZGate
-            from QuantumGates.XGates import RXGate, CXGate
-
-            _transpiled_gates_ = [RXGate(tensor(pi / 2), True), CXGate(),
-                                  RZGate(theta, True), CXGate(), RXGate(tensor(pi / 2), True)]
-            _transpiled_oqs_ = [oqs, oqs, [oqs[-1]], oqs, oqs]
-
-            self._iter_add_module(_transpiled_gates_, _transpiled_oqs_)
-
-    def rzz(self, theta: Tensor, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
-
-        if self.realNoise:
-            from QuantumGates.ZGates import RZZGate
-            for _oq in oqs:
-                self.layers.add_module("RZ{}|{:.3f}".format(oqs, theta.item()), RZZGate(theta))
-        else:
-            from QuantumGates.XGates import CXGate
-            from QuantumGates.ZGates import RZGate
-
-            _transpiled_gates_ = [CXGate(), RZGate(theta, True), CXGate()]
-            _transpiled_oqs_ = [oqs, [oqs[-1]], oqs]
-
-            self._iter_add_module(_transpiled_gates_, _transpiled_oqs_)
-
-    def cx(self, oq0: int, oq1: int):
-        self._oqsList.append([oq0, oq1])
-
+    def rxx(self, theta: Tensor, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
         if not self.realNoise:
-            from QuantumGates.XGates import CXGate
-            self.layers.add_module(f"CX[{oq0},{oq1}]|None", CXGate())
+            from Library.QuantumGates.XGates import RXXGate
+
+            _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+            _headline = f"RXX{oqs}|({_paraI};{_paraD})"
+
+            self._add_module(RXXGate(theta, _ideal), oqs, _headline)
         else:
-            from QuantumGates.NoiseGates import CZEXPGate
-            from QuantumGates.YGates import RYGate
+            self.h(oqs, True)
+            self.cx(oq0, oq1)
+            self.rz(theta, oq1, True)
+            self.cx(oq0, oq1)
+            self.h(oqs, True)
 
-            _transpiled_gates_ = [RYGate(-tensor(pi) / 2, True), CZEXPGate(), RYGate(tensor(pi) / 2), True]
-            _transpiled_oqs_ = [[oq1], [oq0, oq1], [oq1]]
-
-            self._iter_add_module(_transpiled_gates_, _transpiled_oqs_)
-
-    def cy(self, oq0: int, oq1: int):
-        self._oqsList.append([oq0, oq1])
-
+    def ryy(self, theta: Tensor, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
         if not self.realNoise:
-            from QuantumGates.YGates import CYGate
-            self.layers.add_module(f"CX[{oq0},{oq1}]|None", CYGate())
+            from Library.QuantumGates.YGates import RYYGate
+
+            _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+            _headline = f"RYY{oqs}|({_paraI};{_paraD})"
+
+            self._add_module(RYYGate(theta, _ideal), oqs, _headline)
+        else:
+            self.rx(tensor(pi / 2), oqs, True)
+            self.cx(oq0, oq1)
+            self.rz(theta, oq1, True)
+            self.cx(oq0, oq1)
+            self.rx(-tensor(pi / 2), oqs, True)
+
+    def rzz(self, theta: Tensor, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
+        if not self.realNoise:
+            from Library.QuantumGates.ZGates import RZZGate
+
+            _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+            _headline = f"RZZ{oqs}|({_paraI};{_paraD})"
+
+            self._add_module(RZZGate(theta, _ideal), oqs, _headline)
+        else:
+            self.cx(oq0, oq1)
+            self.rz(theta, oq1, True)
+            self.cx(oq0, oq1)
+
+    def cx(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
+        if not self.realNoise:
+            from Library.QuantumGates.XGates import CXGate
+
+            _headline = f"CX{oqs}|None"
+            self._add_module(CXGate(_ideal), oqs, _headline)
+        else:
+            self.ry(-tensor(pi / 2), oq1, True)
+            self.cz(oq0, oq1)
+            self.ry(tensor(pi / 2), oq1, True)
+
+    def cy(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
+        if not self.realNoise:
+            from Library.QuantumGates.YGates import CYGate
+
+            _headline = f"CY{oqs}|None"
+            self._add_module(CYGate(_ideal), oqs, _headline)
         else:
             raise NotImplementedError("EXPCYGate is not implemented yet.")
 
-    def cz(self, oq0: int, oq1: int):
-        self._oqsList.append([oq0, oq1])
+    def cz(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
+        if not self.realNoise:
+            from Library.QuantumGates.ZGates import CZGate
+
+            _headline = f"CZ{oqs}|None"
+
+            self._add_module(CZGate(_ideal), oqs, _headline)
+        else:
+            from Library.QuantumGates.NoiseGates import CZEXPGate
+
+            _headline = f"CZEXP{oqs}|None"
+
+            _tensor = self._cz_expTensors.get(f'{oq0}{oq1}')
+            if _tensor is None:
+                _tensor = self._cz_expTensors.get(f'{oq1}{oq0}')
+
+            self._add_module(CZEXPGate(_tensor), oqs, _headline)
+
+    def cnot(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
+        if not self.realNoise:
+            from Library.QuantumGates.ArbDoubleGates import CNOTGate
+
+            _headline = f"CNOT{oqs}|None"
+            self._add_module(CNOTGate(_ideal), oqs, _headline)
+        else:
+            self.ry(-tensor(pi / 2), oq1, True)
+            self.cz(oq0, oq1)
+            self.ry(tensor(pi / 2), oq1, True)
+
+    def s(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
+        if isinstance(oqs, int):
+            oqs = [oqs]
+        from Library.QuantumGates.PhaseGates import SGate
+
+        _headline = f"S{oqs}|None"
+
+        self._add_module(SGate(_ideal), oqs, _headline)
+
+    def t(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
+        if isinstance(oqs, int):
+            oqs = [oqs]
+        from Library.QuantumGates.PhaseGates import TGate
+
+        _headline = f"T{oqs}|None"
+
+        self._add_module(TGate(_ideal), oqs, _headline)
+
+    def p(self, theta: Tensor, oqs: Union[List, int], _ideal: Optional[bool] = None):
+        if isinstance(oqs, int):
+            oqs = [oqs]
+        from Library.QuantumGates.PhaseGates import PGate
+
+        _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+        _headline = f"P{oqs}|({_paraI};{_paraD})"
+
+        self._add_module(PGate(theta, _ideal), oqs, _headline)
+
+    def cp(self, theta: Optional[Tensor], oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
 
         if not self.realNoise:
-            from QuantumGates.ZGates import CZGate
-            self.layers.add_module(f"CZ[{oq0},{oq1}]|None", CZGate())
+            from Library.QuantumGates.PhaseGates import CPGate
+
+            _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+            _headline = f"CP{oqs}|({_paraI};{_paraD})"
+            self._add_module(CPGate(theta, _ideal), oqs, _headline)
         else:
-            from QuantumGates.NoiseGates import CZEXPGate
-            self.layers.add_module(f"CZEXP[{oq0},{oq1}]|None", CZEXPGate())
+            from Library.QuantumGates.NoiseGates import CPEXPGate
 
-    def cnot(self, oq0: int, oq1: int):
-        self._oqsList.append([oq0, oq1])
+            _headline = f"CPEXP{oqs}|None"
 
-        if not self.realNoise:
-            from QuantumGates.XGates import CXGate
-            self.layers.add_module(f"CNOT[{oq0},{oq1}]|None", CXGate())
-        else:
-            from QuantumGates.NoiseGates import CZEXPGate
-            from QuantumGates.YGates import RYGate
+            _tensor = self._cp_expTensors.get(f'{oq0}{oq1}')
+            if _tensor is None:
+                _tensor = self._cp_expTensors.get(f'{oq1}{oq0}')
+            self._add_module(CPEXPGate(_tensor), oqs, _headline)
 
-            _transpiled_gates_ = [RYGate(-tensor(pi) / 2, True), CZEXPGate(), RYGate(tensor(pi) / 2), True]
-            _transpiled_oqs_ = [[oq1], [oq0, oq1], [oq1]]
-
-            self._iter_add_module(_transpiled_gates_, _transpiled_oqs_)
-
-    def s(self, oqs: List):
+    def arbSingle(self, data: Tensor, oqs: List, _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ArbSingleGates import ArbSingleGate
 
-        from QuantumGates.PhaseGates import SGate
-        self.layers.add_module(f"S{oqs}|None", SGate())
+        _headline = f"ArbS{oqs}|None"
 
-    def t(self, oqs: List):
+        self._add_module(ArbSingleGate(data, _ideal), oqs, _headline)
+
+    def arbDouble(self, data: Tensor, oq1: int, oq2: int, _ideal: Optional[bool] = None):
+        oqs = [oq1, oq2]
+        from Library.QuantumGates.ArbDoubleGates import ArbDoubleGate
+
+        _headline = f"ArbD{oqs}|None"
+
+        self._add_module(ArbDoubleGate(data, _ideal), oqs, _headline)
+
+    def ii(self, oq1: int, oq2: int, _ideal: Optional[bool] = None):
+        oqs = [oq1, oq2]
+        from Library.QuantumGates.ArbDoubleGates import IIGate
+
+        _headline = f"II{oqs}|None"
+
+        self._add_module(IIGate(_ideal), oqs, _headline)
+
+    def u1(self, theta: Tensor, oqs: List, _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ArbSingleGates import U1Gate
 
-        from QuantumGates.PhaseGates import TGate
-        self.layers.add_module(f"T{oqs}|None", TGate())
+        _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
+        _headline = f"U1{oqs}|({_paraI};{_paraD})"
 
-    def p(self, theta: Tensor, oqs: List):
+        self._add_module(U1Gate(theta, _ideal), oqs, _headline)
+
+    def u2(self, phi: Tensor, lam: Tensor, oqs: List, _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ArbSingleGates import U2Gate
 
-        from QuantumGates.PhaseGates import PGate
-        self.layers.add_module("P{}|{:.3f}".format(oqs, theta.item()), PGate(theta))
+        _paraIL, _paraDL = '{:.3f}'.format(lam.item()).split('.')
+        _paraIP, _paraDP = '{:.3f}'.format(phi.item()).split('.')
+        _headline = f"U2{oqs}|({_paraIL};{_paraDL})-({_paraIP};{_paraDP})"
 
-    def cp(self, theta: Tensor, oq0: int, oq1: int):
-        self._oqsList.append([oq0, oq1])
+        self._add_module(U2Gate(phi, lam, _ideal), oqs, _headline)
 
-        if not self.realNoise:
-            from QuantumGates.PhaseGates import CPGate
-            self.layers.add_module("CP[{},{}]|{:.3f}".format(oq0, oq1, theta.item()), CPGate(theta))
-        else:
-            from QuantumGates.NoiseGates import CZEXPGate
-            self.layers.add_module(f"CPEXP[{oq0},{oq1}]|None", CZEXPGate())
-
-    def arbSingle(self, data: Tensor, oqs: List):
+    def u3(self, theta: Tensor, phi: Tensor, lam: Tensor, oqs: List, _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
-        self._oqsList.append(oqs)
+        from Library.QuantumGates.ArbSingleGates import U3Gate
 
-        from QuantumGates.ArbSingleGates import ArbSingleGate
-        self.layers.add_module(f"S{oqs}|None", ArbSingleGate(data))
+        _paraIT, _paraDT = '{:.3f}'.format(theta.item()).split('.')
+        _paraIL, _paraDL = '{:.3f}'.format(lam.item()).split('.')
+        _paraIP, _paraDP = '{:.3f}'.format(phi.item()).split('.')
+        _headline = f"U3{oqs}|({_paraIT};{_paraDT})-({_paraIL};{_paraDL})-({_paraIP};{_paraDP})"
 
-    def arbDouble(self, data: Tensor, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
+        self._add_module(U3Gate(theta, phi, lam, _ideal), oqs, _headline)
 
-        from QuantumGates.ArbDoubleGates import ArbDoubleGate
-        self.layers.add_module(f"D{oqs}|None", ArbDoubleGate(data))
-
-    def ii(self, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
-
-        from QuantumGates.ArbDoubleGates import IIGate
-        self.layers.add_module(f"II{oqs}|None", IIGate())
-
-    def u1(self, theta: Tensor, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
-
-        from QuantumGates.ArbSingleGates import U1Gate
-        self.layers.add_module("U1{}|{:.3f}".format(oqs, theta.item()), U1Gate(theta))
-
-    def u2(self, phi: Tensor, lam: Tensor, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
-
-        from QuantumGates.ArbSingleGates import U2Gate
-        self.layers.add_module("U2{}|{:.3f}-{:.3f}".format(oqs, phi.item(), lam.item()), U2Gate(lam, phi))
-
-    def u3(self, theta: Tensor, phi: Tensor, lam: Tensor, oqs: List):
-        if isinstance(oqs, int):
-            oqs = [oqs]
-        self._oqsList.append(oqs)
-
-        from QuantumGates.ArbSingleGates import U3Gate
-        self.layers.add_module(
-            "U3{}|{:.2f}-{:.2f}-{:.2f}".format(oqs, theta.item(), phi.item(), lam.item()), U3Gate(lam, phi, theta)
-        )
+    def truncate(self, truncation: bool = False):
+        self.Truncate = truncation

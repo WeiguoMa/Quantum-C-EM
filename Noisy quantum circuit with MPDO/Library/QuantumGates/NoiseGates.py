@@ -3,6 +3,7 @@ Author: weiguo_ma
 Time: 11.27.2023
 Contact: weiguo.m@iphy.ac.cn
 """
+import warnings
 from typing import Union, Optional
 
 import torch as tc
@@ -16,9 +17,9 @@ class CZEXPGate(QuantumGate):
         CZ_EXP gate.
     """
 
-    def __init__(self, tensor: Optional[tc.Tensor] = None, truncation: bool = False,
+    def __init__(self, tensor: Optional[tc.Tensor] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(CZEXPGate, self).__init__(truncation=truncation)
+        super(CZEXPGate, self).__init__()
         self.device = device
         self.dtype = dtype
 
@@ -33,7 +34,8 @@ class CZEXPGate(QuantumGate):
     def tensor(self):
         # NO input may cause high memory cost and time cost
         if self.Tensor is None:
-            return czExp_channel().to(self.device, dtype=self.dtype)
+            warnings.warn('No (sufficient) CZ input files, use default tensor.')
+            return czExp_channel(filename='data/chi/czDefault.mat').to(self.device, dtype=self.dtype)
         else:
             return self.Tensor.to(self.device, dtype=self.dtype)
 
@@ -59,9 +61,9 @@ class CPEXPGate(QuantumGate):
         CP_EXP gate.
     """
 
-    def __init__(self, tensor: Optional[tc.Tensor] = None, truncation: bool = False,
+    def __init__(self, tensor: Optional[tc.Tensor] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(CPEXPGate, self).__init__(truncation=truncation)
+        super(CPEXPGate, self).__init__()
         self.device = device
         self.dtype = dtype
 
@@ -76,6 +78,7 @@ class CPEXPGate(QuantumGate):
     def tensor(self):
         # NO input may cause high memory cost and time cost
         if self.Tensor is None:
+            warnings.warn('No (sufficient) CP input files, use default tensor.')
             return cpExp_channel().to(self.device, dtype=self.dtype)
         else:
             return self.Tensor.to(self.device, dtype=self.dtype)

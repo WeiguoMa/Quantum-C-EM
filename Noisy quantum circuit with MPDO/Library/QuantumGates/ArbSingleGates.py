@@ -18,9 +18,9 @@ class IGate(QuantumGate):
     I gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(IGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(IGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -54,9 +54,9 @@ class HGate(QuantumGate):
     H gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(HGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(HGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -90,9 +90,9 @@ class U1Gate(QuantumGate):
     U1 gate.
     """
 
-    def __init__(self, theta: tc.Tensor, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, theta: tc.Tensor, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(U1Gate, self).__init__(ideal=ideal, truncation=truncation)
+        super(U1Gate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -105,7 +105,7 @@ class U1Gate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor([[1, 0], [0, tc.exp(1j * self._theta)]],
                          dtype=self.dtype, device=self.device)
 
@@ -131,9 +131,9 @@ class U2Gate(QuantumGate):
     U2 gate.
     """
 
-    def __init__(self, phi: tc.Tensor, lam: tc.Tensor, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, phi: tc.Tensor, lam: tc.Tensor, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(U2Gate, self).__init__(ideal=ideal, truncation=truncation)
+        super(U2Gate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -148,7 +148,7 @@ class U2Gate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor([self._phi, self._lam])
+        self._check_Para_Tensor([self._phi, self._lam])
         return tc.tensor(
             [[1, -tc.exp(1j * self._lam)],
              [tc.exp(1j * self._phi), tc.exp(1j * (self._phi + self._lam))]],
@@ -180,7 +180,7 @@ class U3Gate(QuantumGate):
     def __init__(self, theta: tc.Tensor, phi: tc.Tensor, lam: tc.Tensor, ideal: Optional[bool] = None,
                  truncation: bool = False,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(U3Gate, self).__init__(ideal=ideal, truncation=truncation)
+        super(U3Gate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -196,7 +196,7 @@ class U3Gate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor([self._theta, self._phi, self._lam])
+        self._check_Para_Tensor([self._theta, self._phi, self._lam])
         return tc.tensor(
             [[tc.cos(self._theta / 2), -tc.exp(1j * self._lam) * tc.sin(self._theta / 2)],
              [tc.exp(1j * self._phi) * tc.sin(self._theta / 2),
@@ -226,9 +226,9 @@ class ArbSingleGate(QuantumGate):
     ArbSingleGate gate.
     """
 
-    def __init__(self, tensor: tc.Tensor, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, tensor: tc.Tensor, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(ArbSingleGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(ArbSingleGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 

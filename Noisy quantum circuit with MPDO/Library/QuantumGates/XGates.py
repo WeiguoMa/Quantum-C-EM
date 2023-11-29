@@ -16,9 +16,9 @@ class XGate(QuantumGate):
     X gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(XGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(XGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -53,9 +53,9 @@ class RXGate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor,
-                 ideal: Optional[bool] = None, truncation: bool = False,
+                 ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(RXGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(RXGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -69,7 +69,7 @@ class RXGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor(
             [[tc.cos(self._theta / 2), -1j * tc.sin(self._theta / 2)],
              [-1j * tc.sin(self._theta / 2), tc.cos(self._theta / 2)]],
@@ -98,9 +98,10 @@ class CXGate(QuantumGate):
         CX gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(CXGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(CXGate, self).__init__(ideal=ideal)
+        self._tensor = None
         self.device = device
         self.dtype = dtype
 
@@ -138,9 +139,9 @@ class RXXGate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor,
-                 ideal: Optional[bool] = None, truncation: bool = False,
+                 ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(RXXGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(RXXGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -154,7 +155,7 @@ class RXXGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor(
             [[tc.cos(self._theta / 2), 0, 0, -1j * tc.sin(self._theta / 2)],
              [0, tc.cos(self._theta / 2), -1j * tc.sin(self._theta / 2), 0],

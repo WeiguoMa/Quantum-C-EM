@@ -16,9 +16,9 @@ class ZGate(QuantumGate):
     X gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(ZGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(ZGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -53,9 +53,9 @@ class RZGate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor,
-                 ideal: Optional[bool] = None, truncation: bool = False,
+                 ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(RZGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(RZGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -69,7 +69,7 @@ class RZGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor([[tc.exp(-1j * self._theta / 2), 0],
                           [0, tc.exp(1j * self._theta / 2)]], dtype=self.dtype, device=self.device)
 
@@ -95,9 +95,9 @@ class CZGate(QuantumGate):
         CZ gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(CZGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(CZGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -135,9 +135,9 @@ class RZZGate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor,
-                 ideal: Optional[bool] = None, truncation: bool = False,
+                 ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(RZZGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(RZZGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -151,7 +151,7 @@ class RZZGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor(
             [
                 [tc.exp(-1j * self._theta), 0, 0, 0],

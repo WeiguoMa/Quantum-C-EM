@@ -16,9 +16,9 @@ class YGate(QuantumGate):
     Y gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(YGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(YGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -53,9 +53,9 @@ class RYGate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor,
-                 ideal: Optional[bool] = None, truncation: bool = False,
+                 ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(RYGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(RYGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -69,7 +69,7 @@ class RYGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor([[tc.cos(self._theta / 2), -tc.sin(self._theta / 2)],
                           [tc.sin(self._theta / 2), tc.cos(self._theta / 2)]], dtype=self.dtype, device=self.device)
 
@@ -95,9 +95,9 @@ class CYGate(QuantumGate):
         CY gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(CYGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(CYGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -135,9 +135,9 @@ class RYYGate(QuantumGate):
     """
 
     def __init__(self, theta: tc.Tensor,
-                 ideal: Optional[bool] = None, truncation: bool = False,
+                 ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(RYYGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(RYYGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -151,7 +151,7 @@ class RYYGate(QuantumGate):
 
     @property
     def tensor(self):
-        self._check_Tensor(self._theta)
+        self._check_Para_Tensor(self._theta)
         return tc.tensor(
             [[tc.cos(self._theta / 2), 0, 0, -tc.sin(self._theta / 2)],
              [0, tc.cos(self._theta / 2), tc.sin(self._theta / 2), 0],

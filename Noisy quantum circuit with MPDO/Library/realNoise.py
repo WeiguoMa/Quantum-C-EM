@@ -4,6 +4,7 @@ Time: 05.01.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 import os
+from typing import Union, Optional, List, Dict
 
 import numpy as np
 import torch as tc
@@ -18,12 +19,9 @@ __all__ = [
 ]
 
 
-def readExpChi(filename: str = None):
+def readExpChi(filename: Optional[str] = None):
     if filename is None:
-        if os.path.split(os.getcwd())[1] == 'Noisy quantum circuit with MPDO':
-            filename = os.path.join('data', 'chi', 'chi1.mat')
-        else:
-            filename = os.path.join('..', 'data', 'chi', 'chi1.mat')
+        raise FileNotFoundError('No file found.')
     if '.mat' in filename:
         data = loadmat(filename)['exp']
         return data
@@ -34,7 +32,10 @@ def readExpChi(filename: str = None):
         raise TypeError('Current file-type is not supported.')
 
 
-def noisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str or int = 'cpu') -> list[tc.Tensor]:
+def noisyTensor(chi,
+                gate_factor: Optional[Dict] = None,
+                dtype=tc.complex64,
+                device: Union[int, str] = 'cpu') -> List[tc.Tensor]:
     r"""
     :param chi: Chi matrix from experiment;
     :param gate_factor: Manual API;
@@ -131,11 +132,11 @@ def noisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str o
                     _effGate['E_{}'.format(_i)][_g_set[_idx]] = _e_matrix[_i][_idx]
         return _effGate
 
-    def is_nested_dict(d: dict):
+    def is_nested_dict(d: Dict):
         """
         check whether a dict is nested, True: { { } } -- False: { }.
         """
-        return any(isinstance(j, dict) for j in d.values())
+        return any(isinstance(j, Dict) for j in d.values())
 
     if gate_factor is None:
         gate_factor = _czNoisySPara(chi)
@@ -160,15 +161,19 @@ def noisyTensor(chi, gate_factor: dict = None, dtype=tc.complex64, device: str o
     return _tensor
 
 
-def czExp_channel(filename: str = None, device: int or str = 'cpu'):
+def czExp_channel(filename: Optional[str] = None, dtype=tc.complex64, device: Union[int, str] = 'cpu'):
+    if filename is None:
+        filename = os.path.join(os.path.dirname(__file__), 'data/chi/czDefault.mat')
     _chi = readExpChi(filename=filename)
     _czExp_tensor = tc.stack(noisyTensor(_chi))
     _czExp_tensor = tc.einsum('ijlmn -> jlmni', _czExp_tensor)
-    return _czExp_tensor.to(device=device)
+    return _czExp_tensor.to(dtype=dtype, device=device)
 
 
-def cpExp_channel(filename: str = None, device: int or str = 'cpu'):
-    _chi = readExpChi(filename=filename)
+def cpExp_channel(filename: Optional[str] = None, dtype=tc.complex64, device: Union[int, str] = 'cpu'):
+    if filename is None:
+        filename = os.path.join(os.path.dirname(__file__), 'data/chi/cpDefault.mat')
+    _chi = readExpChi(filename=None)
     _cpExp_tensor = tc.stack(noisyTensor(_chi))
     _cpExp_tensor = tc.einsum('ijlmn -> jlmni', _cpExp_tensor)
-    return _cpExp_tensor.to(device=device)
+    return _cpExp_tensor.to(dtype=dtype, device=device)

@@ -16,9 +16,9 @@ class IIGate(QuantumGate):
         II gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(IIGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(IIGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -56,9 +56,9 @@ class CNOTGate(QuantumGate):
         CNOT gate.
     """
 
-    def __init__(self, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(CNOTGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(CNOTGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
@@ -95,9 +95,9 @@ class ArbDoubleGate(QuantumGate):
         CNOT gate.
     """
 
-    def __init__(self, tensor: tc.Tensor, ideal: Optional[bool] = None, truncation: bool = False,
+    def __init__(self, tensor: tc.Tensor, ideal: Optional[bool] = None,
                  dtype=tc.complex64, device: Union[str, int] = 'cpu'):
-        super(ArbDoubleGate, self).__init__(ideal=ideal, truncation=truncation)
+        super(ArbDoubleGate, self).__init__(ideal=ideal)
         self.device = device
         self.dtype = dtype
 
