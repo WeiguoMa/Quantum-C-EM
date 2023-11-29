@@ -154,10 +154,10 @@ class RZZGate(QuantumGate):
         self._check_Para_Tensor(self._theta)
         return tc.tensor(
             [
-                [tc.exp(-1j * self._theta), 0, 0, 0],
-                [0, tc.exp(1j * self._theta), 0, 0],
-                [0, 0, tc.exp(1j * self._theta), 0],
-                [0, 0, 0, tc.exp(-1j * self._theta)],
+                [tc.exp(-1j * self._theta / 2), 0, 0, 0],
+                [0, tc.exp(1j * self._theta / 2), 0, 0],
+                [0, 0, tc.exp(1j * self._theta / 2), 0],
+                [0, 0, 0, tc.exp(-1j * self._theta / 2)],
             ], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
 
     @property
