@@ -379,9 +379,5 @@ state = circuit(state, state_vector=False, reduced_index=[])
 of forward()
 and updating the parameters.
 
-**RealNoise** function is still sensitive, which causes a little bit high noise
-compare to
-QUTIP-fullMatrix simulation.
-
 **Memory Overflow** is possible to happen while unknown error occurs in the
 program.
