@@ -283,9 +283,9 @@ reusability of components, which can lead to a more maintainable and scalable pr
 
 ```python
 import tensornetwork as tn
+
 import Library.tools as tools
-from Library.ADCircuits import TensorCircuit
-from Library.AbstractGate import AbstractGate
+from Library.QuantumCircuit import TensorCircuit
 
 tn.set_default_backend("pytorch")
 ```
@@ -293,18 +293,24 @@ tn.set_default_backend("pytorch")
 ## Basic Information of Quantum Circuit
 
 ```python
-qnumber = 4
+# Basic information of circuit
+qnumber = 5
 ideal_circuit = False  # or True
-realNoise = True  # or False
-chiFilename = './data/chi/chi1.mat'
-chi, kappa = None, None
+noiseType = 'realNoise'  # or 'realNoise' or 'idealNoise'
+
+chiFileNames = {
+    'CZ': {'01': './data/chi/czDefault.mat', '12': './data/chi/czDefault.mat', '23': './data/chi/czDefault.mat',
+           '34': './data/chi/czDefault.mat'},
+    'CP': {}
+}
+chi, kappa = 4, 4
 
 """
 While ideal_circuit is False, simulator is working with a noisy quantum circuit with United Noise Model;
       realNoise is True, double-qubit gate is replaced by a real quantum gate with QPT-Chi matrix decomposition;
       
       chiFilename is the path of QPT-Chi matrix, which is used for real quantum noise simulation;
-        I provided two chi matrix in ./data/chi, 'chi1.mat' is for noise qubit,
+        I provided two chi matrix in ./data/chi, 'czDefault.mat' is for noise qubit,
                                                  'ideal_cz.mat' is ideal cz-gate chi matrix;
       
       chi is used for truncating the dimension between qubits in TNN_optimization process, accelerating the contraction;
@@ -321,17 +327,19 @@ An ideal=True circuit cannot work with realNoise=True,
 
 ```python
 # Establish a quantum circuit
-circuit = TensorCircuit(ideal=ideal_circuit, realNoise=realNoise,
-                        chiFilename=chiFilename, chi=chi, kappa=kappa)
-"""
-Example:
-    GHZ State Prepare
-"""
+circuit = TensorCircuit(qn=qnumber, ideal=ideal_circuit, noiseType=noiseType,
+                        chiFileDict=chiFileNames, chi=chi, kappa=kappa, chip='worst4Test', device='cpu')
 
-circuit.add_gate(AbstractGate().h(), [0])
-circuit.add_gate(AbstractGate().cnot(), [0, 1])
-circuit.add_gate(AbstractGate().cnot(), [1, 2])
-circuit.add_gate(AbstractGate().cnot(), [2, 3])
+circuit.h(0)
+circuit.cnot(0, 1)
+circuit.cnot(1, 2)
+circuit.cnot(2, 3)
+circuit.cnot(3, 4)
+
+# Set TensorNetwork Truncation
+circuit.truncate(True)
+
+print(circuit)
 
 ```
 
