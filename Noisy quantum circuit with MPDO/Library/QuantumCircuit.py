@@ -4,7 +4,7 @@ Time: 04.26.2023
 Contact: weiguo.m@iphy.ac.cn
 """
 from copy import deepcopy
-from typing import Optional, Dict, Union, List, Any
+from typing import Optional, Dict, Union, List, Any, Tuple
 
 import tensornetwork as tn
 import torch as tc
@@ -385,7 +385,8 @@ class TensorCircuit(QuantumCircuit):
                 _state: List[tn.AbstractNode],
                 state_vector: bool = False,
                 reduced_index: Optional[List] = None,
-                forceVectorRequire: bool = False) -> Union[tc.Tensor, Dict]:
+                forceVectorRequire: bool = False,
+                _require_nodes: bool = False) -> Union[tc.Tensor, Dict, Tuple]:
         """
         Forward propagation of tensornetwork.
 
@@ -416,6 +417,7 @@ class TensorCircuit(QuantumCircuit):
             svdKappa_left2right(_state, kappa=self.kappa)
 
         self.state = _state
+        _nodes = deepcopy(_state) if _require_nodes else None
         _dm = self._calculate_DM(state_vector=state_vector, reduced_index=reduced_index)
 
-        return _dm
+        return (_nodes, _dm) if _require_nodes else _dm
