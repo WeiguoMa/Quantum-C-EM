@@ -38,7 +38,7 @@ class QuantumCircuit(ABC, nn.Module):
         if self.realNoise:
             self._load_exp_tensors()
 
-        self._sequence = 0
+        self._sequence, self._sequenceT = 0, 0
 
     def _load_exp_tensors(self):
         self._cz_expTensors, self._cp_expTensors = {}, {}
@@ -348,5 +348,10 @@ class QuantumCircuit(ABC, nn.Module):
 
         self._add_module(U3Gate(theta, phi, lam, _ideal), oqs, _headline)
 
-    def truncate(self, truncation: bool = False):
-        self.Truncate = truncation
+    def truncate(self):
+        """
+        Add a truncation layer to the circuit.
+        """
+        self._oqs_list.append(['None'])
+        self.layers.add_module(f'Truncation-{self._sequenceT}', None)
+        self._sequenceT += 1

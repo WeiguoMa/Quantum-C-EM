@@ -133,6 +133,8 @@ class TensorCircuit(QuantumCircuit):
         """
 
         gate = self.layers[_layer_num]
+        if not gate:        # Stopping condition
+            return None
         _maxIdx, _minIdx = max(_oqs), min(_oqs)
 
         if not isinstance(_qubits, List):
@@ -394,7 +396,8 @@ class TensorCircuit(QuantumCircuit):
 
         for _i, layer in enumerate(self.layers):
             self._add_gate(_state, _i, _oqs=self._oqs_list[_i])
-
+            self.Truncate = True if layer is None else False
+            #
             if self.Truncate and self.tnn_optimize:
                 if not self.ideal:
                     svdKappa_left2right(_state, kappa=self.kappa)

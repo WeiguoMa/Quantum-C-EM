@@ -337,7 +337,7 @@ circuit.cnot(2, 3)
 circuit.cnot(3, 4)
 
 # Set TensorNetwork Truncation
-circuit.truncate(True)
+circuit.truncate()
 
 print(circuit)
 
