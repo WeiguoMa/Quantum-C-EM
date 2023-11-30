@@ -1,6 +1,6 @@
 # Noisy Quantum circuit simulator with Matrix Product Density Operator (MPDO)
 
-###### I have to emphasize that this project is not intended for High Performance Computing
+###### I have to emphasize that this project is not intended for High Performance Computing now.
 
 ## Computer Implementation
 
@@ -248,20 +248,17 @@ in the project:
 
 **Library**:
 
-- `AbstractGate`: This abstract class defines the interface for quantum gates, providing a blueprint for
+- `QuantumGate`: This abstract class defines the interface for quantum gates, providing a blueprint for
   implementing different types of quantum gates.
 
-- `ADCircuits`: This class represents a quantum circuit and includes various methods, such as `add_gate`, to
-  manipulate and construct the quantum circuit using quantum gates.
-
-- `ADGate`: This class provides essential information about individual quantum gates, likely including
-  properties like name, matrix representation, and other relevant attributes.
+- `AbstractCircuit`: AbstractCircuit is an abstract class that defines the interface for quantum circuits,
+  providing a blueprint for implementing different types of quantum circuits.
+- 
+- `QuantumCircuit`: TensorCircuit is a concrete class that implements the AbstractCircuit interface, providing
+  a blueprint for implementing different types of quantum circuits.
 
 - `chipInfo`: This module offers fundamental information about quantum chips, which is primarily used for
   noise simulation in the context of quantum computation.
-
-- `ElderFunc`: This section holds the original codes from previous versions, possibly serving as a reference
-  or archive for earlier implementations.
 
 - `NoiseChannel`: This module provides noise channels for the quantum circuit, allowing the simulation of
   realistic quantum noise during computations.
