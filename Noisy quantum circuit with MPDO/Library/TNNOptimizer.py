@@ -19,6 +19,33 @@ __all__ = [
 ]
 
 
+def _randomized_svd(M, n_components, n_iter='auto', random_state=None):
+    """
+    Randomized SVD.
+    """
+    _m, _n = M.shape
+    _rng = tc.Generator()
+    if random_state is not None:
+        _rng.manual_seed(random_state)
+
+    _Q = tc.randn(_m, n_components, dtype=tc.complex64, generator=_rng) + 1j *\
+        tc.randn(_m, n_components, dtype=tc.complex64, generator=_rng)
+
+    if n_iter == 'auto':
+        n_iter = 7 if _m >= _n else 4
+
+    for _ in range(n_iter):
+        _Q = M @ (M.T.conj() @ _Q)
+
+    _Q, _ = tc.linalg.qr(_Q)
+
+    _B = _Q.T.conj() @ M
+
+    _u, _s, _vh = tc.linalg.svd(_B, full_matrices=False)
+    _u = _Q @ _u
+
+    return _u, _s, _vh
+
 def checkConnectivity(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     """
     Check if the qubits have connectivity.
@@ -191,15 +218,18 @@ def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kap
             _shape = _qubitTensor.shape
 
             # SVD to truncate the inner dimension
-            _u, _s, _ = tc.linalg.svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), full_matrices=False)
+            if _qubitTensor.numel() < 10000:
+                _u, _s, _ = tc.linalg.svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), full_matrices=False)
+            else:
+                _u, _s, _ = _randomized_svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), n_components=kappa)
+
             _s = _s.to(dtype=tc.complex64)
 
             # Truncate the inner dimension
             if kappa is None or kappa > _s.nelement():
                 kappa = _s.nelement()
 
-            _s = _s[: kappa]
-            _u = _u[:, : kappa]
+            _u, _s = _u[:, : kappa], _s[: kappa]
 
             if len(_s.shape) == 1:
                 _s = tc.diag(_s)
