@@ -28,8 +28,8 @@ def _randomized_svd(M, n_components, n_iter='auto', random_state=None):
     if random_state is not None:
         _rng.manual_seed(random_state)
 
-    _Q = tc.randn(_m, n_components, dtype=tc.complex64, generator=_rng) + 1j *\
-        tc.randn(_m, n_components, dtype=tc.complex64, generator=_rng)
+    _Q = tc.randn(_m, n_components, dtype=tc.complex64, generator=_rng) + 1j * \
+         tc.randn(_m, n_components, dtype=tc.complex64, generator=_rng)
 
     if n_iter == 'auto':
         n_iter = 7 if _m >= _n else 4
@@ -45,6 +45,7 @@ def _randomized_svd(M, n_components, n_iter='auto', random_state=None):
     _u = _Q @ _u
 
     return _u, _s, _vh
+
 
 def checkConnectivity(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     """
