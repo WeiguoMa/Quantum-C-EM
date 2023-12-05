@@ -29,8 +29,7 @@ def _randomized_svd(M, n_components: int, n_overSamples: int = 5,
     if random_state is not None:
         _rng.manual_seed(random_state)
 
-    _Q = tc.randn(_m, n_components + n_overSamples, dtype=tc.complex64, generator=_rng) + 1j * \
-         tc.randn(_m, n_components + n_overSamples, dtype=tc.complex64, generator=_rng)
+    _Q = tc.randn(_m, n_components + n_overSamples, dtype=tc.complex64, generator=_rng)
 
     if n_iter == 'auto':
         n_iter = 6 if _m >= _n else 4
