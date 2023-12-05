@@ -219,7 +219,7 @@ def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kap
             _shape = _qubitTensor.shape
 
             # SVD to truncate the inner dimension
-            if _qubitTensor.numel() < 10000:
+            if _qubitTensor.numel() < 10000 or kappa is None:
                 _u, _s, _ = tc.linalg.svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), full_matrices=False)
             else:
                 _u, _s, _ = _randomized_svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), n_components=kappa)
