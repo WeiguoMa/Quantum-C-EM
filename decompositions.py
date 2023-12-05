@@ -13,20 +13,49 @@
 # limitations under the License.
 """Tensor Decomposition Implementations."""
 
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, Union
+
 import numpy as np
 
 Tensor = Any
 
 
+def _randomized_svd(torch: Any, M, n_components: int, n_overSamples: int = 5,
+                    n_iter: Union[str, int] = 'auto', random_state: Optional = None):
+    """
+    Randomized SVD for complex-number matrix.
+    """
+    _m, _n = M.shape
+    _rng = torch.Generator()
+    if random_state is not None:
+        _rng.manual_seed(random_state)
+
+    _Q = torch.randn(_m, n_components + n_overSamples, dtype=torch.complex64, generator=_rng)
+
+    if n_iter == 'auto':
+        n_iter = 6 if _m >= _n else 4
+
+    for _ in range(n_iter):
+        _Q = M @ (M.T.conj() @ _Q)
+
+    _Q, _ = torch.linalg.qr(_Q)
+
+    _B = _Q.T.conj() @ M
+
+    _u, _s, _vh = torch.linalg.svd(_B, full_matrices=False)
+    _u = _Q @ _u
+
+    return _u, _s, _vh
+
+
 def svd(
-    torch: Any,
-    tensor: Tensor,
-    pivot_axis: int,
-    max_singular_values: Optional[int] = None,
-    max_truncation_error: Optional[float] = None,
-    relative: Optional[bool] = False) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
-  """Computes the singular value decomposition (SVD) of a tensor.
+        torch: Any,
+        tensor: Tensor,
+        pivot_axis: int,
+        max_singular_values: Optional[int] = None,
+        max_truncation_error: Optional[float] = None,
+        relative: Optional[bool] = False) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+    """Computes the singular value decomposition (SVD) of a tensor.
 
   The SVD is performed by treating the tensor as a matrix, with an effective
   left (row) index resulting from combining the axes `tensor.shape[:pivot_axis]`
@@ -76,48 +105,51 @@ def svd(
     s_rest: Vector of discarded singular values (length zero if no
             truncation).
   """
-  left_dims = tensor.shape[:pivot_axis]
-  right_dims = tensor.shape[pivot_axis:]
+    left_dims = tensor.shape[:pivot_axis]
+    right_dims = tensor.shape[pivot_axis:]
 
-  tensor = tensor.reshape((-1, torch.prod(torch.tensor(right_dims))))
-  u, s, vh = torch.linalg.svd(tensor, full_matrices=False)
-
-  if max_singular_values is None:
-    max_singular_values = s.numel()
-
-  if max_truncation_error is not None:
-    s_squared_sorted = torch.sort(s ** 2, descending=True).values
-    trunc_errs = torch.sqrt(torch.cumsum(s_squared_sorted, dim=0))
-    if relative:
-      abs_max_truncation_error = max_truncation_error * s[0]
+    tensor = tensor.reshape((-1, torch.prod(torch.tensor(right_dims))))
+    if tensor.numel() < 10000 or max_singular_values is None:
+        u, s, vh = torch.linalg.svd(tensor, full_matrices=False)
     else:
-      abs_max_truncation_error = max_truncation_error
-    num_sing_vals_err = torch.nonzero(trunc_errs > abs_max_truncation_error, as_tuple=True)[0].numel()
-  else:
-    num_sing_vals_err = max_singular_values
+        u, s, vh = _randomized_svd(torch, tensor, n_components=max_singular_values)
 
-  num_sing_vals_keep = min(max_singular_values, num_sing_vals_err)
+    if max_singular_values is None:
+        max_singular_values = s.numel()
 
-  s = s.to(tensor.dtype)
-  s_rest = s[num_sing_vals_keep:]
-  s = s[:num_sing_vals_keep]
-  u = u[:, :num_sing_vals_keep]
-  vh = vh[:num_sing_vals_keep, :]
+    if max_truncation_error is not None:
+        s_squared_sorted = torch.sort(s ** 2, descending=True).values
+        trunc_errs = torch.sqrt(torch.cumsum(s_squared_sorted, dim=0))
+        if relative:
+            abs_max_truncation_error = max_truncation_error * s[0]
+        else:
+            abs_max_truncation_error = max_truncation_error
+        num_sing_vals_err = torch.nonzero(trunc_errs > abs_max_truncation_error, as_tuple=True)[0].numel()
+    else:
+        num_sing_vals_err = max_singular_values
 
-  dim_s = s.size(0)
-  u = u.reshape(*left_dims, dim_s)
-  vh = vh.reshape(dim_s, *right_dims)
+    num_sing_vals_keep = min(max_singular_values, num_sing_vals_err)
 
-  return u, s, vh, s_rest
+    s = s.to(tensor.dtype)
+    s_rest = s[num_sing_vals_keep:]
+    s = s[:num_sing_vals_keep]
+    u = u[:, :num_sing_vals_keep]
+    vh = vh[:num_sing_vals_keep, :]
+
+    dim_s = s.size(0)
+    u = u.reshape(*left_dims, dim_s)
+    vh = vh.reshape(dim_s, *right_dims)
+
+    return u, s, vh, s_rest
 
 
 def qr(
-    torch: Any,
-    tensor: Tensor,
-    pivot_axis: int,
-    non_negative_diagonal: bool = False
+        torch: Any,
+        tensor: Tensor,
+        pivot_axis: int,
+        non_negative_diagonal: bool = False
 ) -> Tuple[Tensor, Tensor]:
-  """Computes the QR decomposition of a tensor.
+    """Computes the QR decomposition of a tensor.
 
   The QR decomposition is performed by treating the tensor as a matrix,
   with an effective left (row) index resulting from combining the axes
@@ -145,28 +177,28 @@ def qr(
     R: Right tensor factor.
   """
 
-  left_dims = list(tensor.shape)[:pivot_axis]
-  right_dims = list(tensor.shape)[pivot_axis:]
+    left_dims = list(tensor.shape)[:pivot_axis]
+    right_dims = list(tensor.shape)[pivot_axis:]
 
-  tensor = torch.reshape(tensor, (int(np.prod(left_dims)), int(np.prod(right_dims))))
-  q, r = torch.linalg.qr(tensor)
-  if non_negative_diagonal:
-    phases = torch.sign(torch.diagonal(r))
-    q = q * phases
-    r = phases[:, None] * r
-  center_dim = q.shape[1]
-  q = torch.reshape(q, list(left_dims) + [center_dim])
-  r = torch.reshape(r, [center_dim] + list(right_dims))
-  return q, r
+    tensor = torch.reshape(tensor, (int(np.prod(left_dims)), int(np.prod(right_dims))))
+    q, r = torch.linalg.qr(tensor)
+    if non_negative_diagonal:
+        phases = torch.sign(torch.diagonal(r))
+        q = q * phases
+        r = phases[:, None] * r
+    center_dim = q.shape[1]
+    q = torch.reshape(q, list(left_dims) + [center_dim])
+    r = torch.reshape(r, [center_dim] + list(right_dims))
+    return q, r
 
 
 def rq(
-    torch: Any,
-    tensor: Tensor,
-    pivot_axis: int,
-    non_negative_diagonal: bool = False
+        torch: Any,
+        tensor: Tensor,
+        pivot_axis: int,
+        non_negative_diagonal: bool = False
 ) -> Tuple[Tensor, Tensor]:
-  """Computes the RQ decomposition of a tensor.
+    """Computes the RQ decomposition of a tensor.
 
   The RQ decomposition is performed by treating the tensor as a matrix,
   with an effective left (row) index resulting from combining the axes
@@ -194,18 +226,18 @@ def rq(
     Q: Right tensor factor.
   """
 
-  left_dims = tensor.shape[:pivot_axis]
-  right_dims = tensor.shape[pivot_axis:]
-  tensor = torch.reshape(tensor, [np.prod(left_dims), np.prod(right_dims)])
-  #torch has currently no support for complex dtypes
-  q, r = torch.linalg.qr(torch.transpose(tensor, 0, 1))
-  if non_negative_diagonal:
-    phases = torch.sign(torch.diagonal(r))
-    q = q * phases
-    r = phases[:, None] * r
-  r, q = torch.transpose(r, 0, 1), torch.transpose(q, 0,
-                                                   1)  #M=r*q at this point
-  center_dim = r.shape[1]
-  r = torch.reshape(r, list(left_dims) + [center_dim])
-  q = torch.reshape(q, [center_dim] + list(right_dims))
-  return r, q
+    left_dims = tensor.shape[:pivot_axis]
+    right_dims = tensor.shape[pivot_axis:]
+    tensor = torch.reshape(tensor, [np.prod(left_dims), np.prod(right_dims)])
+    # torch has currently no support for complex dtypes
+    q, r = torch.linalg.qr(torch.transpose(tensor, 0, 1))
+    if non_negative_diagonal:
+        phases = torch.sign(torch.diagonal(r))
+        q = q * phases
+        r = phases[:, None] * r
+    r, q = torch.transpose(r, 0, 1), torch.transpose(q, 0,
+                                                     1)  # M=r*q at this point
+    center_dim = r.shape[1]
+    r = torch.reshape(r, list(left_dims) + [center_dim])
+    q = torch.reshape(q, [center_dim] + list(right_dims))
+    return r, q
