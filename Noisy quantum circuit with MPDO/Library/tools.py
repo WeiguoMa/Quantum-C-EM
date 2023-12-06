@@ -316,10 +316,12 @@ def plot_histogram(prob_psi: Dict, title: Optional[str] = None, filename: Option
     plt.figure(figsize=(10, 8), dpi=300)
     plt.bar(prob_psi.keys(), prob_psi.values(), color='b')
     plt.ylim(ymin=0, ymax=1)
-    plt.xticks(rotation=-45)
-    plt.title(title)
-    plt.xlabel('State')
-    plt.ylabel('Probability')
+    plt.xticks(rotation=-45, fontsize=10)
+    plt.yticks(fontsize=14)
+    plt.title(title, fontsize=18)
+    plt.xlabel('State', fontsize=16)
+    plt.ylabel('Probability', fontsize=16)
+    plt.tight_layout()
 
     if filename is not None:
         plt.savefig(filename)
