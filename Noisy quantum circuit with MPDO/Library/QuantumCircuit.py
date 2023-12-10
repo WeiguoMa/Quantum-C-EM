@@ -47,7 +47,6 @@ class TensorCircuit(QuantumCircuit):
 
         # About program
         self.fVR = None
-        self.i = 0
         self.qnumber = qn
         self.state = None
         self.initState = None
@@ -407,8 +406,8 @@ class TensorCircuit(QuantumCircuit):
                     svd_right2left(_state, chi=self.chi)
             if self._entropy:
                 _entropy = cal_entropy(_state, kappa=self.kappa)
-                for _oqs in self._oqs_list[_i]:
-                    self._entropyList[f'qEntropy_{_oqs}'].append(_entropy[f'qEntropy_{_oqs}'])
+                for _ii in range(len(_state)):
+                    self._entropyList[f'qEntropy_{_ii}'].append(_entropy[f'qEntropy_{_ii}'])
             #
             if self.Truncate:
                 self.Truncate = False
