@@ -54,6 +54,7 @@ class TensorCircuit(QuantumCircuit):
         # Entropy
         self._entropy = _entropy
         self._entropyList = {f'qEntropy_{_i}': [] for _i in range(self.qnumber)}
+        self._entropyList.update({f'dimension_{_i}': [] for _i in range(self.qnumber)})
 
         # Noisy Circuit Setting
         self.ideal = ideal
@@ -82,43 +83,35 @@ class TensorCircuit(QuantumCircuit):
         self.tnn_optimize = tnn_optimize
 
     @staticmethod
-    def _calOrder(minIdx: int, maxIdx: Optional[int] = None, lBond: bool = False,
-                  smallI: bool = False, bigI: bool = False, rBond: bool = False, single: bool = False):
-        if single:
-            _return = [f'bond_{minIdx - 1}_{minIdx}'] * lBond \
-                      + [f'physics_{minIdx}'] \
-                      + [f'I_{minIdx}'] * smallI + [f'bond_{minIdx}_{minIdx + 1}'] * rBond
-        else:
-            _return = [f'bond_{minIdx - 1}_{minIdx}'] * lBond \
-                      + [f'physics_{minIdx}', f'physics_{maxIdx}'] \
-                      + [f'I_{minIdx}'] * smallI + [f'I_{maxIdx}'] * bigI \
-                      + [f'bond_{maxIdx}_{maxIdx + 1}'] * rBond
-        return _return
+    def _getBond(target_idx: int, idxList: Union[List[int], range], Name: List[str], Letters: str, _left: bool) \
+            -> List[str]:
+        return [
+            Letters[_idx_ - target_idx - 1] if not _left and f'bond_{target_idx}_{_idx_}' in Name else
+            Letters[_idx_] if _left and f'bond_{_idx_}_{target_idx}' in Name else ''
+            for _idx_ in idxList
+        ]
 
-    def _crossTalkZ_transpile(self, _gate_: QuantumGate, _oqs_: List[int]):
-        raise NotImplementedError('CrossTalk Z gate is not supported yet.')
-        # _minOqs, _maxOqs = min(_oqs_), max(_oqs_)
-        # if _minOqs == _maxOqs:
-        #     _Angle = np.random.normal(loc=np.pi / 16, scale=np.pi / 128,
-        #                               size=(1, 2))  # Should be related to the chip-Exp information
-        #     _gateList_ = [AbstractGate(ideal=True).rz(_Angle[0][0]), _gate_, AbstractGate(ideal=True).rz(_Angle[0][1])]
-        #     _oqsList_ = [[_oqs_[0] - 1], _oqs_, [_oqs_[0] + 1]]
-        # elif _minOqs + 1 == _maxOqs:
-        #     _Angle = np.random.normal(loc=np.pi / 16, scale=np.pi / 128,
-        #                               size=(1, 2))  # Should be related to the chip-Exp information
-        #     _gateList_ = [AbstractGate(ideal=True).rz(_Angle[0][0]), _gate_, AbstractGate(ideal=True).rz(_Angle[0][1])]
-        #     _oqsList_ = [[_minOqs - 1], _oqs_, [_maxOqs + 1]]
-        # else:
-        #     _Angle = np.random.normal(loc=np.pi / 16, scale=np.pi / 128,
-        #                               size=(1, 4))  # Should be related to the chip-Exp information
-        #     _gateList_ = [AbstractGate(ideal=True).rz(_Angle[0][0]), AbstractGate(ideal=True).rz(_Angle[0][1]),
-        #                   _gate_, AbstractGate(ideal=True).rz(_Angle[0][2]), AbstractGate(ideal=True).rz(_Angle[0][3])]
-        #     _oqsList_ = [[_minOqs - 1], [_minOqs + 1], _oqs_, [_maxOqs - 1], [_maxOqs + 1]]
-        # if _oqsList_[0][0] < 0:
-        #     _gateList_.pop(0), _oqsList_.pop(0)
-        # if _oqsList_[-1][0] > self.qnumber - 1:
-        #     _gateList_.pop(-1), _oqsList_.pop(-1)
-        # return _gateList_, _oqsList_
+    @staticmethod
+    def _calOrder(minIdx: int, maxIdx: Optional[int] = None, lBond: List = None, rBond: List = None,
+                  smallI: bool = False, bigI: bool = False, single: bool = False):
+        if single:
+            _lNames = [f'bond_{i}_{minIdx}' for i, item in enumerate(lBond) if item] if lBond else []
+            _rNames = [f'bond_{minIdx}_{i + minIdx + 1}' for i, item in enumerate(rBond) if item] if rBond else []
+            # lBond, phy, I, rBond
+            _return = _lNames + [f'physics_{minIdx}'] + [f'I_{minIdx}'] * smallI + _rNames
+        else:
+            # Type-in lBond and rBond should be (minLBond, maxLBond), (minRBond, maxRBond)
+            _lNames = [f'bond_{i}_{minIdx}' for i, item in enumerate(lBond[0]) if item] if lBond else []
+            _lNames.extend([f'bond_{i}_{maxIdx}' for i, item in enumerate(lBond[1]) if item] if lBond else [])
+
+            _rNames = [f'bond_{minIdx}_{i+minIdx+1}' for i, item in enumerate(rBond[0]) if item] if rBond else []
+            _rNames.extend([f'bond_{maxIdx}_{i+maxIdx+1}' for i, item in enumerate(rBond[1]) if item] if rBond else [])
+            # minLBond, maxLBond, minPhy, maxPhy, minI, maxI, minRBond, maxRBond
+            _return = (
+                    _lNames + [f'physics_{minIdx}', f'physics_{maxIdx}'] +
+                    [f'I_{minIdx}'] * smallI + [f'I_{maxIdx}'] * bigI + _rNames
+            )
+        return _return
 
     def _add_gate(self, _qubits: List[tn.AbstractNode], _layer_num: int, _oqs: List[int]):
         r"""
@@ -143,7 +136,7 @@ class TensorCircuit(QuantumCircuit):
         if not isinstance(_oqs, List):
             raise TypeError('Operating qubits must be a list.')
         if _maxIdx >= self.qnumber:
-            raise ValueError('Qubit index out of range.')
+            raise ValueError(f'Qubit index out of range, max index is Q{_maxIdx}.')
 
         single = gate.single
 
@@ -179,18 +172,29 @@ class TensorCircuit(QuantumCircuit):
             if _oqs[0] > _oqs[1]:
                 _gString = _gString.replace('wp', 'pw')
 
-            _smallI, _bigI, _lBond, _rBond = f'I_{min(_oqs)}' in _contract_qubitsAxisName, \
-                                             f'I_{max(_oqs)}' in _contract_qubitsAxisName, \
-                                             f'bond_{_minIdx - 1}_{_minIdx}' in _contract_qubitsAxisName, \
-                                             f'bond_{_maxIdx}_{_maxIdx + 1}' in _contract_qubitsAxisName
+            _smallI, _bigI = f'I_{min(_oqs)}' in _contract_qubitsAxisName, f'I_{max(_oqs)}' in _contract_qubitsAxisName
 
-            _qString = ''.join(['l' * _lBond, 'wp', 'm' * _smallI, 'n' * _bigI, 'r' * _rBond])
+            _minL_Idx, _minR_Idx, _maxL_Idx, _maxR_Idx = (
+                range(_minIdx), range(_minIdx + 1, self.qnumber),
+                range(_maxIdx), range(_maxIdx + 1, self.qnumber)
+            )
+            _min_lList, _min_rList, _max_lList, _max_rList = 'labch', 'defg', 'stuz', 'rvwxy'  # HARD CODE
+
+            _min_lBond, _min_rBond, _max_lBond, _max_rBond = (
+                self._getBond(_minIdx, _minL_Idx, _contract_qubitsAxisName, _min_lList, True),
+                self._getBond(_minIdx, _minR_Idx, _contract_qubitsAxisName, _min_rList, False),
+                self._getBond(_maxIdx, _maxL_Idx, _contract_qubitsAxisName, _max_lList, True),
+                self._getBond(_maxIdx, _maxR_Idx, _contract_qubitsAxisName, _max_rList, False)
+            )
+
+            _qString = ''.join(_min_lBond + _max_lBond + ['wp', 'm' * _smallI, 'n' * _bigI] + _min_rBond + _max_rBond)
 
             _qAFString = _qString.replace('wp', _gString[:2] + _gString[-1] * (len(_gateTensor.shape) == 5))
             if _oqs[0] > _oqs[1]:
                 _qAFString = _qAFString.replace('ij', 'ji')
 
-            _reorderAxisName = self._calOrder(_minIdx, _maxIdx, _lBond, _smallI, _bigI, _rBond)
+            _reorderAxisName = self._calOrder(_minIdx, _maxIdx, lBond=[_min_lBond, _max_lBond],
+                                              rBond=[_min_rBond, _max_rBond], smallI=_smallI, bigI=_bigI)
 
             _contract_qubits.reorder_edges([_contract_qubits[_element] for _element in _reorderAxisName])
             _contract_qubitsTensor_AoP = tc.einsum(f'{_gString}, {_qString} -> {_qAFString}',
@@ -207,30 +211,39 @@ class TensorCircuit(QuantumCircuit):
                     _contract_qubits.set_tensor(
                         tc.einsum(f"{_qAFString} -> {_AFStringT}", _contract_qubitsTensor_AoP))
 
-                    _contract_qubitsAxisName.append(f'I_{_minIdx}')
-                    _contract_qubits.add_axis_names(_contract_qubitsAxisName)
+                    _reorderAxisName.append(f'I_{_minIdx}')
+                    _contract_qubits.add_axis_names(_reorderAxisName)
                     _new_edge = tn.Edge(_contract_qubits,
                                         axis1=len(_contract_qubits.edges), name=f'I_{_minIdx}')
                     _contract_qubits.edges.append(_new_edge)
                     _contract_qubits.add_edge(_new_edge, f'I_{_minIdx}')
 
                     _smallI = True
-                    _reorderAxisName = self._calOrder(_minIdx, _maxIdx, _lBond, _smallI, _bigI, _rBond)
+                    _reorderAxisName = self._calOrder(_minIdx, _maxIdx, lBond=[_min_lBond, _max_lBond],
+                                              rBond=[_min_rBond, _max_rBond], smallI=_smallI, bigI=_bigI)
                     _contract_qubits.reorder_edges([_contract_qubits[_element] for _element in _reorderAxisName])
                 else:
                     _contract_qubits.set_tensor(_contract_qubitsTensor_AoP)
 
             # Split back to two qubits
-            _left_AxisName = [f'bond_{_minIdx - 1}_{_minIdx}'] * _lBond
-            _left_AxisName.extend([f'physics_{_minIdx}'])
-            _left_AxisName.extend([f'I_{_minIdx}'] * (self.idealNoise or self.realNoise))
+            _left_AxisName = (
+                    [f'bond_{_i}_{_minIdx}' for _i, _item in enumerate(_min_lBond) if _item] +
+                    [f'physics_{_minIdx}'] +
+                    [f'I_{_minIdx}'] * (self.idealNoise or self.realNoise) +
+                    [f'bond_{_minIdx}_{_minIdx + 1 + _i}' for _i, _item in enumerate(_min_rBond) if _item]
+            )
 
-            _right_AxisName = [f'physics_{_maxIdx}']
-            _right_AxisName.extend([f'I_{_maxIdx}'] * ((self.idealNoise or self.realNoise) and _bigI))
-            _right_AxisName.extend([f'bond_{_maxIdx}_{_maxIdx + 1}'] * _rBond)
+            _right_AxisName = (
+                    [f'bond_{_i}_{_maxIdx}' for _i, _item in enumerate(_max_lBond) if _item] +
+                    [f'physics_{_maxIdx}'] +
+                    [f'I_{_maxIdx}'] * ((self.idealNoise or self.realNoise) and _bigI) +
+                    [f'bond_{_maxIdx}_{_maxIdx + 1 + _i}' for _i, _item in enumerate(_max_rBond) if _item]
+            )
 
-            _left_edges, _right_edges = [_contract_qubits[name] for name in _left_AxisName], \
+            _left_edges, _right_edges = (
+                [_contract_qubits[name] for name in _left_AxisName],
                 [_contract_qubits[name] for name in _right_AxisName]
+            )
 
             _qubits[_minIdx], _qubits[_maxIdx], _ = tn.split_node(_contract_qubits,
                                                                   left_edges=_left_edges,
@@ -257,25 +270,27 @@ class TensorCircuit(QuantumCircuit):
                 for _idx in _oqs
             ]
             for _i, _bit in enumerate(_oqs):
-                _qubit = _qubits[_bit]
-                _qubitTensor, _qubitAxisName, _qubitShape = \
-                    _qubit.tensor, _qubit.axis_names, _qubit.tensor.shape
-                _gShape = gate_list[_i].shape
+                _qubit, _gShape = _qubits[_bit], gate_list[_i].shape
+                _qubitAxisName, _qubitShape = _qubit.axis_names, _qubit.tensor.shape
 
-                _I, _lBond, _rBond = \
-                    f'I_{_bit}' in _qubitAxisName, f'bond_{_bit - 1}_{_bit}' in _qubitAxisName, \
-                    f'bond_{_bit}_{_bit + 1}' in _qubitAxisName
-                _qString = ''.join(['l' * _lBond, 'i', 'j' * _I, 'r' * _rBond])
+                _I = f'I_{_bit}' in _qubitAxisName
 
+                _lList, _rList = 'labcdef', 'ropqxyz'  # HARD CODE
+                _lIdx, _rIdx = range(_bit), range(_bit + 1, self.qnumber)
+                _lBond, _rBond = (
+                    self._getBond(_bit, _lIdx, _qubitAxisName, _lList, True),
+                    self._getBond(_bit, _rIdx, _qubitAxisName, _rList, False)
+                )
+
+                _qString = ''.join(_lBond + ['i', 'j' * _I] + _rBond)
                 _gString = 'min' if len(_gShape) == 3 else 'mi'
-
                 _qAFString = _qString.replace('i', 'mn') if _gString == 'min' else _qString.replace('i', 'm')
 
                 _reorderAxisName = self._calOrder(minIdx=_bit, lBond=_lBond, smallI=_I, rBond=_rBond, single=True)
+
                 if _qubitAxisName != _reorderAxisName:
                     _qubit.reorder_edges([_qubit[_element] for _element in _reorderAxisName])
-                _qubitTensor_AOP = tc.einsum(f'{_gString}, {_qString} -> {_qAFString}', gate_list[_i],
-                                             _qubitTensor)
+                _qubitTensor_AOP = tc.einsum(f'{_gString}, {_qString} -> {_qAFString}', gate_list[_i], _qubit.tensor)
                 _qShape = _qubitTensor_AOP.shape
 
                 _jIdx, _nIdx = _qAFString.find('j'), _qAFString.find('n')
@@ -348,7 +363,7 @@ class TensorCircuit(QuantumCircuit):
                     tn.connect(self.state[i][f'I_{i}'], _qubits_conj[i][f'I_{i}'])
 
             # Reduced density matrix
-            if reduced_index is not None:
+            if reduced_index:
                 reduced_index = [reduced_index] if isinstance(reduced_index, int) else reduced_index
                 if not isinstance(reduced_index, list):
                     raise TypeError('reduced_index should be int or list[int]')
@@ -358,8 +373,10 @@ class TensorCircuit(QuantumCircuit):
                 reduced_index = []
 
             _numList = [_i for _i in range(self.qnumber) if _i not in reduced_index]
-            _qOutOrder, _conQOutOrder = [self.state[i][f'physics_{i}'] for i in _numList], \
+            _qOutOrder, _conQOutOrder = (
+                [self.state[i][f'physics_{i}'] for i in _numList],
                 [_qubits_conj[i][f'con_physics_{i}'] for i in _numList]
+            )
 
             _dm = tn.contractors.auto(self.state + _qubits_conj,
                                       output_edge_order=_qOutOrder + _conQOutOrder)
@@ -404,9 +421,10 @@ class TensorCircuit(QuantumCircuit):
                 if checkConnectivity(_state):
                     qr_left2right(_state)
                     svd_right2left(_state, chi=self.chi)
-            if self._entropy:
-                _entropy = cal_entropy(_state, kappa=self.kappa)
+            if self._entropy and not self.Truncate:
+                _entropy = cal_entropy(_state)
                 for _ii in range(len(_state)):
+                    self._entropyList[f'dimension_{_ii}'].append(_entropy[f'dimension_{_ii}'])
                     self._entropyList[f'qEntropy_{_ii}'].append(_entropy[f'qEntropy_{_ii}'])
             #
             if self.Truncate:

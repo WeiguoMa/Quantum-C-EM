@@ -72,11 +72,9 @@ def checkConnectivity(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
         return connectivity
 
 
-def von_neumann_entropy(rho):
-    eigenvalues, _ = tc.linalg.eigh(rho)
-    eigenvalues = eigenvalues.abs()
-    eigenvalues = eigenvalues[eigenvalues > 1e-10]
-    entropy = -tc.sum(eigenvalues * tc.log(eigenvalues))
+def von_neumann_entropy(eigenvalues):
+    eigenvalues = tc.abs(eigenvalues)
+    entropy = -tc.sum(eigenvalues * tc.log2(eigenvalues))
     return entropy
 
 
@@ -205,12 +203,19 @@ def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kap
     for _num, _qubit in enumerate(qubits):
         # Shape-relating
         _qubitTensor, _qubitAxisNames = _qubit.tensor, _qubit.axis_names
-        _qubitIdx = ''.join([
-            'l' * (f'bond_{_num - 1}_{_num}' in _qubitAxisNames),
-            'i',
-            'j' * (f'I_{_num}' in _qubitAxisNames),
-            'r' * (f'bond_{_num}_{_num + 1}' in _qubitAxisNames)
-        ])
+
+        _lIdx, _rIdx = range(_num), range(_num + 1, len(qubits))
+        _lBond, _rBond = [''] * len(_lIdx), [''] * len(_rIdx)
+        _lList, _rList = 'labcdefgh', 'rstuvwxyz'
+
+        for _idx in _lIdx:
+            if f'bond_{_idx}_{_num}' in _qubitAxisNames:
+                _lBond[_idx] = _lList[_idx]
+        for _idx in _rIdx:
+            if f'bond_{_num}_{_idx}' in _qubitAxisNames:
+                _rBond[_idx-_num-1] = _rList[_idx-_num-1]
+
+        _qubitIdx = ''.join(_lBond + ['i', 'j' * (f'I_{_num}' in _qubitAxisNames)] + _rBond)
 
         _jIdx = _qubitIdx.find('j')
         if _jIdx != -1:
@@ -241,7 +246,7 @@ def svdKappa_left2right(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kap
             _qubit.set_tensor(_qubitTensor)
 
 
-def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: List[int] = None):
+def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
     r"""
     Perform SVD with optional dimension truncation on a list of quantum tensors.
 
@@ -253,6 +258,7 @@ def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: List
         _entropy: The function modifies the input tensors in-place.
     """
     _entropy = {f'qEntropy_{_i}': None for _i in range(len(qubits))}
+    _entropy.update({f'dimension_{_i}': None for _i in range(len(qubits))})
     for _num, _qubit in enumerate(qubits):
         # Shape-relating
         _qubitTensor, _qubitAxisNames = _qubit.tensor, _qubit.axis_names
@@ -271,13 +277,9 @@ def cal_entropy(qubits: Union[List[tn.Node], List[tn.AbstractNode]], kappa: List
             # SVD to truncate the inner dimension
             _u, _s, _ = tc.linalg.svd(tc.reshape(_qubitTensor, (-1, _shape[-1])), full_matrices=False)
             _s = _s.to(dtype=tc.complex64)
-            # Truncate the inner dimension
-            if kappa is None or kappa > _s.nelement():
-                kappa = _s.nelement()
 
-            _s = _s[: kappa]
-            _u = _u[:, : kappa]
-
-            _entropy[f'qEntropy_{_num}'] = von_neumann_entropy(tc.matmul(_u, tc.diag(_s)))
+            print(_s)
+            _entropy[f'dimension_{_num}'] = _s.shape[0]
+            _entropy[f'qEntropy_{_num}'] = von_neumann_entropy(_s)
 
     return _entropy

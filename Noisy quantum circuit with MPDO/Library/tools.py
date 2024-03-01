@@ -18,7 +18,7 @@ import tensornetwork as tn
 import torch as tc
 from scipy.optimize import minimize
 
-mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rcParams['font.family'] = 'Arial'
 
 
 def EdgeName2AxisName(_nodes: List[tn.AbstractNode]):
@@ -305,6 +305,7 @@ def plot_histogram(prob_psi: Dict,
                    filename: Optional[str] = None,
                    transparent: bool = False,
                    spines: bool = True,
+                   show: bool = True,
                    **kwargs):
     r"""
     Plot a histogram of probability distribution.
@@ -314,7 +315,8 @@ def plot_histogram(prob_psi: Dict,
         title: title of the fig, while None, it does not work;
         filename: location to save the fig, while None, it does not work;
         transparent: whether to save the fig with transparent background;
-        spines: whether to show the spines of the fig.
+        spines: whether to show the spines of the fig;
+        show: whether to show the fig;
     """
     if not isinstance(prob_psi, Dict):
         raise TypeError('Prob distribution should be input as a dict, with keys as basis_name.')
@@ -324,23 +326,24 @@ def plot_histogram(prob_psi: Dict,
     title = title or f'Probability distribution qnumber={qnumber}'
 
     plt.figure(dpi=300, figsize=kwargs['figsize'] if 'figsize' in kwargs else (10, 8))
-    plt.bar(prob_psi.keys(), prob_psi.values(), color='b')
+    plt.bar(prob_psi.keys(), prob_psi.values(), color=kwargs['color'] if 'color' in kwargs else 'b')
     plt.ylim(ymin=0, ymax=1)
-    plt.xticks(rotation=-45, fontsize=kwargs['xticks_fontsize'] if 'xticks_fontsize' in kwargs else 20)
-    plt.yticks(fontsize=kwargs['yticks_fontsize'] if 'yticks_fontsize' in kwargs else 20)
-    plt.title(title, fontsize=kwargs['title_fontsize'] if 'title_fontsize' in kwargs else 24)
-    plt.xlabel('State', fontsize=kwargs['xlabel_fontsize'] if 'xlabel_fontsize' in kwargs else 22)
-    plt.ylabel('Probability', fontsize=kwargs['ylabel_fontsize'] if 'ylabel_fontsize' in kwargs else 22)
+    plt.xticks(rotation=-45, fontsize=kwargs['xticks_fontsize'] if 'xticks_fontsize' in kwargs else 22)
+    plt.yticks(fontsize=kwargs['yticks_fontsize'] if 'yticks_fontsize' in kwargs else 22)
+    plt.title(title, fontsize=kwargs['title_fontsize'] if 'title_fontsize' in kwargs else 27)
+    plt.xlabel('Bitstring', fontsize=kwargs['xlabel_fontsize'] if 'xlabel_fontsize' in kwargs else 24)
+    plt.ylabel('Probability', fontsize=kwargs['ylabel_fontsize'] if 'ylabel_fontsize' in kwargs else 24)
     plt.tight_layout()
 
     if not spines:
         plt.gca().spines['right'].set_visible(False)
         plt.gca().spines['top'].set_visible(False)
 
-    if filename is not None:
+    if filename:
         plt.savefig(filename, transparent=transparent, dpi=300)
 
-    plt.show()
+    if show:
+        plt.show()
 
 
 def select_device(device: Optional[Union[str, int]] = None):
