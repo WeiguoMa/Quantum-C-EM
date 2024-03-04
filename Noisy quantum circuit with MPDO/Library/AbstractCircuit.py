@@ -243,6 +243,20 @@ class QuantumCircuit(ABC, nn.Module):
             self.cz(oq0, oq1)
             self.ry(tensor(pi / 2), oq1, True)
 
+    def swap(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
+        from Library.QuantumGates.ArbDoubleGates import SWAPGate
+
+        _headline = f"SWAP{oqs}|None"
+        self._add_module(SWAPGate(_ideal), oqs, _headline)
+
+    def iswap(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
+        oqs = [oq0, oq1]
+        from Library.QuantumGates.ArbDoubleGates import ISWAPGate
+
+        _headline = f"ISWAP{oqs}|None"
+        self._add_module(ISWAPGate(_ideal), oqs, _headline)
+
     def s(self, oqs: Union[List, int], _ideal: Optional[bool] = None):
         if isinstance(oqs, int):
             oqs = [oqs]
@@ -354,4 +368,12 @@ class QuantumCircuit(ABC, nn.Module):
         """
         self._oqs_list.append(['None'])
         self.layers.add_module(f'Truncation-{self._sequenceT}', None)
+        self._sequenceT += 1
+
+    def barrier(self):
+        """
+        Add a barrier to the circuit.
+        """
+        self._oqs_list.append(['None'])
+        self.layers.add_module(f'Barrier-{self._sequenceT}', None)
         self._sequenceT += 1
