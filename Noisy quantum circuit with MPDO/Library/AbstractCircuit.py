@@ -146,7 +146,7 @@ class QuantumCircuit(ABC, nn.Module):
 
     def rxx(self, theta: Tensor, oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.XGates import RXXGate
 
             _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
@@ -162,7 +162,7 @@ class QuantumCircuit(ABC, nn.Module):
 
     def ryy(self, theta: Tensor, oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.YGates import RYYGate
 
             _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
@@ -178,7 +178,7 @@ class QuantumCircuit(ABC, nn.Module):
 
     def rzz(self, theta: Tensor, oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.ZGates import RZZGate
 
             _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
@@ -192,7 +192,7 @@ class QuantumCircuit(ABC, nn.Module):
 
     def cx(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.XGates import CXGate
 
             _headline = f"CX{oqs}|None"
@@ -204,7 +204,7 @@ class QuantumCircuit(ABC, nn.Module):
 
     def cy(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.YGates import CYGate
 
             _headline = f"CY{oqs}|None"
@@ -214,7 +214,7 @@ class QuantumCircuit(ABC, nn.Module):
 
     def cz(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.ZGates import CZGate
 
             _headline = f"CZ{oqs}|None"
@@ -233,7 +233,7 @@ class QuantumCircuit(ABC, nn.Module):
 
     def cnot(self, oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.ArbDoubleGates import CNOTGate
 
             _headline = f"CNOT{oqs}|None"
@@ -288,7 +288,7 @@ class QuantumCircuit(ABC, nn.Module):
     def cp(self, theta: Optional[Tensor], oq0: int, oq1: int, _ideal: Optional[bool] = None):
         oqs = [oq0, oq1]
 
-        if not self.realNoise:
+        if not self.realNoise or _ideal:
             from Library.QuantumGates.PhaseGates import CPGate
 
             _paraI, _paraD = '{:.3f}'.format(theta.item()).split('.')
