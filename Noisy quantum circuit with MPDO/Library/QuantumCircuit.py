@@ -203,7 +203,7 @@ class TensorCircuit(QuantumCircuit):
 
             _mIdx, _qIdx = _qAFString.find('m'), _qAFString.find('n')
 
-            if not gate.ideal:
+            if not gate.ideal and not self.ideal:
                 if _mIdx != -1:
                     _qShape = _qShape[:_mIdx - 1] + (_qShape[_mIdx - 1] * _qShape[_mIdx],) + _qShape[_mIdx + 1:]
                     _contract_qubits.set_tensor(tc.reshape(_contract_qubitsTensor_AoP, _qShape))
