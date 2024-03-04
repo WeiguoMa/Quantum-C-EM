@@ -90,6 +90,84 @@ class CNOTGate(QuantumGate):
         return False
 
 
+class ISWAPGate(QuantumGate):
+    """
+        ISWAP gate.
+    """
+
+    def __init__(self, ideal: Optional[bool] = None,
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
+        super(ISWAPGate, self).__init__(ideal=ideal)
+        self.device = device
+        self.dtype = dtype
+
+    @property
+    def name(self):
+        return 'ISWAP'
+
+    @property
+    def tensor(self):
+        return tc.tensor([[1, 0, 0, 0],
+                          [0, 0, 1j, 0],
+                          [0, 1j, 0, 0],
+                          [0, 0, 0, 1]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
+
+    @property
+    def rank(self):
+        return 4
+
+    @property
+    def dimension(self):
+        return [[2, 2], [2, 2]]
+
+    @property
+    def single(self) -> bool:
+        return False
+
+    @property
+    def variational(self) -> bool:
+        return False
+
+
+class SWAPGate(QuantumGate):
+    """
+        SWAP gate.
+    """
+
+    def __init__(self, ideal: Optional[bool] = None,
+                 dtype=tc.complex64, device: Union[str, int] = 'cpu'):
+        super(SWAPGate, self).__init__(ideal=ideal)
+        self.device = device
+        self.dtype = dtype
+
+    @property
+    def name(self):
+        return 'SWAP'
+
+    @property
+    def tensor(self):
+        return tc.tensor([[1, 0, 0, 0],
+                          [0, 0, 1, 0],
+                          [0, 1, 0, 0],
+                          [0, 0, 0, 1]], dtype=self.dtype, device=self.device).reshape((2, 2, 2, 2))
+
+    @property
+    def rank(self):
+        return 4
+
+    @property
+    def dimension(self):
+        return [[2, 2], [2, 2]]
+
+    @property
+    def single(self) -> bool:
+        return False
+
+    @property
+    def variational(self) -> bool:
+        return False
+
+
 class ArbDoubleGate(QuantumGate):
     """
         CNOT gate.
