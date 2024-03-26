@@ -300,7 +300,7 @@ def density2prob(rho_in: tc.Tensor,
         return np.array(_prob) / _prob_sum
 
 
-def plot_histogram(prob_psi: Dict,
+def plot_histogram(prob_psi: Union[Dict, np.ndarray],
                    title: Optional[str] = None,
                    filename: Optional[str] = None,
                    transparent: bool = False,
@@ -318,22 +318,118 @@ def plot_histogram(prob_psi: Dict,
         spines: whether to show the spines of the fig;
         show: whether to show the fig;
     """
-    if not isinstance(prob_psi, Dict):
-        raise TypeError('Prob distribution should be input as a dict, with keys as basis_name.')
-
-    qnumber = len(next(iter(prob_psi)))
+    if isinstance(prob_psi, Dict):
+        qnumber = len(next(iter(prob_psi)))
+        _basis_name = list(prob_psi.keys())
+        _prob_distribution = prob_psi.values()
+    elif isinstance(prob_psi, np.ndarray):
+        qnumber = int(np.log2(prob_psi.shape[0]))
+        _prob_distribution = prob_psi
+        _basis_name = [''.join(ii) for ii in itertools.product('01', repeat=qnumber)]
+    else:
+        raise TypeError('Prob distribution should be input as a dict, or np.array.')
 
     title = title or f'Probability distribution qnumber={qnumber}'
 
-    plt.figure(dpi=300, figsize=kwargs['figsize'] if 'figsize' in kwargs else (10, 8))
-    plt.bar(prob_psi.keys(), prob_psi.values(), color=kwargs['color'] if 'color' in kwargs else 'b')
+    plt.figure(dpi=300, figsize=kwargs.get('figsize', (10, 8)))
+    plt.bar(_basis_name, _prob_distribution,
+            yerr=kwargs.get('yerr', None),
+            color=kwargs.get('color', 'b'))
     plt.ylim(ymin=0, ymax=1)
-    plt.xticks(rotation=-45, fontsize=kwargs['xticks_fontsize'] if 'xticks_fontsize' in kwargs else 22)
-    plt.yticks(fontsize=kwargs['yticks_fontsize'] if 'yticks_fontsize' in kwargs else 22)
-    plt.title(title, fontsize=kwargs['title_fontsize'] if 'title_fontsize' in kwargs else 27)
-    plt.xlabel('Bitstring', fontsize=kwargs['xlabel_fontsize'] if 'xlabel_fontsize' in kwargs else 24)
-    plt.ylabel('Probability', fontsize=kwargs['ylabel_fontsize'] if 'ylabel_fontsize' in kwargs else 24)
+    plt.xticks(rotation=-45, fontsize=kwargs.get('xticks_fontsize', 22))
+    plt.yticks(fontsize=kwargs.get('yticks_fontsize', 22))
+    if kwargs.get('yticks'):
+        plt.yticks(ticks=kwargs.get('yticks'))
+    plt.title(title, fontsize=kwargs.get('title_fontsize', 27))
+    plt.xlabel('Bitstring', fontsize=kwargs.get('xlabel_fontsize', 24))
+    plt.ylabel('Probability', fontsize=kwargs.get('ylabel_fontsize', 24))
     plt.tight_layout()
+
+    if not spines:
+        plt.gca().spines['right'].set_visible(False)
+        plt.gca().spines['top'].set_visible(False)
+
+    if filename:
+        plt.savefig(filename, transparent=transparent, dpi=300)
+
+    if show:
+        plt.show()
+
+def plot_histogram_2Bars(prob_psi1: Union[Dict, np.ndarray],
+                       prob_psi2: Union[Dict, np.ndarray],
+                       labels: list[str] = None,
+                       title: Optional[str] = None,
+                       filename: Optional[str] = None,
+                       transparent: bool = False,
+                       spines: bool = True,
+                       show: bool = True,
+                       threshold: float = None,
+                       color1: str = 'b',
+                       color2: str = 'orange',
+                       **kwargs):
+    """
+    Plot a histogram of probability distribution for two datasets,
+    omitting bars where both datasets have values below a threshold.
+
+    Args:
+        prob_psi1: First probability distribution, as a dict or np.ndarray;
+        prob_psi2: Second probability distribution, as a dict or np.ndarray;
+        labels: List of labels for the datasets;
+        title: Title of the figure, defaults to a generic title if None;
+        filename: Location to save the figure, does nothing if None;
+        transparent: Whether to save the figure with a transparent background;
+        spines: Whether to show the spines of the figure;
+        show: Whether to show the figure;
+        threshold: Value below which bars are not shown if both datasets are below it;
+        color1: Color of the first dataset bars;
+        color2: Color of the second dataset bars;
+    """
+    def extract_data(prob_psi):
+        if isinstance(prob_psi, Dict):
+            basis_name = list(prob_psi.keys())
+            prob_distribution = list(prob_psi.values())
+        elif isinstance(prob_psi, np.ndarray):
+            qnumber = int(np.log2(prob_psi.shape[0]))
+            prob_distribution = prob_psi
+            basis_name = [''.join(ii) for ii in itertools.product('01', repeat=qnumber)]
+        else:
+            raise TypeError('Prob distribution should be input as a dict or np.array.')
+        return basis_name, prob_distribution
+
+    if not threshold:
+        threshold = 0.
+
+    basis_name1, prob_distribution1 = extract_data(prob_psi1)
+    basis_name2, prob_distribution2 = extract_data(prob_psi2)
+
+    # Filtering data based on threshold
+    filtered_indices = [i for i, (p1, p2) in enumerate(zip(prob_distribution1, prob_distribution2)) if p1 >= threshold or p2 >= threshold]
+    basis_name_filtered = [basis_name1[i] for i in filtered_indices]
+    prob_distribution1_filtered = [prob_distribution1[i] for i in filtered_indices]
+    prob_distribution2_filtered = [prob_distribution2[i] for i in filtered_indices]
+
+    title = title or 'Probability Distribution'
+
+    plt.figure(dpi=300, figsize=kwargs.get('figsize', (10, 8)))
+    width = 0.36  # the width of the bars
+    x = np.arange(len(basis_name_filtered))
+
+    plt.bar(x - width/2, prob_distribution1_filtered, width, label=labels[0],
+            color=color1)
+    plt.bar(x + width/2, prob_distribution2_filtered, width, label=labels[1],
+            color=color2)
+
+    plt.ylim(ymin=0, ymax=kwargs.get('ymax', 1))
+    plt.xticks(x, basis_name_filtered, rotation=-45, fontsize=kwargs.get('xticks_fontsize', 22))
+    plt.yticks(fontsize=kwargs.get('yticks_fontsize', 22))
+    plt.title(title, fontsize=kwargs.get('title_fontsize', 27))
+    plt.xlabel('Bitstring', fontsize=kwargs.get('xlabel_fontsize', 24))
+    plt.ylabel('Probability', fontsize=kwargs.get('ylabel_fontsize', 24))
+    plt.legend(fontsize=kwargs.get('legend_fontsize', 22))
+    plt.tight_layout()
+
+    if kwargs.get('yticks'):
+        plt.yticks(kwargs.get('yticks'))
 
     if not spines:
         plt.gca().spines['right'].set_visible(False)
