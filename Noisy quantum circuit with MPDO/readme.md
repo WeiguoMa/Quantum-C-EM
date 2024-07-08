@@ -1,6 +1,8 @@
 # Noisy Quantum circuit simulator with Matrix Product Density Operator (MPDO)
 
 ###### I have to emphasize that this project is not intended for High Performance Computing now.
+###### The python version, especially based on Pytorch, could be orders of magnitude slower than the C++ implementation.
+###### The C++ version, with ITensor package, is not uploaded yet.
 
 ## Computer Implementation
 
@@ -10,6 +12,7 @@ Main Packages Required:
 - Pytorch -- Version 2.0 or Version 1.10
 
 ### TensorNetwork Package
+###### Because of the design from old version PyTorch, You need to substitute the decompositions.py file in TensorNetwork.backend.torch to reach the correct SVD and QR decomposition.
 
 The project centers around TensorNetwork, a mathematical methodology capable of performing truncation to
 expedite calculations while maintaining a constrained level of error, a phenomenon introduced through Singular
