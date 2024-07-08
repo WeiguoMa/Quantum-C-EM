@@ -92,10 +92,13 @@ def qr_left2right(_qubits: Union[List[tn.Node], List[tn.AbstractNode]]):
         raise TypeError('input should be a list of qubits nodes')
 
     for _i in range(len(_qubits) - 1):
-        _left_edges_name, _right_edges_name = [name for name in _qubits[_i].axis_names if f'bond_{_i}_' not in name], \
-            [name for name in _qubits[_i].axis_names if f'bond_{_i}_' in name]
-        _left_edges, _right_edges = [_qubits[_i][_name] for _name in _left_edges_name], \
-            [_qubits[_i][_name] for _name in _right_edges_name]
+
+        _edges = _qubits[_i].edges
+        _left_edges, _right_edges = (
+            [_edge for _edge in _edges if f'bond_{_i}_' not in _edge.name],
+            [_edge for _edge in _edges if f'bond_{_i}_' in _edge.name]
+        )
+
         _q, _r = tn.split_node_qr(_qubits[_i],
                                   left_edges=_left_edges,
                                   right_edges=_right_edges,

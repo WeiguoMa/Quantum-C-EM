@@ -122,11 +122,11 @@ class NoiseChannel:
         _param_T1 = 1 - np.exp(- time / T1)
         _param_T2 = 1 - np.exp(- time / _T2p)
 
-        _apdc_tensor = tc.tensor([[[1, 0],
-                                   [0, np.sqrt(1 - (_param_T1 + _param_T2))]],
-                                  [[0, 0],
-                                   [0, np.sqrt(_param_T2)]],
-                                  [[0, np.sqrt(_param_T1)],
-                                   [0, 0]]], dtype=self.dtype, device=self.device)
+        _apdc_tensor = tc.tensor(
+            [
+                [[1, 0], [0, np.sqrt(1 - (_param_T1 + _param_T2))]],
+                [[0, 0], [0, np.sqrt(_param_T2)]], [[0, np.sqrt(_param_T1)],
+                                                    [0, 0]]
+            ], dtype=self.dtype, device=self.device)
         _apdc_tensor = tc.einsum('ijk -> jki', _apdc_tensor)
         return _apdc_tensor
