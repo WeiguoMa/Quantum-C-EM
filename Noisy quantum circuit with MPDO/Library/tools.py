@@ -263,7 +263,7 @@ def tc_expect(oper: tc.Tensor, state: tc.Tensor) -> tc.Tensor:
 def density2prob(rho_in: tc.Tensor,
                  bases: Optional[Dict] = None,
                  tol: Optional[float] = None,
-                 _dict: Optional[bool] = True) -> Dict:
+                 _dict: Optional[bool] = True) -> Union[Dict, np.ndarray]:
     """
     Transform density matrix into probability distribution with provided bases.
 
@@ -301,31 +301,35 @@ def density2prob(rho_in: tc.Tensor,
 
 
 def plot_histogram(prob_psi: Union[Dict, np.ndarray],
+                   threshold: Optional[float] = None,
                    title: Optional[str] = None,
                    filename: Optional[str] = None,
                    transparent: bool = False,
                    spines: bool = True,
                    show: bool = True,
                    **kwargs):
-    r"""
+    """
     Plot a histogram of probability distribution.
 
     Args:
-        prob_psi: probability of states, should be input as a dict;
+        prob_psi: probability of states, should be input as a dict or np.ndarray;
+        threshold: minimum value to plot;
         title: title of the fig, while None, it does not work;
         filename: location to save the fig, while None, it does not work;
         transparent: whether to save the fig with transparent background;
         spines: whether to show the spines of the fig;
         show: whether to show the fig;
     """
+    if not threshold:
+        threshold = 0.
     if isinstance(prob_psi, Dict):
         qnumber = len(next(iter(prob_psi)))
-        _basis_name = list(prob_psi.keys())
-        _prob_distribution = prob_psi.values()
+        _basis_name, _prob_distribution = zip(*[(k, v) for k, v in prob_psi.items() if v >= threshold])
     elif isinstance(prob_psi, np.ndarray):
         qnumber = int(np.log2(prob_psi.shape[0]))
-        _prob_distribution = prob_psi
         _basis_name = [''.join(ii) for ii in itertools.product('01', repeat=qnumber)]
+        _prob_distribution = [v for v in prob_psi if v >= threshold]
+        _basis_name = [_basis_name[i] for i, v in enumerate(prob_psi) if v >= threshold]
     else:
         raise TypeError('Prob distribution should be input as a dict, or np.array.')
 
@@ -335,7 +339,7 @@ def plot_histogram(prob_psi: Union[Dict, np.ndarray],
     plt.bar(_basis_name, _prob_distribution,
             yerr=kwargs.get('yerr', None),
             color=kwargs.get('color', 'b'))
-    plt.ylim(ymin=0, ymax=1)
+    plt.ylim(ymin=0, ymax=kwargs.get('ymax', 1.))
     plt.xticks(rotation=-45, fontsize=kwargs.get('xticks_fontsize', 22))
     plt.yticks(fontsize=kwargs.get('yticks_fontsize', 22))
     if kwargs.get('yticks'):
@@ -355,35 +359,45 @@ def plot_histogram(prob_psi: Union[Dict, np.ndarray],
     if show:
         plt.show()
 
-def plot_histogram_2Bars(prob_psi1: Union[Dict, np.ndarray],
-                       prob_psi2: Union[Dict, np.ndarray],
-                       labels: list[str] = None,
-                       title: Optional[str] = None,
-                       filename: Optional[str] = None,
-                       transparent: bool = False,
-                       spines: bool = True,
-                       show: bool = True,
-                       threshold: float = None,
-                       color1: str = 'b',
-                       color2: str = 'orange',
-                       **kwargs):
+
+def plot_histogram_multiBars(
+        prob_psi1: Union[Dict, np.ndarray],
+        prob_psi2: Union[Dict, np.ndarray],
+        prob_psi3: Union[Dict, np.ndarray] = None,
+        prob_psi4: Union[Dict, np.ndarray] = None,
+        labels: list[str] = None,
+        title: Optional[str] = None,
+        filename: Optional[str] = None,
+        transparent: bool = False,
+        spines: bool = True,
+        show: bool = True,
+        threshold: float = None,
+        colors: Optional[List[str]] = None,
+        text: Optional[str] = None,
+        **kwargs
+):
     """
-    Plot a histogram of probability distribution for two datasets,
-    omitting bars where both datasets have values below a threshold.
+    Plot a histogram of probability distribution for up to four datasets,
+    omitting bars where all datasets have values below a threshold.
 
     Args:
         prob_psi1: First probability distribution, as a dict or np.ndarray;
         prob_psi2: Second probability distribution, as a dict or np.ndarray;
+        prob_psi3: Third probability distribution, optional, as a dict or np.ndarray;
+        prob_psi4: Fourth probability distribution, optional, as a dict or np.ndarray;
         labels: List of labels for the datasets;
         title: Title of the figure, defaults to a generic title if None;
         filename: Location to save the figure, does nothing if None;
         transparent: Whether to save the figure with a transparent background;
         spines: Whether to show the spines of the figure;
         show: Whether to show the figure;
-        threshold: Value below which bars are not shown if both datasets are below it;
-        color1: Color of the first dataset bars;
-        color2: Color of the second dataset bars;
+        threshold: Value below which bars are not shown if all datasets are below it;
+        colors: List of colors for each dataset bars;
+        text: Text to be shown if all datasets are below it.
     """
+    if colors is None:
+        colors = ['b', 'orange', 'g', 'r']
+
     def extract_data(prob_psi):
         if isinstance(prob_psi, Dict):
             basis_name = list(prob_psi.keys())
@@ -399,25 +413,33 @@ def plot_histogram_2Bars(prob_psi1: Union[Dict, np.ndarray],
     if not threshold:
         threshold = 0.
 
-    basis_name1, prob_distribution1 = extract_data(prob_psi1)
-    basis_name2, prob_distribution2 = extract_data(prob_psi2)
+    datasets = [prob_psi1, prob_psi2, prob_psi3, prob_psi4]
+    distributions = [extract_data(data) for data in datasets if data is not None]
 
-    # Filtering data based on threshold
-    filtered_indices = [i for i, (p1, p2) in enumerate(zip(prob_distribution1, prob_distribution2)) if p1 >= threshold or p2 >= threshold]
-    basis_name_filtered = [basis_name1[i] for i in filtered_indices]
-    prob_distribution1_filtered = [prob_distribution1[i] for i in filtered_indices]
-    prob_distribution2_filtered = [prob_distribution2[i] for i in filtered_indices]
+    if labels is None:
+        labels = [f'Dataset {i+1}' for i in range(len(distributions))]
+
+    basis_names = [d[0] for d in distributions]
+    prob_distributions = [d[1] for d in distributions]
+
+    # Filter out indices where all datasets are below the threshold
+    filtered_indices = [i for i in range(len(basis_names[0]))
+                        if any(prob[i] >= threshold for prob in prob_distributions)]
+
+    basis_name_filtered = [basis_names[0][i] for i in filtered_indices]
+    prob_distributions_filtered = [[prob[i] for i in filtered_indices] for prob in prob_distributions]
 
     title = title or 'Probability Distribution'
 
     plt.figure(dpi=300, figsize=kwargs.get('figsize', (10, 8)))
-    width = 0.36  # the width of the bars
+    n_bars = len(distributions)
+    group_width = 0.8
+    bar_width = group_width / n_bars
     x = np.arange(len(basis_name_filtered))
 
-    plt.bar(x - width/2, prob_distribution1_filtered, width, label=labels[0],
-            color=color1)
-    plt.bar(x + width/2, prob_distribution2_filtered, width, label=labels[1],
-            color=color2)
+    for i, (prob_distribution, color) in enumerate(zip(prob_distributions_filtered, colors[:n_bars])):
+        bar_positions = x - (group_width - bar_width) / 2 + i * bar_width
+        plt.bar(bar_positions, prob_distribution, bar_width, label=labels[i], color=color)
 
     plt.ylim(ymin=0, ymax=kwargs.get('ymax', 1))
     plt.xticks(x, basis_name_filtered, rotation=-45, fontsize=kwargs.get('xticks_fontsize', 22))
@@ -434,6 +456,15 @@ def plot_histogram_2Bars(prob_psi1: Union[Dict, np.ndarray],
     if not spines:
         plt.gca().spines['right'].set_visible(False)
         plt.gca().spines['top'].set_visible(False)
+
+    if text:
+        if kwargs.get('text_loc'):
+            _x, _y = kwargs.get('text_loc')
+        else:
+            _x, _y = (0, 0)
+        plt.text(_x, _y, text, ha='center', va='center', fontsize=kwargs.get('text_fontsize', 22),
+                 bbox=dict(facecolor='yellow', alpha=0.5, edgecolor='red', boxstyle='round,pad=0.5'),
+                 fontdict=kwargs.get('text_fontdict', {}))
 
     if filename:
         plt.savefig(filename, transparent=transparent, dpi=300)
