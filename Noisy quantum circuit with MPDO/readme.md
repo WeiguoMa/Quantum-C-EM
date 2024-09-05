@@ -3,7 +3,10 @@
 ###### I have to emphasize that this project is not intended for High Performance Computing now.
 ###### The python version, especially based on Pytorch, could be orders of magnitude slower than the C++ implementation.
 ###### The C++ version, with ITensor package, is not uploaded yet.
-
+This work contains the code of paper "Tomography-assisted noisy quantum circuit simulator using matrix 
+product density operators". This work simply combines the Quantum Process Tomography with Matrix Product 
+Density Operators to simulate the quantum circuit with experimental "real noise". The manuscript can be 
+found here: [https://journals.aps.org/pra/abstract/10.1103/PhysRevA.110.032604](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.110.032604).
 ## Computer Implementation
 
 Main Packages Required:
